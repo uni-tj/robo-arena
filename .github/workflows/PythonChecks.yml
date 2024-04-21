@@ -7,6 +7,7 @@ permissions:
 
 jobs:
   build:
+    name: Python status checks
     runs-on: ubuntu-latest
 
     steps:
