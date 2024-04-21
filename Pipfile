@@ -4,8 +4,11 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+pygame = "~=2.5.2"
 
 [dev-packages]
+flake8 = "==7.0.0"
+black = "~=24.4.0"
 pytest = "~=8.1.1"
 
 [requires]
