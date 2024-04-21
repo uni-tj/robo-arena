@@ -10,6 +10,15 @@ post_bump_hooks = []
 pre_package_bump_hooks = []
 post_package_bump_hooks = []
 
+[git_hooks.pre-commit]
+script = """
+  #!/bin/sh
+  set -e
+  pipenv install -d
+  pipenv run black --check --diff .
+  pipenv run flake8 . --count --show-source --statistics
+  pipenv run pytest
+"""
 [git_hooks.commit-msg]
 script = """
   #!/bin/sh
