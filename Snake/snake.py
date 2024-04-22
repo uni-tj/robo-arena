@@ -144,7 +144,6 @@ def randomize_fruit():
     while True:
         fpos = Position.random_pos(SQAURE_SIZE, SQAURE_SIZE)
         if not check_collision(fpos):
-            print(fpos)
             return fpos
 
 
