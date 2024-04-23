@@ -1,6 +1,8 @@
 import random
 from dataclasses import dataclass, field
 from typing import Callable
+from enum import Enum
+from typing import Optional
 
 import pygame
 
@@ -44,6 +46,16 @@ class Snake:
     direction: Position = Position(-1, 0)
 
 
+class End(Enum):
+    def __init__(self, id: int, message: str):
+        self.id = id
+        self.message = message
+
+    LOOSE = 0, "Game Over"
+    WIN = 1, "You Won"
+    QUIT = 2, "Bye bye"
+
+
 pygame.init()
 
 # Set up game constants
@@ -62,9 +74,17 @@ pygame.display.set_caption("Snake")
 
 # Set up the starting positions
 snake = Snake()
-fruit: Position = Position(5, 5)
+INITIAL_FRUIT = Position(5, 5)
+fruit: Position = INITIAL_FRUIT
 current_direction = Position(-1, 0)
-end = False
+end: Optional[End] = None
+
+# Set up as global variable improve performance
+fruit_positions = [
+    Position(x, y)
+    for x in range(WINDOW_SIZE_WIDTH // SQAURE_SIZE)
+    for y in range(WINDOW_SIZE_HEIGHT // SQAURE_SIZE)
+]
 
 
 # draw the fruit
@@ -101,9 +121,9 @@ def draw_snake():
 
 
 # draw end screen
-def draw_end(points: int):
+def draw_end(points: int, end: End):
     font = pygame.font.Font(None, 36)
-    game_over = font.render("Game Over", True, (255, 255, 255))
+    game_over = font.render(end.message, True, (255, 255, 255))
     text_rect = game_over.get_rect(center=(200, 200))
     screen.blit(game_over, text_rect)
     font = pygame.font.Font(None, 24)
@@ -135,16 +155,14 @@ def check_self_collision():
 
 # randomize the fruit position
 def randomize_fruit():
-    """#! This Code is flawed due to the issue that all fields could be occupied!
-    A faster and more reliable way to find a empty position is to choose a random start
-    and checking the closest positions systematically. This ensures, that a
-    result will always be found deterministically in at most Square_Size^2 steps!
-    While the current Implementation might never find a free spot.
-    """
-    while True:
-        fpos = Position.random_pos(SQAURE_SIZE, SQAURE_SIZE)
-        if not check_collision(fpos):
-            return fpos
+    global end
+    random.shuffle(fruit_positions)
+    try:
+        return next(_ for _ in fruit_positions if not check_collision(_))
+    except StopIteration:
+        # No tile is free anymore
+        end = End.WIN
+        return INITIAL_FRUIT
 
 
 # move the snake
@@ -180,14 +198,14 @@ DIRECTION_CHANGE = {
     pygame.K_d: DIRECTIONS["Right"],
 }
 # main game loop
-while not end:
+while end is None:
     screen.fill(BACKGROUND_COLOR)
     draw_fruit()
     draw_snake()
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            end = True
+            end = End.QUIT
         if event.type == pygame.KEYDOWN and event.key in DIRECTION_CHANGE:
             new_dir = DIRECTION_CHANGE[event.key]
             if new_dir.dot_product(snake.direction) == 0:
@@ -199,9 +217,9 @@ while not end:
         fruit = randomize_fruit()
 
     if check_self_collision():
-        end = True
+        end = End.LOOSE
 
     pygame.display.update()
     pygame.time.delay(GAME_SPEED)
 
-draw_end(len(snake.body) - 3)
+draw_end(len(snake.body) - 3, end)
