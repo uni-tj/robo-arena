@@ -38,6 +38,7 @@ owner = "uni-tj"
 authors = [
   { signature = "weiserhase", username = "weiserhase" },
   { signature = "JulesOxe", username = "JulesOxe" },
+  { signature = "Julius Oexle", username = "JulesOxe" },
   { signature = "p-98", username = "p-98" },
   { signature = "p98", username = "p-98" },
 ]
