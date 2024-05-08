@@ -70,7 +70,7 @@ However, in order to keep the creation of graphics simple, we have opted for a p
 Various pixel editors were tried out. For example, the free [Pixilart](https://www.pixilart.com/) website. However, as the person responsible for creating the graphics, I wanted to work on my tablet, where I can draw better with a pen, so I opted for the [Pixquare](https://www.pixquare.art/) app. <br />
 It offers a free mode in which you can create two graphics and try out the app. As I was impressed by the app, I bought the full version for €20, which gave me unlimited access to all features.
 
-![App-Screenshot-Pixsquare](./sprintlog-2/pixsquare.jpg)
+![App-Screenshot-Pixsquare](./sprintlog-2/pixsquare.png)
 
 The app offers the following useful features:
 
