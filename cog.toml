@@ -14,10 +14,10 @@ post_package_bump_hooks = []
 script = """
   #!/bin/sh
   set -e
-  pipenv install -d
-  pipenv run black --check --diff .
-  pipenv run flake8 . --count --show-source --statistics
-  pipenv run pytest
+  PIPENV_VERBOSITY=-1 pipenv install -d > /dev/null
+  PIPENV_VERBOSITY=-1 pipenv run black --quiet --check --diff .
+  PIPENV_VERBOSITY=-1 pipenv run flake8 . --show-source
+  PIPENV_VERBOSITY=-1 pipenv run pytest --quiet
 """
 [git_hooks.commit-msg]
 script = """
