@@ -2,14 +2,15 @@ from abc import ABC
 from dataclasses import dataclass
 from typing import TypeVar
 
-from position import Vector
+from src.wfc.vector import Vector
 from pygame import Surface
 from pygame.transform import scale
 
 """
-Two different coordinate systems that are not static 
-- Level coordinates (Absolut against the level origin) 
-- Player coordinates (Absolut against the player position in the Level coordinate system) 
+Two different coordinate systems that are not static
+- Level coordinates (Absolut against the level origin)
+- Player coordinates (Absolut against the player position
+in the Level coordinate system)
 50x65 texture
 """
 
