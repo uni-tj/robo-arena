@@ -1,5 +1,5 @@
 import numpy as np
-from vector import Vector
+from roboarena.utils.vector import Vector
 
 
 def gen_coord_space(xsize: int, ysize: int) -> list[Vector[int]]:
