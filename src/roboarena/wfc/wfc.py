@@ -2,8 +2,8 @@ import random
 from dataclasses import dataclass
 from enum import Enum
 from typing import Callable, Optional
-from vector import Vector
-from utils import gen_coord_space
+from roboarena.utils.vector import Vector
+from roboarena.utils.utils import gen_coord_space
 
 
 class bcolors:
@@ -21,6 +21,7 @@ class bcolors:
 @dataclass
 class Tile:
     color: str
+    graphics: dict[Vector[int], str]
     type: "TileType"
 
     def __str__(self) -> str:
