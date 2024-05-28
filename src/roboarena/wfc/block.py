@@ -2,7 +2,7 @@ from abc import ABC
 from dataclasses import dataclass
 from typing import TypeVar
 
-from src.wfc.vector import Vector
+from roboarena.utils.vector import Vector
 from pygame import Surface
 from pygame.transform import scale
 
