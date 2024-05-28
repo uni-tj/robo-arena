@@ -1,0 +1,31 @@
+roboarena = "src"         # Point to the src directory
+[project]
+name = "roboarena"
+version = "0.0.1"
+authors = [
+    {name = "Jan Keller"},
+    {name = "Timon Martins"},
+    {name = "Jules Oexle"},
+]
+description = "Python-utils will provide base level components to all python projects"
+readme = "README.md"
+requires-python = ">=3.12"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[tool.setuptools]
+packages = ["roboarena"]
+package-dir = {"" = "src"}
+
+[tool.setuptools.package-data]
+"*" = ["*"]  
+
+[tool.setuptools.dynamic]
+version = {attr = "roboarena.__version__"}
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
