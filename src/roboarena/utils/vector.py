@@ -46,3 +46,15 @@ class Vector[T: (int, float)]:
 
     def dot_product(self, o: "Vector[T]") -> T:
         return self.x * o.x + self.y * o.y
+
+
+def test():
+    print("klsdfj;lk")
+
+
+def getBounds(position: list[Vector[int]]) -> tuple[Vector[int], Vector[int]]:
+    max_x = max(position, key=lambda x: x.x).x
+    min_x = min(position, key=lambda x: x.x).x
+    max_y = max(position, key=lambda x: x.y).y
+    min_y = min(position, key=lambda x: x.y).y
+    return (Vector(min_x, min_y), Vector(max_x, max_y))

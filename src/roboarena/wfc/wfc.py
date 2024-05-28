@@ -2,8 +2,9 @@ import random
 from dataclasses import dataclass
 from enum import Enum
 from typing import Callable, Optional
-from roboarena.utils.vector import Vector
+from roboarena.utils.vector import Vector, getBounds
 from roboarena.utils.utils import gen_coord_space
+from roboarena.rendering_interface import BlockCtx
 
 
 class bcolors:
@@ -21,8 +22,8 @@ class bcolors:
 @dataclass
 class Tile:
     color: str
-    graphics: dict[Vector[int], str]
     type: "TileType"
+    graphics: dict[Vector[int], "BlockCtx"]
 
     def __str__(self) -> str:
         return self.color
@@ -89,11 +90,10 @@ WFCCollapsble = Collapsable[TileType, Tile]
 def get_grid(nodes: dict[Vector[int], Optional["Tile"]]):
     """Returns a grid-like representation of the nodes,
     arranged by their (x, y) positions."""
-    position = nodes
-    max_x = max(position, key=lambda x: x.x).x
-    min_x = min(position, key=lambda x: x.x).x
-    max_y = max(position, key=lambda x: x.y).y
-    min_y = min(position, key=lambda x: x.y).y
+
+    (v_min, v_max) = getBounds(list(nodes.keys()))
+    (min_x, min_y) = v_min.tuple_repr()
+    (max_x, max_y) = v_max.tuple_repr()
     grid = [[" " for _ in range(min_x, max_x + 1)] for _ in range(min_y, max_y + 1)]
 
     for position, cons in nodes.items():
@@ -288,7 +288,7 @@ def get_collapsable(tg: WFCCollapsble) -> Optional[Vector[int]]:
 
 
 def construct_Tile(tt: TileType):
-    return Tile(tt.value, tt)
+    return Tile(tt.value, tt, {})
     # TODO Example
 
 
