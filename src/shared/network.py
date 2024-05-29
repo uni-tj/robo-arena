@@ -50,6 +50,16 @@ class Network[Message]:
             self._clients[ip].put(packet)
         return sorted(arrived, key=lambda _: _[0])
 
+    def receive_one(self, ip: IpV4) -> None | Arrived[Message]:
+        """receive the oldest message for this ip"""
+        arrived = self.receive(ip)
+        if len(arrived) == 0:
+            return None
+        oldest, *other = arrived
+        for packet in other:
+            self._clients[ip].put(packet)
+        return oldest
+
 
 class Receiver[Message]:
     """Receiver is running constantly in seperate thread

@@ -39,8 +39,9 @@ logger = logging.getLogger(__name__)
 network = Network[EventType](0)
 logger.info("initialized network")
 
-Thread(target=lambda: Server(network, SERVER_IP)).start()
+server = Server(network, SERVER_IP)
+Thread(target=lambda: server.loop()).start()
 logger.info("started server")
 
 client = Client(network, 0x00000001)
-logger.info("started client")
+client.loop()
