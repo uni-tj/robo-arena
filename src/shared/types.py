@@ -7,6 +7,7 @@ from shared.time import Time
 from shared.network import IpV4
 
 type Acknoledgement = int
+INITIAL_ACKNOLEDGEMENT: Acknoledgement = -1
 type EntityId = int
 type ClientId = int
 
@@ -19,12 +20,18 @@ type Color = pygame.Color
 """Communication protocol
 """
 
-type ServerSubEventType = (
-    ServerConnectionConfirmEvent | ServerSpawnRobotEvent | ServerEntityEvent
+type ServerGameEventType = (ServerSpawnRobotEvent | ServerEntityEvent)
+type ServerEventType = (
+    ServerConnectionConfirmEvent
+    | ServerGameStartEvent
+    | ServerGameEvent[ServerGameEventType]
 )
-type ServerEventType = ServerEvent[ServerSubEventType]
-type ClientSubEventType = ClientConnectionRequestEvent | ClientInputEvent
-type ClientEventType = ClientEvent[ClientSubEventType]
+type ClientGameEventType = ClientInputEvent
+type ClientEventType = (
+    ClientConnectionRequestEvent
+    | ClientLobbyReadyEvent
+    | ClientGameEvent[ClientInputEvent]
+)
 type EventType = ServerEventType | ClientEventType
 
 
@@ -41,16 +48,20 @@ class Input:
 
 
 @dataclass(frozen=True)
-class ServerEvent[Evt]:
-    last_ack: Acknoledgement
-    event: Evt
+class ServerConnectionConfirmEvent:
+    client_id: ClientId
 
 
 @dataclass(frozen=True)
-class ServerConnectionConfirmEvent:
-    client_id: ClientId
+class ServerGameStartEvent:
     client_entity: EntityId
-    world: Iterable[ServerSubEventType]
+    entities: Iterable["ServerSpawnRobotEvent"]
+
+
+@dataclass(frozen=True)
+class ServerGameEvent[Evt]:
+    last_ack: Acknoledgement
+    event: Evt
 
 
 @dataclass(frozen=True)
@@ -62,7 +73,7 @@ class ServerEntityEvent:
 
 @dataclass(frozen=True)
 class ServerSpawnRobotEvent:
-    entity: EntityId
+    id: EntityId
     motion: Motion
     color: Color
 
@@ -70,23 +81,21 @@ class ServerSpawnRobotEvent:
 # Client to server events
 
 
-""" Set ClientEvent.client to this value when sending ConnectionRequest
-
-It will be ignored and the assigned id is send as ConnectionConfirm.client_id
-"""
-INITIAL_CLIENT_ID = -1
-
-
-@dataclass(frozen=True)
-class ClientEvent[Evt]:
-    ack: Acknoledgement
-    client: ClientId
-    event: Evt
-
-
 @dataclass(frozen=True)
 class ClientConnectionRequestEvent:
     ip: IpV4
+
+
+@dataclass(frozen=True)
+class ClientLobbyReadyEvent:
+    client_id: ClientId
+
+
+@dataclass(frozen=True)
+class ClientGameEvent[Evt]:
+    client_id: ClientId
+    ack: Acknoledgement
+    event: Evt
 
 
 @dataclass(frozen=True)
