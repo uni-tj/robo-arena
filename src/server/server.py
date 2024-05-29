@@ -13,6 +13,7 @@ from server.entity import (
 )
 from server.events import Dispatch, EventBuffer, EventName
 from shared.constants import SERVER_FRAMES_PER_TIMESTEP, SERVER_TIMESTEP
+from shared.game import GameState as SharedGameState
 from shared.network import IpV4, Network, Receiver
 from shared.time import Time, get_time
 from shared.types import (
@@ -72,7 +73,7 @@ class LobbyState:
         return {client_id: client.ip for client_id, client in self._clients.items()}
 
 
-class GameState:
+class GameState(SharedGameState):
     @dataclass
     class ClientInfo:
         ip: IpV4

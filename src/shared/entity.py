@@ -1,10 +1,15 @@
 from abc import ABC, abstractmethod
-import pygame
-from pygame import Surface, Vector2
+from typing import TYPE_CHECKING
 
-from shared.types import Input, Motion, Color, Position
-from shared.time import Time
+import pygame
+from pygame import Rect, Surface, Vector2
+
 from shared.rendering import px
+from shared.time import Time
+from shared.types import Color, Input, Motion, Position
+
+if TYPE_CHECKING:
+    from shared.game import GameState
 
 
 class Value[T](ABC):
@@ -14,6 +19,13 @@ class Value[T](ABC):
 
 
 class Entity(ABC):
+    _game: "GameState"
+    hitbox: Rect
+
+    def __init__(self, game: "GameState") -> None:
+        super().__init__()
+        self._game = game
+
     @abstractmethod
     def tick(self, dt: Time, t: Time): ...
 

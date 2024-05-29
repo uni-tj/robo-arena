@@ -1,17 +1,17 @@
-from typing import Callable
 from abc import ABC, abstractmethod
 from functools import partial
+from typing import Callable
 
-from shared.types import Input, Motion, Color
-from shared.time import Time
+from server.events import Dispatch, SimpleDispatch
 from shared.entity import (
-    Value,
-    PlayerRobotMoveCtx,
-    PlayerRobot,
-    EnemyRobotMoveCtx,
     EnemyRobot,
+    EnemyRobotMoveCtx,
+    PlayerRobot,
+    PlayerRobotMoveCtx,
+    Value,
 )
-from server.events import SimpleDispatch, Dispatch
+from shared.time import Time
+from shared.types import Color, Input, Motion
 
 
 class ActiveRemoteValue[T](Value[T]):
