@@ -1,3 +1,4 @@
+import logging
 from typing import Callable
 from abc import ABC, abstractmethod
 from bisect import insort_right
@@ -53,7 +54,7 @@ class PredictedValue[T, Ctx](Value[T]):
 
 
 class InterpolatedValue[T, Ctx](Value[T]):
-
+    _logger = logging.getLogger(f"{__name__}.InterpolatedValue")
     value: T
     interpolate: Callable[[T, T, float, Ctx], T]
     """snapshots of receiced time and data
@@ -73,7 +74,10 @@ class InterpolatedValue[T, Ctx](Value[T]):
         super().__init__()
         self.value = value
         self.interpolate = f
-        self.snapshots = deque([(last_ack, t, value)])
+        # display current value until a future value has buffered
+        self.snapshots = deque(
+            [(last_ack, t - SERVER_TIMESTEP, value), (last_ack, t, value)]
+        )
 
     def tick(self, t: Time, ctx: Ctx) -> None:
         interpolated_t = t - SERVER_TIMESTEP
@@ -85,7 +89,8 @@ class InterpolatedValue[T, Ctx](Value[T]):
         if self.snapshots[0][1] > interpolated_t:
             # only future snapshot available
             # this should not happen, since __init__ adds old snapshot
-            raise ValueError("interpolated value: only future snapshot")
+            self._logger.error(f"only future snapshot: {self.snapshots}")
+            raise ValueError(f"only future snapshot: {self.snapshots}")
 
         # now the first snapshot is in the past or present
         #     the rest (if any) are in the future
