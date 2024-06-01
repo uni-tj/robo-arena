@@ -1,26 +1,35 @@
-from dataclasses import dataclass
 from collections.abc import Iterable
-import pygame
-from pygame import Vector2
+from dataclasses import dataclass
+from typing import Optional
 
-from shared.time import Time
-from shared.network import IpV4
+import pygame
+
+from roboarena.server.level_generation.tile import Tile
+from roboarena.shared.block import Block
+from roboarena.shared.network import IpV4
+from roboarena.shared.time import Time
+from roboarena.shared.utils.vector import Vector
 
 type Acknoledgement = int
 INITIAL_ACKNOLEDGEMENT: Acknoledgement = -1
 type EntityId = int
 type ClientId = int
 
-type Position = Vector2
-type Orientation = Vector2
+type Position = Vector[float]
+type Orientation = Vector[float]
 type Motion = tuple[Position, Orientation]
 type Color = pygame.Color
+
+type TileMap = dict[Vector[int], Optional[Tile]]
+type Level = dict[Vector[int], Block]
 
 
 """Communication protocol
 """
 
-type ServerGameEventType = (ServerSpawnRobotEvent | ServerEntityEvent)
+type ServerGameEventType = (
+    ServerSpawnRobotEvent | ServerEntityEvent | ServerExtendLevelEvent
+)
 type ServerEventType = (
     ServerConnectionConfirmEvent
     | ServerGameStartEvent
@@ -56,6 +65,7 @@ class ServerConnectionConfirmEvent:
 class ServerGameStartEvent:
     client_entity: EntityId
     entities: Iterable["ServerSpawnRobotEvent"]
+    level: Level
 
 
 @dataclass(frozen=True)
@@ -76,6 +86,11 @@ class ServerSpawnRobotEvent:
     id: EntityId
     motion: Motion
     color: Color
+
+
+@dataclass(frozen=True)
+class ServerExtendLevelEvent:
+    level_diff: Level
 
 
 # Client to server events

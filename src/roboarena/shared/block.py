@@ -1,8 +1,11 @@
 from abc import ABC
 from dataclasses import dataclass
+from pathlib import Path
+
 from pygame import Surface, transform
-from position import Vector
-from render_ctx import RenderingCtx
+
+from roboarena.shared.rendering.render_ctx import RenderingCtx
+from roboarena.shared.utils.vector import Vector
 
 STANDARD_BLOCK_SIZE_PX = 50
 
@@ -20,6 +23,12 @@ class Block(ABC):
         ctx.screen.blit(
             transform.scale_by(self.texture, ctx.scale), corrected_block_pos_px
         )
+
+
+@dataclass(frozen=True)
+class BlockCtx(ABC):
+    graphics_path: Path
+    collision: bool
 
 
 class WallBlock(Block):

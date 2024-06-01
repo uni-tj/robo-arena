@@ -1,7 +1,8 @@
+from queue import Empty, Queue
 from threading import Lock, Thread
-from queue import Queue, Empty
-from shared.time import Time, get_time, add_seconds
-from shared.threading import Atom
+
+from roboarena.shared.custom_threading import Atom
+from roboarena.shared.time import Time, add_seconds, get_time
 
 type IpV4 = int
 """Time of arrival and message, internal type"""

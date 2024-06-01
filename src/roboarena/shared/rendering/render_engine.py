@@ -1,7 +1,7 @@
-from position import Vector
-from render_ctx import RenderingCtx
-from block import Block, voidBlock
-from entity import Entity
+from roboarena.shared.block import Block, voidBlock
+from roboarena.shared.entity import Entity
+from roboarena.shared.rendering.render_ctx import RenderingCtx
+from roboarena.shared.utils.vector import Vector
 
 type Level = dict[Vector[int], Block]
 type EntityId = int

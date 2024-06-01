@@ -1,17 +1,21 @@
 from abc import ABC, abstractmethod
 from functools import partial
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
-from server.events import Dispatch, SimpleDispatch
-from shared.entity import (
+from roboarena.server.events import Dispatch, SimpleDispatch
+from roboarena.shared.entity import (
     EnemyRobot,
     EnemyRobotMoveCtx,
+    Entity,
     PlayerRobot,
     PlayerRobotMoveCtx,
     Value,
 )
-from shared.time import Time
-from shared.types import Color, Input, Motion
+from roboarena.shared.time import Time
+from roboarena.shared.types import Color, Input, Motion
+
+if TYPE_CHECKING:
+    from roboarena.server.server import GameState
 
 
 class ActiveRemoteValue[T](Value[T]):
@@ -55,7 +59,7 @@ class CalculatedValue[T, Ctx](Value[T]):
         return self.value
 
 
-class ServerInputHandler(ABC):
+class ServerInputHandler(Entity, ABC):
     @abstractmethod
     def on_input(self, input: Input, dt: Time): ...
 
@@ -68,8 +72,13 @@ class ServerPlayerRobot(PlayerRobot, ServerInputHandler):
     color: ActiveRemoteValue[Color]
 
     def __init__(
-        self, motion: Motion, color: Color, dispatch: Dispatch[Motion | Color]
+        self,
+        game: "GameState",
+        motion: Motion,
+        color: Color,
+        dispatch: Dispatch[Motion | Color],
     ) -> None:
+        super().__init__(game)
         self.motion = CalculatedValue(motion, self.move, partial(dispatch, "motion"))  # type: ignore
         self.color = ActiveRemoteValue(color, partial(dispatch, "color"))  # type: ignore
 
@@ -85,9 +94,13 @@ class ServerEnemyRobot(EnemyRobot):
     color: ActiveRemoteValue[Color]
 
     def __init__(
-        self, motion: Motion, color: Color, dispatch: Dispatch[Motion | Color]
+        self,
+        game: "GameState",
+        motion: Motion,
+        color: Color,
+        dispatch: Dispatch[Motion | Color],
     ) -> None:
-        super().__init__(motion)
+        super().__init__(game, motion)
         self.motion = CalculatedValue(  # type: ignore
             motion, self.move, partial(dispatch, "motion")
         )

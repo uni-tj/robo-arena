@@ -15,15 +15,26 @@ class Vector[T: (int, float)]:
     ](self, o: "Vector[S]",) -> "Vector[float]":
         return Vector(self.x + o.x, self.y + o.y)
 
-    def __mul__[
-        S: (int, float)
-    ](self, o: "Vector[S]",) -> "Vector[float]":
-        return Vector(self.x * o.x, self.y * o.y)
-
     def __sub__[
         S: (int, float)
     ](self, o: "Vector[S]",) -> "Vector[float]":
         return Vector(self.x - o.x, self.y - o.y)
+
+    def __mul__[S: (int, float)](self, o: "Vector[S]" | S) -> "Vector[float]":
+        match o:
+            case Vector(x, y):
+                return Vector(self.x * x, self.y * y)
+            case _:
+                return Vector(self.x * o, self.y * o)
+
+    def __truediv__[
+        S: (int, float, "Vector[int]", "Vector[float]")
+    ](self, o: S) -> "Vector[float]":
+        match o:
+            case Vector(x, y):
+                return Vector(self.x / x, self.y / y)
+            case _:
+                return Vector(self.x / o, self.y / o)
 
     def apply_transform(self, f: Callable[[T], T] = lambda x: x):
         return Vector(f(self.x), f(self.y))
@@ -35,6 +46,10 @@ class Vector[T: (int, float)]:
 
     def tuple_repr(self) -> tuple[T, T]:
         return (self.x, self.y)
+
+    @staticmethod
+    def from_tuple[U: int | float](tup: tuple[U, U]) -> "Vector[U]":
+        return Vector(tup[0], tup[1])
 
     def vector2_repr(self) -> Vector2:
         return Vector2(self.x, self.y)
@@ -50,3 +65,15 @@ class Vector[T: (int, float)]:
 
     def floor(self) -> "Vector[int]":
         return self.apply_transform(math.floor)  # type: ignore
+
+    def round(self) -> "Vector[int]":
+        return self.apply_transform(round)  # type: ignore
+
+    def length(self) -> float:
+        return math.sqrt(self.x**2 + self.y**2)
+
+    def normalize(self) -> "Vector[float]":
+        return self / self.length()
+
+    def distance_to(self, to: "Vector[T]") -> float:
+        return (to - self).length()
