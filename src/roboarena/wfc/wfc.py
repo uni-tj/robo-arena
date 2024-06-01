@@ -31,10 +31,6 @@ class Tile:
 
 @dataclass
 class Collapsable[C, N]:
-    # neighbors: dict[
-    #     P, list[P]
-    # ]  # it is possible to remove this due to the rules of tiles which dictate which
-    # tiles are neighbored (allowing for more complex neighboring )
     constraints: dict[Vector[int], set[C]]
     nodes: dict[Vector[int], Optional[N]]
 
@@ -289,17 +285,16 @@ def get_collapsable(tg: WFCCollapsble) -> Optional[Vector[int]]:
 
 def construct_Tile(tt: TileType):
     return Tile(tt.value, tt, {})
-    # TODO Example
 
 
 def wave_function_collapse(
     tg: WFCCollapsble,
-    end_pred: Callable[[WFCCollapsble], bool],
+    expand_map: Callable[[WFCCollapsble], None],
     consttraint_map: ConstraintMap,
 ):
     selected_tile = get_collapsable(tg)
-
-    while selected_tile is not None and not end_pred(tg):
+    expand_map(tg)
+    while selected_tile is not None:
         pos_tiles: set[TileType] = tg.constraints[selected_tile]
         selected_type = random.choice(list(pos_tiles))
         propagate(tg, selected_tile, selected_type, consttraint_map)
