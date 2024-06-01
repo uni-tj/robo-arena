@@ -1,10 +1,11 @@
 import random
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable, Optional
-from roboarena.utils.vector import Vector, getBounds
-from roboarena.utils.utils import gen_coord_space
-from roboarena.rendering_interface import BlockCtx
+from typing import Optional
+
+from roboarena.server.level_generation.tile import Tile, TileType
+from roboarena.shared.util import gen_coord_space, getBounds
+from roboarena.shared.utils.vector import Vector
 
 
 class bcolors:
@@ -20,19 +21,9 @@ class bcolors:
 
 
 @dataclass
-class Tile:
-    color: str
-    type: "TileType"
-    graphics: dict[Vector[int], "BlockCtx"]
-
-    def __str__(self) -> str:
-        return self.color
-
-
-@dataclass
-class Collapsable[C, N]:
-    constraints: dict[Vector[int], set[C]]
-    nodes: dict[Vector[int], Optional[N]]
+class WfcCtx:
+    constraints: dict[Vector[int], set[TileType]]
+    nodes: dict[Vector[int], Optional[Tile]]
 
     def print_constraints(self):
         print_constraint_grid(self.constraints)
@@ -40,23 +31,10 @@ class Collapsable[C, N]:
     def print_nodes(self):
         print_grid(self.nodes)
 
-
-class TileType(Enum):
-    # R = "R"
-    # B = "B"
-    # C = "C"
-    H = "─"
-    V = "|"
-    C = "┼"
-    E = "├"
-    EI = "┤"
-    TI = "┴"
-    T = "┬"
-    # # N = "N"
-    # UL = "UL"
-    # UR = "UR"
-    # BL = "BL"
-    # BR = "BR"
+    def add_nodes(self, pos_list: list[Vector[int]], tl: set[TileType]) -> None:
+        for pos in pos_list:
+            self.constraints[pos] = tl
+            self.nodes[pos] = None
 
 
 # Switching from the user specified Constraint map to a less error prone variant that
@@ -80,7 +58,6 @@ Constraint = dict[Vector[int], set[TileType]]
 ConstraintMap = dict[TileType, Constraint]
 
 TL = set(x for x in TileType.__members__.values())
-WFCCollapsble = Collapsable[TileType, Tile]
 
 
 def get_grid(nodes: dict[Vector[int], Optional["Tile"]]):
@@ -171,69 +148,6 @@ ucm = [
     ),
 ]
 
-ucm = [
-    UserConstraint(
-        [Direction.RIGHT, Direction.LEFT],
-        TileType.H,
-        [TileType.H, TileType.C, TileType.E, TileType.EI, TileType.T, TileType.TI],
-    ),
-    UserConstraint(
-        [Direction.UP, Direction.DOWN],
-        TileType.V,
-        [TileType.V, TileType.C, TileType.E, TileType.EI, TileType.T, TileType.TI],
-    ),
-    UserConstraint(
-        [Direction.LEFT, Direction.RIGHT],
-        TileType.C,
-        [TileType.H, TileType.T, TileType.TI, TileType.C],
-    ),
-    UserConstraint(
-        [Direction.UP, Direction.DOWN],
-        TileType.C,
-        [TileType.V, TileType.E, TileType.EI, TileType.C],
-    ),
-    UserConstraint(
-        [Direction.UP],
-        TileType.C,
-        [TileType.T],
-    ),
-    UserConstraint(
-        [Direction.DOWN],
-        TileType.C,
-        [TileType.TI],
-    ),
-    UserConstraint(
-        [Direction.LEFT],
-        TileType.C,
-        [TileType.E],
-    ),
-    UserConstraint(
-        [Direction.RIGHT],
-        TileType.C,
-        [TileType.EI],
-    ),
-    UserConstraint(
-        [Direction.RIGHT, Direction.DOWN, Direction.UP],
-        TileType.E,
-        [TileType.V, TileType.C, TileType.T, TileType.TI],
-    ),
-    UserConstraint(
-        [Direction.LEFT, Direction.DOWN, Direction.UP],
-        TileType.EI,
-        [TileType.V, TileType.C, TileType.T, TileType.TI],
-    ),
-    UserConstraint(
-        [Direction.RIGHT, Direction.LEFT, Direction.DOWN],
-        TileType.T,
-        [TileType.H, TileType.C, TileType.E, TileType.EI, TileType.V, TileType.TI],
-    ),
-    UserConstraint(
-        [Direction.RIGHT, Direction.LEFT, Direction.UP],
-        TileType.TI,
-        [TileType.H, TileType.C, TileType.E, TileType.EI, TileType.V, TileType.T],
-    ),
-]
-
 
 def generate_constraint_map(ucm: UserConstraintList) -> ConstraintMap:
     # This function converts a UserConstraintList into a ConstraintMap that is usable
@@ -255,14 +169,14 @@ def generate_constraint_map(ucm: UserConstraintList) -> ConstraintMap:
                     for ntt in tiles:
                         if ntt not in cm:
                             cm[ntt] = {}
-                        idir = dir.value * Vector[int](-1, -1)
-                        if idir not in cm[ntt]:
+                        idir = (dir.value * Vector[int](-1, -1)).round()
+                        if idir.floor() not in cm[ntt]:
                             cm[ntt][idir] = set()
                         cm[ntt][idir] = cm[ntt][idir].union(set([tt]))
     return cm
 
 
-def get_collapsable(tg: WFCCollapsble) -> Optional[Vector[int]]:
+def get_collapsable(tg: WfcCtx) -> Optional[Vector[int]]:
     collapseable: dict[int, list[Vector[int]]] = {}
     min_constr = len(TL) + 1
 
@@ -288,12 +202,10 @@ def construct_Tile(tt: TileType):
 
 
 def wave_function_collapse(
-    tg: WFCCollapsble,
-    expand_map: Callable[[WFCCollapsble], None],
+    tg: WfcCtx,
     consttraint_map: ConstraintMap,
 ):
     selected_tile = get_collapsable(tg)
-    expand_map(tg)
     while selected_tile is not None:
         pos_tiles: set[TileType] = tg.constraints[selected_tile]
         selected_type = random.choice(list(pos_tiles))
@@ -302,9 +214,9 @@ def wave_function_collapse(
 
 
 def propagate(
-    tg: WFCCollapsble, pos: Vector[int], tt: TileType, constraints: ConstraintMap
+    tg: WfcCtx, pos: Vector[int], tt: TileType, constraints: ConstraintMap
 ) -> None:
-    # ! Mutates the tg WFCCollapsble in place
+    # ! Mutates the tg WfcCtx in place
     tg.constraints[pos] = set([tt])
     tg.nodes[pos] = construct_Tile(tt)
     old_map = tg.constraints
@@ -332,7 +244,7 @@ def calculate_neighbors(
     # calculate the possible Neighbortiles
     nl: list[tuple[TileType, Vector[int], Vector[int]]] = []
     for ntt, dir in cm:
-        npos = pos - dir
+        npos = (pos - dir).round()
         if npos not in map or ntt not in map[npos]:
             continue
         nl.append((ntt, npos, dir))
@@ -371,7 +283,7 @@ def propagate_neighbors(
         nttm[npos] = nttm[npos].union(cos_tt)
 
     # Unify the Constraints from all neigbors
-    for npos, tts in nttm.items():
+    for _, tts in nttm.items():
         curr_tt = curr_tt.intersection(tts)
     return curr_tt
 
@@ -391,8 +303,8 @@ def update_map(
     return new_cmap
 
 
-def init_collapsable(xsize: int, ysize: int) -> WFCCollapsble:
-    tg: WFCCollapsble = Collapsable(constraints={}, nodes={})
+def init_collapsable(xsize: int, ysize: int) -> WfcCtx:
+    tg: WfcCtx = WfcCtx(constraints={}, nodes={})
     coords = gen_coord_space(xsize, ysize)
     for coord in coords:
         tg.nodes[coord] = None
@@ -402,7 +314,7 @@ def init_collapsable(xsize: int, ysize: int) -> WFCCollapsble:
 
 def main():
     test_tg = init_collapsable(3, 3)
-    wave_function_collapse(test_tg, lambda x: False, generate_constraint_map(ucm))
+    wave_function_collapse(test_tg, generate_constraint_map(ucm))
     test_tg.print_nodes()
 
 

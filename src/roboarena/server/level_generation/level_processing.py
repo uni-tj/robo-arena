@@ -1,16 +1,16 @@
-import pygame.locals
-from roboarena.rendering_interface import Block, BlockCtx, Level, FloorBlock, WallBlock
-from roboarena.utils.vector import Vector, getBounds
-from typing import Optional
-from roboarena.wfc.wfc import TileType, Tile
 from pathlib import Path
+
 import pygame
+import pygame.locals
 
-type TileMap = dict[Vector[int], Optional[Tile]]
+from roboarena.shared.block import Block, BlockCtx, FloorBlock, WallBlock
+from roboarena.shared.types import Level, TileMap
+from roboarena.shared.util import getBounds
+from roboarena.shared.utils.vector import Vector
 
 
-def tilesmap2levelmap(tm: TileMap, tilesize: Vector[int]) -> Level:
-    (v_min, v_max) = getBounds(list(tm.keys()))
+def tilesmap2levelmap(tm: TileMap) -> Level:
+    (v_min, _) = getBounds(list(tm.keys()))
     # (min_x, min_y) = v_min.tuple_repr()
     # (max_x, max_y) = v_max.tuple_repr()
     level: Level = {}
@@ -22,7 +22,7 @@ def tilesmap2levelmap(tm: TileMap, tilesize: Vector[int]) -> Level:
                 of wave function collapse"""
             )
         for gcoord, bctx in tile.graphics.items():
-            bcoord = v_min + tcoord + gcoord
+            bcoord = (v_min + tcoord + gcoord).round()
             level[bcoord] = generateBlock(bctx, bl)
     return level
 
@@ -31,9 +31,9 @@ def generateBlock(bc: BlockCtx, bs: dict[BlockCtx, Block]) -> Block:
     if bc in bs:
         return bs[bc]
     if bc.collision:
-        return WallBlock(load_graphics(bc.graphics_path))
+        return WallBlock(load_graphics(bc.graphics_path), Vector(65, 50))
     else:
-        return FloorBlock(load_graphics(bc.graphics_path))
+        return FloorBlock(load_graphics(bc.graphics_path), Vector(65, 50))
 
 
 def load_graphics(gp: Path) -> pygame.Surface:

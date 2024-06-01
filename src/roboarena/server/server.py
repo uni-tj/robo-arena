@@ -2,21 +2,22 @@ import logging
 from dataclasses import dataclass
 from typing import Optional
 
-from pygame import Color, Vector2
+from pygame import Color
 from pygame.time import Clock
 
-from server.entity import (
+from roboarena.server.entity import (
     ServerEnemyRobot,
     ServerEntityType,
     ServerInputHandler,
     ServerPlayerRobot,
 )
-from server.events import Dispatch, EventBuffer, EventName
-from shared.constants import SERVER_FRAMES_PER_TIMESTEP, SERVER_TIMESTEP
-from shared.game import GameState as SharedGameState
-from shared.network import IpV4, Network, Receiver
-from shared.time import Time, get_time
-from shared.types import (
+from roboarena.server.events import Dispatch, EventBuffer, EventName
+from roboarena.server.level_generation.level_generator import LevelGenerator
+from roboarena.shared.constants import SERVER_FRAMES_PER_TIMESTEP, SERVER_TIMESTEP
+from roboarena.shared.game import GameState as SharedGameState
+from roboarena.shared.network import IpV4, Network, Receiver
+from roboarena.shared.time import Time, get_time
+from roboarena.shared.types import (
     INITIAL_ACKNOLEDGEMENT,
     Acknoledgement,
     ClientConnectionRequestEvent,
@@ -26,14 +27,17 @@ from shared.types import (
     ClientLobbyReadyEvent,
     EntityId,
     EventType,
+    Level,
     ServerConnectionConfirmEvent,
     ServerEntityEvent,
+    ServerExtendLevelEvent,
     ServerGameEvent,
     ServerGameEventType,
     ServerGameStartEvent,
     ServerSpawnRobotEvent,
 )
-from shared.util import gen_id
+from roboarena.shared.util import gen_id
+from roboarena.shared.utils.vector import Vector
 
 logger = logging.getLogger(__name__)
 
@@ -87,14 +91,20 @@ class GameState(SharedGameState):
     _clients: dict[ClientId, ClientInfo] = {}
     _entities: dict[EntityId, ServerEntityType] = {}
 
+    _level_generator: LevelGenerator
+
     def __init__(self, server: "Server", clients: dict[ClientId, IpV4]) -> None:
         self._server = server
 
         self._logger.debug(f"initialize with clients: {clients}")
 
+        self._level_generator = LevelGenerator()
+        # self.level = self._level_generator.get_level()
+        self.level = {}
         enemy_id = 0
         enemy = ServerEnemyRobot(
-            (Vector2(10, 1), Vector2(1, 0)),
+            self,
+            (Vector(10.0, 1.0), Vector(1.0, 0.0)),
             Color(255, 0, 0),
             self.dispatch_factory(None, enemy_id),
         )
@@ -129,7 +139,10 @@ class GameState(SharedGameState):
         spawn_events = [entity_as_event(i, e) for i, e in self._entities.items()]
         for client in self._clients.values():
             self._server.network.send(
-                client.ip, ServerGameStartEvent(client.entity_id, spawn_events)
+                client.ip,
+                ServerGameStartEvent(
+                    client.entity_id, spawn_events, {}
+                ),  # TODO Leveldiff
             )
 
     def dispatch_factory(
@@ -163,7 +176,8 @@ class GameState(SharedGameState):
     def gen_client_entity(self) -> tuple[EntityId, ServerPlayerRobot]:
         entity_id = gen_id(self._entities.keys())
         entity = ServerPlayerRobot(
-            (Vector2(10, 5), Vector2(1, 0)),
+            self,
+            (Vector(10.0, 5.0), Vector(1.0, 0.0)),
             Color(0, 255, 0),
             self.dispatch_factory(None, entity_id),
         )
@@ -182,6 +196,14 @@ class GameState(SharedGameState):
             # Each update is split into 3 frames to get more precise results
             for i in range(SERVER_FRAMES_PER_TIMESTEP):
                 t_frame = last_t + i * dt_frame
+
+                # level_diff = self._level_generator.extend_level(
+                #     client.entity.position for client in self._clients.values()
+                # )
+                level_diff: Level = {}
+                if len(level_diff) > 0:
+                    extend_level_evt = ServerExtendLevelEvent(level_diff)
+                    self.dispatch(None, f"extend-level/{t_frame}", extend_level_evt)
 
                 for t_msg, msg in self._server.receiver.received_until(t_frame):
                     self.handle(t_msg, msg)

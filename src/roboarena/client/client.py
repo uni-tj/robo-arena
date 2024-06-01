@@ -1,23 +1,27 @@
 import functools
 import logging
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Any
 
 import pygame
-from pygame import Surface
+from pygame import RESIZABLE, Surface, event
 from pygame.font import Font
 from pygame.time import Clock
 
-from client.entity import (
+from roboarena.client.entity import (
     ClientEnemyRobot,
     ClientEntityType,
     ClientInputHandler,
     ClientPlayerRobot,
 )
-from shared.constants import CLIENT_TIMESTEP, SERVER_IP
-from shared.network import Arrived, IpV4, Network
-from shared.time import Time, get_time
-from shared.types import (
+from roboarena.shared.constants import CLIENT_TIMESTEP, SERVER_IP
+from roboarena.shared.game import GameState as SharedGameState
+from roboarena.shared.network import Arrived, IpV4, Network
+from roboarena.shared.rendering.render_ctx import RenderingCtx
+from roboarena.shared.rendering.render_engine import RenderEngine
+from roboarena.shared.time import Time, get_time
+from roboarena.shared.types import (
     INITIAL_ACKNOLEDGEMENT,
     Acknoledgement,
     ClientConnectionRequestEvent,
@@ -31,11 +35,13 @@ from shared.types import (
     Input,
     ServerConnectionConfirmEvent,
     ServerEntityEvent,
+    ServerExtendLevelEvent,
     ServerGameEvent,
     ServerGameStartEvent,
     ServerSpawnRobotEvent,
 )
-from shared.util import counter
+from roboarena.shared.util import EventTarget, counter
+from roboarena.shared.utils.vector import Vector
 
 
 def unexpected_evt(expected: str, actual: Any) -> str:
@@ -117,7 +123,13 @@ class GameOverState:
             clock.tick(1 / CLIENT_TIMESTEP)
 
 
-class GameState:
+@dataclass(frozen=True)
+class ResizeEvent:
+    w: int
+    h: int
+
+
+class GameState(SharedGameState, EventTarget[ResizeEvent]):
     _logger = logging.getLogger(f"{__name__}.GameState")
     _client: "Client"
     _screen: Surface
@@ -125,8 +137,7 @@ class GameState:
     _client_id: ClientId
     _entity_id: EntityId
     _entity: ClientInputHandler
-
-    _entities: dict[EntityId, ClientEntityType] = {}
+    entities: dict[EntityId, ClientEntityType] = {}
 
     def __init__(
         self,
@@ -143,16 +154,18 @@ class GameState:
 
         self._logger.debug(f"initialize with t_start: {t_start}, start: {start}")
 
+        self.level = start.level
+
         for spawn in start.entities:
             if spawn.id != start.client_entity:
                 self.handle(t_start, ServerGameEvent(INITIAL_ACKNOLEDGEMENT, spawn))
                 continue
             # initialize client entity
-            entity = ClientPlayerRobot(spawn.motion, spawn.color)
-            self._entities[spawn.id] = entity
+            entity = ClientPlayerRobot(self, spawn.motion, spawn.color)
+            self.entities[spawn.id] = entity
             self._entity = entity
             self._logger.debug(f"intialized client entity: {self._entity}")
-        self._logger.debug(f"initialized all entities: {self._entities}")
+        self._logger.debug(f"initialized all entities: {self.entities}")
 
     def handle(self, t_msg: Time, msg: EventType):
         if not isinstance(msg, ServerGameEvent):
@@ -162,10 +175,12 @@ class GameState:
 
         match event:
             case ServerEntityEvent(id, name, payload):
-                self._entities[id].on_server(name, payload, msg.last_ack, t_msg)
+                self.entities[id].on_server(name, payload, msg.last_ack, t_msg)
             case ServerSpawnRobotEvent(id, motion, color):
-                entity = ClientEnemyRobot(motion, color, last_ack, t_msg)
-                self._entities[id] = entity
+                entity = ClientEnemyRobot(self, motion, color, last_ack, t_msg)
+                self.entities[id] = entity
+            case ServerExtendLevelEvent(level_diff):
+                self.level |= level_diff
 
     def dispatch(self, event: ClientGameEventType) -> Acknoledgement:
         ack = next(self._ack)
@@ -184,16 +199,15 @@ class GameState:
             action=keys[pygame.K_a],
         )
 
-    def render(self) -> None:
-        self._screen.fill("black")
-        for entity in self._entities.values():
-            entity.render(self._screen)
-        pygame.display.flip()
-
     def loop(self) -> None:
         self._logger.debug("Enterered loop")
         last_t = get_time()
         clock = Clock()
+        render_ctx = RenderingCtx(self._screen)
+        render_engine = RenderEngine()
+        self.add_event_listener(
+            ResizeEvent, lambda e: render_ctx.update_screen_dimensions(Vector(e.w, e.h))
+        )
 
         while True:
             # init frame
@@ -207,12 +221,23 @@ class GameState:
             ack = self.dispatch(ClientInputEvent(input, dt))
             self._entity.on_input(input, dt, ack)
 
-            for _, entity in self._entities.items():
+            for _, entity in self.entities.items():
                 entity.tick(dt, t)
 
+            # pygame event handling
+            for e in event.get():
+                match e.type:
+                    case pygame.QUIT:
+                        # TODO: implement
+                        continue
+                    case pygame.VIDEORESIZE:
+                        self.dispatch_event(ResizeEvent(e.w, e.h))
+                    case _:
+                        continue
+
             # rendering
-            pygame.event.pump()
-            self.render()
+            render_ctx.update_camera_position(self._entity.position)
+            render_engine.render_screen(render_ctx, self.level, self.entities)  # type: ignore
             self._logger.debug("Rendered")
 
             # cleanup frame
@@ -237,7 +262,7 @@ class Client:
 
     def loop(self) -> None:
         pygame.init()
-        screen = pygame.display.set_mode((1000, 1000))
+        screen = pygame.display.set_mode((1000, 1000), flags=RESIZABLE)
 
         MenuState(screen).loop()
 

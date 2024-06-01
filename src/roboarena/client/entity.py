@@ -1,22 +1,27 @@
 import logging
-from typing import Callable
 from abc import ABC, abstractmethod
 from bisect import insort_right
 from collections import deque
-from pygame import Vector2, Color
+from typing import TYPE_CHECKING, Callable
 
-from shared.types import Input, Motion, Acknoledgement
-from shared.time import Time
-from shared.constants import SERVER_TIMESTEP
-from shared.entity import (
-    Value,
-    PlayerRobotMoveCtx,
-    PlayerRobot,
+from pygame import Color
+
+from roboarena.server.events import EventName
+from roboarena.shared.constants import SERVER_TIMESTEP
+from roboarena.shared.entity import (
     EnemyRobot,
     Entity,
+    PlayerRobot,
+    PlayerRobotMoveCtx,
+    Value,
     interpolateMotion,
 )
-from server.events import EventName
+from roboarena.shared.time import Time
+from roboarena.shared.types import Acknoledgement, Input, Motion
+from roboarena.shared.utils.vector import Vector
+
+if TYPE_CHECKING:
+    from roboarena.client.client import GameState
 
 
 class PredictedValue[T, Ctx](Value[T]):
@@ -154,7 +159,7 @@ class PassiveRemoteValue[T](Value[T]):
         return self.value
 
 
-class ClientInputHandler(ABC):
+class ClientInputHandler(Entity, ABC):
     @abstractmethod
     def on_input(self, input: Input, dt: Time, ack: Acknoledgement): ...
 
@@ -178,7 +183,8 @@ class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
     motion: PredictedValue[Motion, PlayerRobotMoveCtx]
     color: PassiveRemoteValue[Color]
 
-    def __init__(self, motion: Motion, color: Color) -> None:
+    def __init__(self, game: "GameState", motion: Motion, color: Color) -> None:
+        super().__init__(game)
         self.motion = PredictedValue(motion, self.move)  # type: ignore
         self.color = PassiveRemoteValue(color)  # type: ignore
 
@@ -194,8 +200,10 @@ class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
         t_ack: Time,
     ):
         match event_name, event:
-            case "motion", tuple((Vector2(), Vector2()) as e):
-                self.motion.on_server(e, last_ack)
+            case "motion", tuple(
+                (Vector(float(), float()), Vector(float(), float())) as e  # type: ignore
+            ):
+                self.motion.on_server(e, last_ack)  # type: ignore
                 pass
             case "color", Color():
                 self.color.on_server(event)
@@ -211,8 +219,14 @@ class ClientEnemyRobot(EnemyRobot, ClientEntity):
     color: PassiveRemoteValue[Color]
 
     def __init__(
-        self, motion: Motion, color: Color, last_ack: Acknoledgement, t_ack: Time
+        self,
+        game: "GameState",
+        motion: Motion,
+        color: Color,
+        last_ack: Acknoledgement,
+        t_ack: Time,
     ) -> None:
+        super().__init__(game, motion)
         self.motion = InterpolatedValue(motion, last_ack, t_ack, interpolateMotion)  # type: ignore
         self.color = PassiveRemoteValue(color)  # type: ignore
 
@@ -224,12 +238,14 @@ class ClientEnemyRobot(EnemyRobot, ClientEntity):
         t_ack: Time,
     ):
         match event_name, event:
-            case "motion", tuple((Vector2(), Vector2()) as e):
-                self.motion.on_server(e, last_ack, t_ack)
+            case "motion", tuple(
+                (Vector(float(), float()), Vector(float(), float())) as e  # type: ignore
+            ):
+                self.motion.on_server(e, last_ack, t_ack)  # type: ignore
             case "color", Color():
                 self.color.on_server(event)
-            case _:
-                raise ValueError("entity: invalid event")
+            case n, e:
+                raise ValueError(f"entity: invalid event {n}={e}")
 
     def tick(self, dt: Time, t: Time):
         self.motion.tick(t, None)

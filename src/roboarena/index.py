@@ -2,12 +2,11 @@ import argparse
 import logging
 from threading import Thread
 
-from client.client import Client
-from server.server import Server
-from shared.constants import SERVER_IP
-from shared.network import Network
-from shared.types import EventType
-
+from roboarena.client.client import Client
+from roboarena.server.server import Server
+from roboarena.shared.constants import SERVER_IP
+from roboarena.shared.network import Network
+from roboarena.shared.types import EventType
 
 """ Command line argument parsing
 """

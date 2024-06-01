@@ -1,12 +1,13 @@
 from pygame import Surface
-from position import Vector
+
+from roboarena.shared.utils.vector import Vector
 
 # representing the upper left and lower right corners of the field of view
 type FieldOfView = tuple[Vector[int], Vector[int]]
 
 STANDARD_BLOCK_SIZE_PX = 50
 STANDARD_GU_PER_SCREEN = 15
-OVERLAP_FOV_GU = Vector(2, 2)
+OVERLAP_FOV_GU = Vector(2.0, 2.0)
 
 
 class RenderingCtx:
@@ -20,7 +21,7 @@ class RenderingCtx:
     def __init__(self, screen: Surface):
         self.screen = screen
         self.update_screen_dimensions(Vector(screen.get_width(), screen.get_height()))
-        self.update_camera_position(Vector(0, 0))
+        self.update_camera_position(Vector(0.0, 0.0))
 
     def update_camera_position(self, camera_position_gu: Vector[float]):
         self.camera_position_gu = camera_position_gu
