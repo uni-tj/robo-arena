@@ -1,3 +1,4 @@
+import logging
 from abc import ABC
 from collections.abc import Sequence
 
@@ -5,6 +6,8 @@ from pygame import Rect
 
 from roboarena.shared.entity import Entity
 from roboarena.shared.types import EntityId, Level
+
+logger = logging.getLogger(f"{__name__}")
 
 
 class GameState(ABC):

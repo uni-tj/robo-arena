@@ -1,3 +1,6 @@
+import logging
+
+import pygame
 from pygame import Surface
 
 from roboarena.shared.utils.vector import Vector
@@ -10,13 +13,16 @@ STANDARD_GU_PER_SCREEN = 15
 OVERLAP_FOV_GU = Vector(2.0, 2.0)
 
 
+# @dataclass(frozen=True)
 class RenderingCtx:
     screen: Surface
     screen_dimenions_px: Vector[int]
     camera_position_gu: Vector[float]
     fov: FieldOfView
     px_per_gu: int
-    scale: float
+    scale_factor: float
+    _scale_cache: dict[Surface, Surface] = {}
+    _logger = logging.getLogger(f"{__name__}.RenderingCtx")
 
     def __init__(self, screen: Surface):
         self.screen = screen
@@ -30,6 +36,7 @@ class RenderingCtx:
     def update_screen_dimensions(self, screen_dimensions_px: Vector[int]):
         self.screen_dimenions_px = screen_dimensions_px
         self.update_scale()
+        self._scale_cache = {}
 
     def update_fov(self) -> FieldOfView:
         center_to_corner_distance_gu: Vector[float] = (
@@ -50,4 +57,19 @@ class RenderingCtx:
 
     def update_scale(self):
         self.px_per_gu = self.screen_dimenions_px.x // STANDARD_GU_PER_SCREEN
-        self.scale = self.px_per_gu / STANDARD_BLOCK_SIZE_PX
+        self.scale_factor = self.px_per_gu / STANDARD_BLOCK_SIZE_PX
+
+    def scale_texture(self, surface: Surface) -> Surface:
+        cache_key = surface
+        if cache_key not in self._scale_cache:
+            self._logger.debug("texture cache miss")
+            self._scale_cache[cache_key] = pygame.transform.scale_by(
+                surface, self.scale_factor
+            ).convert()
+        return self._scale_cache[cache_key]
+
+    def scale_value[T: (int, float)](self, value: T) -> T:
+        return value * self.scale_factor  # type: ignore
+
+    def scale_vector(self, vector: Vector[float]) -> Vector[float]:
+        return vector * self.scale_factor
