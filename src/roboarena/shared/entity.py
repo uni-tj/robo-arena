@@ -1,7 +1,8 @@
+import logging
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from pygame import Rect, Surface, transform
+from pygame import Rect, Surface
 
 from roboarena.shared.rendering.render_ctx import FieldOfView, RenderingCtx
 from roboarena.shared.time import Time
@@ -10,6 +11,8 @@ from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
     from roboarena.shared.game import GameState
+
+logger = logging.getLogger(f"{__name__}")
 
 
 class Value[T](ABC):
@@ -49,13 +52,10 @@ class Entity(ABC):
         entity_pos_px: Vector[float] = ctx.screen_dimenions_px * Vector(0.5, 0.5) - (
             ctx.camera_position_gu - entity_pos_gu
         ) * Vector(ctx.px_per_gu, ctx.px_per_gu)
-        corrected_entity_pos_px: tuple[float, float] = (
-            entity_pos_px
-            - entity_dim_px * Vector(0.5, 0.5) * Vector(ctx.scale, ctx.scale)
+        corrected_entity_pos_px: tuple[float, float] = ctx.scale_vector(
+            entity_pos_px - entity_dim_px * 0.5
         ).tuple_repr()
-        ctx.screen.blit(
-            transform.scale_by(self.texture, ctx.scale), corrected_entity_pos_px
-        )
+        ctx.screen.blit(ctx.scale_texture(self.texture), corrected_entity_pos_px)
 
     @abstractmethod
     def tick(self, dt: Time, t: Time): ...
