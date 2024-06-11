@@ -1,47 +1,54 @@
 import logging
 
 from funcy import log_durations
-from pygame import display
+from pygame import Surface, display
 
 from roboarena.shared.block import Block, voidBlock
-from roboarena.shared.entity import Entity
-from roboarena.shared.rendering.render_ctx import RenderingCtx
+from roboarena.shared.rendering.render_ctx import RenderCtx
+from roboarena.shared.types import Entities, Level
 from roboarena.shared.utils.vector import Vector
 
-type Level = dict[Vector[int], Block]
-type EntityId = int
-type Entities = dict[EntityId, Entity]
+logger = logging.getLogger(f"{__name__}")
 
 logger = logging.getLogger(f"{__name__}")
 
 
 class RenderEngine:
 
+    ctx: RenderCtx
+
+    def __init__(self, screen: Surface) -> None:
+        self.ctx = RenderCtx(screen, Vector(0, 0), {})
+
     @log_durations(logger.debug, "render_screen: ", "ms")
     def render_screen(
-        self, ctx: RenderingCtx, level: Level, entities: Entities
+        self, level: Level, entities: Entities, player_pos_gu: Vector[float]
     ) -> None:
-        self.render_background(ctx, level)
-        self.render_entities(ctx, entities)
+        self.update_ctx(player_pos_gu)
+        self.render_background(level)
+        self.render_entities(entities)
         display.flip()
 
     # @log_durations(logger.debug, "render_background: ", "ms")
-    def render_background(self, ctx: RenderingCtx, level: Level) -> None:
-        ctx.screen.fill((0, 0, 0))
-        for y in range(ctx.fov[0].y, ctx.fov[1].y):
-            for x in range(ctx.fov[0].x, ctx.fov[1].x):
+    def render_background(self, level: Level) -> None:
+        self.ctx.screen.fill((0, 0, 0))
+        for y in range(self.ctx.fov[0].y, self.ctx.fov[1].y):
+            for x in range(self.ctx.fov[0].x, self.ctx.fov[1].x):
                 block: Block | None = level.get(Vector(x, y))
-                block_pos_px: Vector[float] = ctx.screen_dimenions_px * Vector(
+                block_pos_px: Vector[float] = self.ctx.screen_dimenions_px * Vector(
                     0.5, 0.5
-                ) - (ctx.camera_position_gu - Vector(x, y)) * Vector(
-                    ctx.px_per_gu, ctx.px_per_gu
+                ) - (self.ctx.camera_position_gu - Vector(x, y)) * Vector(
+                    self.ctx.px_per_gu, self.ctx.px_per_gu
                 )
                 if block:
-                    block.render_block(ctx, block_pos_px)
+                    block.render_block(self.ctx, block_pos_px)
                 else:
-                    voidBlock.render_block(ctx, block_pos_px)
+                    voidBlock.render_block(self.ctx, block_pos_px)
 
     # @log_durations(logger.debug, "render_entities: ", "ms")
-    def render_entities(self, ctx: RenderingCtx, entities: Entities) -> None:
+    def render_entities(self, entities: Entities) -> None:
         for entity in entities.values():
-            entity.render(ctx)
+            entity.render(self.ctx)
+
+    def update_ctx(self, player_pos_gu: Vector[float]) -> None:
+        self.ctx = RenderCtx(self.ctx.screen, player_pos_gu, self.ctx.get_scale_cache())
