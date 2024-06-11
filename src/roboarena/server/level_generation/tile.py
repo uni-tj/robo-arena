@@ -2,32 +2,28 @@ from dataclasses import dataclass
 from enum import Enum
 
 from roboarena.shared.block import BlockCtx
-from roboarena.shared.utils.vector import Vector
 
 
 @dataclass(frozen=True)
 class Tile:
-    color: str
     type: "TileType"
-    graphics: dict[Vector[int], "BlockCtx"]
+    blocks: list[list[BlockCtx]]
 
-    def __str__(self) -> str:
-        return self.color
+
+@dataclass(frozen=True)
+class BasicTile:
+    tt: "TileType"
 
 
 class TileType(Enum):
-    # R = "R"
-    # B = "B"
-    # C = "C"
-    H = "─"
-    V = "|"
     C = "┼"
-    E = "├"
-    EI = "┤"
     TI = "┴"
     T = "┬"
-    # # N = "N"
-    # UL = "UL"
-    # UR = "UR"
-    # BL = "BL"
-    # BR = "BR"
+    EI = "┤"
+    E = "├"
+    H = "─"
+    V = "│"
+
+
+# Unicode Symbols: Box Drawings Light
+# https://www.compart.com/de/unicode/search?q=Box+Drawings+Light#characters

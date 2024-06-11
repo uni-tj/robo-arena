@@ -36,6 +36,11 @@ class Vector[T: (int, float)]:
             case _:
                 return Vector(self.x / o, self.y / o)
 
+    def __floordiv__[
+        S: (int, float, "Vector[int]", "Vector[float]")
+    ](self, o: S) -> "Vector[int]":
+        return (self / o).floor()
+
     def apply_transform(self, f: Callable[[T], T] = lambda x: x):
         return Vector(f(self.x), f(self.y))
 

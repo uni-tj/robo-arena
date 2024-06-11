@@ -1,11 +1,19 @@
+import json
+import logging
 import random
+import time
 from dataclasses import dataclass
-from enum import Enum
 from typing import Optional
 
-from roboarena.server.level_generation.tile import Tile, TileType
+from funcy import log_durations
+
+# from roboarena.server.level_generation.level_config import UCM
+from roboarena.server.level_generation.tile import BasicTile, Tile, TileType
+from roboarena.shared.types import ConstraintMap, UserConstraint, UserConstraintList
 from roboarena.shared.util import gen_coord_space, getBounds
 from roboarena.shared.utils.vector import Vector
+
+logger = logging.getLogger(f"{__name__}")
 
 
 class bcolors:
@@ -20,10 +28,33 @@ class bcolors:
     UNDERLINE = "\033[4m"
 
 
+TL = set(x for x in TileType.__members__.values())
+
+
+def print_constraints_as_json(constraints: ConstraintMap):
+    constraints_dict = {
+        str(tile_types): [
+            [str(dir), list(map(lambda x: x.value, cons))]
+            for dir, cons in inner.items()
+        ]
+        for tile_types, inner in constraints.items()
+    }
+    print(json.dumps(constraints_dict, indent=2, ensure_ascii=False))
+
+
 @dataclass
 class WfcCtx:
     constraints: dict[Vector[int], set[TileType]]
-    nodes: dict[Vector[int], Optional[Tile]]
+    nodes: dict[Vector[int], Optional["BasicTile"]]
+    open_tiles: "ChangedTiles"
+
+    @log_durations(logger.critical, "init_square: ", "ms")
+    def init_square(self, xsize: int, ysize: int):
+        coords = gen_coord_space((0, xsize), (0, ysize))
+        for coord in coords:
+            self.nodes[coord] = None
+            self.constraints[coord] = TL
+            self.open_tiles.add(coord)
 
     def print_constraints(self):
         print_constraint_grid(self.constraints)
@@ -31,33 +62,24 @@ class WfcCtx:
     def print_nodes(self):
         print_grid(self.nodes)
 
-    def add_nodes(self, pos_list: list[Vector[int]], tl: set[TileType]) -> None:
+    def add_nodes(self, pos_list: list[Vector[int]], tl: set[TileType]) -> bool:
+        update = False
+        added_nodes: set[Vector[int]] = set()
         for pos in pos_list:
+            if pos in self.nodes:
+                continue
+            update = True
+            added_nodes.add(pos)
             self.constraints[pos] = tl
             self.nodes[pos] = None
+            self.open_tiles.add(pos)
+        if update:
+            print(added_nodes)
+        return update
 
 
 # Switching from the user specified Constraint map to a less error prone variant that
 # is not directional
-class Direction(Enum):
-    UP = Vector[int](0, -1)
-    DOWN = Vector[int](0, 1)
-    LEFT = Vector[int](-1, 0)
-    RIGHT = Vector[int](1, 0)
-
-
-@dataclass(frozen=True)
-class UserConstraint:
-    direction: list[Direction]
-    tt: TileType
-    tiles: list[TileType]
-
-
-UserConstraintList = list[UserConstraint]
-Constraint = dict[Vector[int], set[TileType]]
-ConstraintMap = dict[TileType, Constraint]
-
-TL = set(x for x in TileType.__members__.values())
 
 
 def get_grid(nodes: dict[Vector[int], Optional["Tile"]]):
@@ -90,7 +112,7 @@ def get_constraint_grid(constraints: dict[Vector[int], set["TileType"]]):
     return grid
 
 
-def print_grid(nodes: dict[Vector[int], Optional["Tile"]]):
+def print_grid(nodes: dict[Vector[int], Optional["BasicTile"]]):
     print("\n".join(map(lambda x: "".join(x), get_grid(nodes))))
 
 
@@ -105,58 +127,14 @@ def print_constraint_grid(constraints: dict[Vector[int], set["TileType"]]):
     print("\n".join(grid))
 
 
-ucm = [
-    UserConstraint(
-        [Direction.LEFT, Direction.RIGHT],
-        TileType.C,
-        [TileType.H, TileType.T, TileType.TI, TileType.C],
-    ),
-    UserConstraint(
-        [Direction.UP, Direction.DOWN],
-        TileType.C,
-        [TileType.V, TileType.E, TileType.EI, TileType.C],
-    ),
-    UserConstraint(
-        [Direction.UP],
-        TileType.C,
-        [TileType.T],
-    ),
-    UserConstraint(
-        [Direction.DOWN],
-        TileType.C,
-        [TileType.TI],
-    ),
-    UserConstraint(
-        [Direction.LEFT],
-        TileType.C,
-        [TileType.E],
-    ),
-    UserConstraint(
-        [Direction.RIGHT],
-        TileType.C,
-        [TileType.EI],
-    ),
-    UserConstraint(
-        [Direction.LEFT, Direction.RIGHT],
-        TileType.H,
-        [TileType.H, TileType.T, TileType.TI, TileType.C],
-    ),
-    UserConstraint(
-        [Direction.UP, Direction.DOWN],
-        TileType.V,
-        [TileType.V, TileType.E, TileType.EI, TileType.C],
-    ),
-]
-
-
 def generate_constraint_map(ucm: UserConstraintList) -> ConstraintMap:
     # This function converts a UserConstraintList into a ConstraintMap that is usable
     # for internal ease of use
     cm: ConstraintMap = {}
     for const in ucm:
         match const:
-            case UserConstraint(dirs, tt, tiles):
-                for dir in dirs:
+            case UserConstraint(tt, constrs):
+                for dir, tiles in constrs.items():
                     # Update all  outgoing tiles
                     if tt not in cm:
                         cm[tt] = {}
@@ -176,6 +154,7 @@ def generate_constraint_map(ucm: UserConstraintList) -> ConstraintMap:
     return cm
 
 
+# @log_durations(logger.critical, "getCollapsable: ", "ms")
 def get_collapsable(tg: WfcCtx) -> Optional[Vector[int]]:
     collapseable: dict[int, list[Vector[int]]] = {}
     min_constr = len(TL) + 1
@@ -185,6 +164,8 @@ def get_collapsable(tg: WfcCtx) -> Optional[Vector[int]]:
             continue
 
         num_constraints = len(tg.constraints[pos])
+        if num_constraints == 0:
+            continue
         if num_constraints < min_constr:
             min_constr = num_constraints
             collapseable = {min_constr: [pos]}
@@ -197,22 +178,37 @@ def get_collapsable(tg: WfcCtx) -> Optional[Vector[int]]:
     return random.choice(collapseable[min_constr])
 
 
-def construct_Tile(tt: TileType):
-    return Tile(tt.value, tt, {})
+def construct_Tile(tt: TileType) -> BasicTile:
+    return BasicTile(tt)
 
 
+# @log_durations(logger.critical, "wfc: ", "ms")
 def wave_function_collapse(
     tg: WfcCtx,
     consttraint_map: ConstraintMap,
 ):
     selected_tile = get_collapsable(tg)
-    while selected_tile is not None:
+
+    num_iter = 0
+    pat = 0
+    cat = 0
+    end_pred = all(map(lambda x: x is not None, tg.nodes.values()))
+    while selected_tile is not None and not end_pred:
+        num_iter += 1
         pos_tiles: set[TileType] = tg.constraints[selected_tile]
         selected_type = random.choice(list(pos_tiles))
+        t0 = time.time()
         propagate(tg, selected_tile, selected_type, consttraint_map)
+        pat += time.time() - t0
+        t1 = time.time()
         selected_tile = get_collapsable(tg)
+        cat += time.time() - t1
+    print(
+        f"{bcolors.WARNING}pat: {pat*1000}, cat: {cat*1000},  Num Iterations: {num_iter} {bcolors.ENDC}"
+    )
 
 
+# @log_durations(logger.critical, "propagate: ", "ms")
 def propagate(
     tg: WfcCtx, pos: Vector[int], tt: TileType, constraints: ConstraintMap
 ) -> None:
@@ -221,23 +217,29 @@ def propagate(
     tg.nodes[pos] = construct_Tile(tt)
     old_map = tg.constraints
     new_map = {}
+    tg.open_tiles.remove(pos)
     # Propagate Information until the map doesn't change
-    while new_map != old_map:
-        res = update_map(
-            old_map, tg.nodes, constraints, generate_neighbors_map(constraints)
+    while new_map != old_map and len(tg.open_tiles) > 0:  # and not len(cnt) == 0:
+        res, _ = update_map(
+            old_map,
+            tg.nodes,
+            constraints,
+            generate_neighbors_map(constraints),
+            tg.open_tiles,
         )
         if new_map != {}:
             old_map = new_map
 
         new_map = res
-    print(bcolors.FAIL + "Finsihed iteration" + bcolors.ENDC)
+    # print(bcolors.FAIL + "Finsihed iteration" + bcolors.ENDC)
     tg.constraints = new_map
-    tg.print_constraints()
+    # tg.print_constraints()
 
 
 neighbors_map = list[tuple[TileType, Vector[int]]]
 
 
+# @log_durations(logger.critical, "calculate_neighbors: ", "ms")
 def calculate_neighbors(
     map: dict[Vector[int], set[TileType]], pos: Vector[int], cm: neighbors_map
 ) -> list[tuple[TileType, Vector[int], Vector[int]]]:
@@ -251,6 +253,7 @@ def calculate_neighbors(
     return nl
 
 
+# @log_durations(logger.critical, "generate_neighbors_map: ", "ms")
 def generate_neighbors_map(cm: ConstraintMap) -> neighbors_map:
     res: neighbors_map = []
     for ntt, consts in cm.items():
@@ -259,12 +262,16 @@ def generate_neighbors_map(cm: ConstraintMap) -> neighbors_map:
     return res
 
 
+type ChangedTiles = set[Vector[int]]
+
+
+# @log_durations(logger.critical, "propagate_neighbors: ", "ms")
 def propagate_neighbors(
     cmap: dict[Vector[int], set[TileType]],
     pos: Vector[int],
     cm: ConstraintMap,
     nm: neighbors_map,
-) -> set[TileType]:
+) -> tuple[set[TileType], ChangedTiles]:
     # Update the Tile at position pos to be constrained by the neighboring tiles
     curr_tt = TL
     nl: list[tuple[TileType, Vector[int], Vector[int]]] = calculate_neighbors(
@@ -273,51 +280,84 @@ def propagate_neighbors(
     nttm: dict[Vector[int], set[TileType]] = {}
 
     # Update the implied constraints resulting from possible neighbor tiles
+    # restrictors: dict[str, list[tuple[str, list[str]]]] = {}
     for ntt, npos, ndir in nl:
+        # if str(npos) not in restrictors:
+        #     restrictors[str(npos)] = []
         if ntt not in cmap[npos]:
             continue
         if npos not in nttm:
             nttm[npos] = set()
 
         cos_tt = cm[ntt][ndir]
+        # restrictors[str(npos)].append((str(ntt), list(map(lambda x: str(x), cos_tt))))
         nttm[npos] = nttm[npos].union(cos_tt)
-
     # Unify the Constraints from all neigbors
-    for _, tts in nttm.items():
-        curr_tt = curr_tt.intersection(tts)
-    return curr_tt
+    changed_neighbors: set[Vector[int]] = set(nttm.keys())
+    # logger.critical(f" changed_neig{changed_neighbors}")
+    # for npos, tts in nttm.items():
+    #     curr_tt = curr_tt.intersection(tts)
+    #     changed_neighbors.add(npos)
+    curr_tt.intersection(*nttm.values())
+    # changed_neighbors = set(nttm.keys())
+    # if curr_tt == set():
+    # print(json.dumps(restrictors, indent=2))
+    # print_constraints_as_json(cm)
+    return curr_tt, changed_neighbors
 
 
+# @log_durations(logger.critical, "update_map: ", "ms")
 def update_map(
     cmap: dict[Vector[int], set[TileType]],
-    nmap: dict[Vector[int], Optional[Tile]],
+    nmap: dict[Vector[int], Optional[BasicTile]],
     cm: ConstraintMap,
     nm: neighbors_map,
-) -> dict[Vector[int], set[TileType]]:
+    ct: ChangedTiles,
+) -> tuple[dict[Vector[int], set[TileType]], ChangedTiles]:
     new_cmap: dict[Vector[int], set[TileType]] = dict()
-    for pos in cmap.keys():
+    apt = 0
+    # print_constraint_grid(cmap)
+    # print_grid(nmap)
+    i = 0
+    cnt: ChangedTiles = set()
+    for pos in ct:
+        # print(pos)
         if nmap[pos] is not None:
             new_cmap[pos] = cmap[pos]
+            _, ctt = propagate_neighbors(cmap, pos, cm, nm)
+            cnt = cnt.union(ctt)
+            # logger.critical(f" Nmap[pos]: {nmap[pos]}")
             continue
-        new_cmap[pos] = propagate_neighbors(cmap, pos, cm, nm)
-    return new_cmap
+        t0 = time.time()
+        i += 1
+        new_cmap[pos], cct = propagate_neighbors(cmap, pos, cm, nm)
+        cnt = cnt.union(cct)
+
+        # print(f"cnt {cnt} cnt")
+        apt += time.time() - t0
+    # print(cnt)
+    logger.critical(f"apt,i  {apt} {i}")
+    # input()
+    return new_cmap, cnt
 
 
 def init_collapsable(xsize: int, ysize: int) -> WfcCtx:
     tg: WfcCtx = WfcCtx(constraints={}, nodes={})
-    coords = gen_coord_space(xsize, ysize)
+    coords = gen_coord_space((0, xsize), (0, ysize))
     for coord in coords:
         tg.nodes[coord] = None
         tg.constraints[coord] = TL
     return tg
 
 
-def main():
-    test_tg = init_collapsable(3, 3)
-    wave_function_collapse(test_tg, generate_constraint_map(ucm))
-    test_tg.print_nodes()
+# def main():
+#     ucm = UCM
+#     test_tg = init_collapsable(10, 10)
+#     # print_constraints_as_json(generate_constraint_map(ucm))
+#     wave_function_collapse(test_tg, generate_constraint_map(ucm))
+#     # test_tg.print_nodes()
 
 
-if __name__ == "__main__":
-    print(generate_constraint_map(ucm))
-    main()
+# if __name__ == "__main__":
+
+#     main()

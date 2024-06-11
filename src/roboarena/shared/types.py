@@ -1,10 +1,11 @@
 from collections.abc import Iterable
 from dataclasses import dataclass
+from enum import Enum
 from typing import TYPE_CHECKING, Optional
 
 import pygame
 
-from roboarena.server.level_generation.tile import Tile
+from roboarena.server.level_generation.tile import BasicTile, TileType
 from roboarena.shared.network import IpV4
 from roboarena.shared.time import Time
 from roboarena.shared.utils.vector import Vector
@@ -23,7 +24,26 @@ type Orientation = Vector[float]
 type Motion = tuple[Position, Orientation]
 type Color = pygame.Color
 
-type TileMap = dict[Vector[int], Optional[Tile]]
+
+class Direction(Enum):
+    UP = Vector[int](0, -1)
+    DOWN = Vector[int](0, 1)
+    LEFT = Vector[int](-1, 0)
+    RIGHT = Vector[int](1, 0)
+
+
+@dataclass(frozen=True)
+class UserConstraint:
+    tt: TileType
+    tiles: dict[Direction, list[TileType]]
+
+
+UserConstraintList = list[UserConstraint]
+Constraint = dict[Vector[int], set[TileType]]
+ConstraintMap = dict[TileType, Constraint]
+
+
+type TileMap = dict[Vector[int], Optional[BasicTile]]
 type Level = dict[Vector[int], "Block"]
 
 type Entities = dict[EntityId, "Entity"]
