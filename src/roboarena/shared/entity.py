@@ -4,13 +4,16 @@ from typing import TYPE_CHECKING
 
 from pygame import Rect, Surface
 
-from roboarena.shared.rendering.render_ctx import FieldOfView, RenderingCtx
 from roboarena.shared.time import Time
 from roboarena.shared.types import Color, Input, Motion, Position
 from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
     from roboarena.shared.game import GameState
+    from roboarena.shared.rendering.render_ctx import RenderCtx
+    from roboarena.shared.types import FieldOfView
+
+logger = logging.getLogger(f"{__name__}")
 
 logger = logging.getLogger(f"{__name__}")
 
@@ -34,7 +37,7 @@ class Entity(ABC):
     @abstractmethod
     def position(self) -> Position: ...
 
-    def visible_in_fov(self, fov: FieldOfView) -> bool:
+    def visible_in_fov(self, fov: "FieldOfView") -> bool:
         position = self.position
         return (
             position.x >= fov[0].x
@@ -43,7 +46,7 @@ class Entity(ABC):
             and position.y <= fov[1].y
         )
 
-    def render(self, ctx: RenderingCtx) -> None:
+    def render(self, ctx: "RenderCtx") -> None:
         if not self.visible_in_fov(ctx.fov):
             return
 
@@ -52,8 +55,8 @@ class Entity(ABC):
         entity_pos_px: Vector[float] = ctx.screen_dimenions_px * Vector(0.5, 0.5) - (
             ctx.camera_position_gu - entity_pos_gu
         ) * Vector(ctx.px_per_gu, ctx.px_per_gu)
-        corrected_entity_pos_px: tuple[float, float] = ctx.scale_vector(
-            entity_pos_px - entity_dim_px * 0.5
+        corrected_entity_pos_px: tuple[float, float] = (
+            entity_pos_px - ctx.scale_vector(entity_dim_px * 0.5)
         ).tuple_repr()
         ctx.screen.blit(ctx.scale_texture(self.texture), corrected_entity_pos_px)
 

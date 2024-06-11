@@ -1,14 +1,17 @@
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import pygame
 
 from roboarena.server.level_generation.tile import Tile
-from roboarena.shared.block import Block
 from roboarena.shared.network import IpV4
 from roboarena.shared.time import Time
 from roboarena.shared.utils.vector import Vector
+
+if TYPE_CHECKING:
+    from roboarena.shared.block import Block
+    from roboarena.shared.entity import Entity
 
 type Acknoledgement = int
 INITIAL_ACKNOLEDGEMENT: Acknoledgement = -1
@@ -21,7 +24,11 @@ type Motion = tuple[Position, Orientation]
 type Color = pygame.Color
 
 type TileMap = dict[Vector[int], Optional[Tile]]
-type Level = dict[Vector[int], Block]
+type Level = dict[Vector[int], "Block"]
+
+type Entities = dict[EntityId, "Entity"]
+
+type FieldOfView = tuple[Vector[int], Vector[int]]
 
 
 """Communication protocol

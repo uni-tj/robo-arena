@@ -1,7 +1,6 @@
 import functools
 import logging
 from collections.abc import Sequence
-from dataclasses import dataclass
 from typing import Any
 
 import pygame
@@ -18,7 +17,6 @@ from roboarena.client.entity import (
 from roboarena.shared.constants import CLIENT_TIMESTEP, SERVER_IP
 from roboarena.shared.game import GameState as SharedGameState
 from roboarena.shared.network import Arrived, IpV4, Network
-from roboarena.shared.rendering.render_ctx import RenderingCtx
 from roboarena.shared.rendering.render_engine import RenderEngine
 from roboarena.shared.time import Time, get_time
 from roboarena.shared.types import (
@@ -40,8 +38,7 @@ from roboarena.shared.types import (
     ServerGameStartEvent,
     ServerSpawnRobotEvent,
 )
-from roboarena.shared.util import EventTarget, counter
-from roboarena.shared.utils.vector import Vector
+from roboarena.shared.util import counter
 
 
 def unexpected_evt(expected: str, actual: Any) -> str:
@@ -123,13 +120,7 @@ class GameOverState:
             clock.tick(1 / CLIENT_TIMESTEP)
 
 
-@dataclass(frozen=True)
-class ResizeEvent:
-    w: int
-    h: int
-
-
-class GameState(SharedGameState, EventTarget[ResizeEvent]):
+class GameState(SharedGameState):
     _logger = logging.getLogger(f"{__name__}.GameState")
     _client: "Client"
     _screen: Surface
@@ -203,11 +194,7 @@ class GameState(SharedGameState, EventTarget[ResizeEvent]):
         self._logger.debug("Enterered loop")
         last_t = get_time()
         clock = Clock()
-        render_ctx = RenderingCtx(self._screen)
-        render_engine = RenderEngine()
-        self.add_event_listener(
-            ResizeEvent, lambda e: render_ctx.update_screen_dimensions(Vector(e.w, e.h))
-        )
+        render_engine = RenderEngine(self._screen)
 
         while True:
             # init frame
@@ -230,14 +217,11 @@ class GameState(SharedGameState, EventTarget[ResizeEvent]):
                     case pygame.QUIT:
                         # TODO: implement
                         continue
-                    case pygame.VIDEORESIZE:
-                        self.dispatch_event(ResizeEvent(e.w, e.h))
                     case _:
                         continue
 
             # rendering
-            render_ctx.update_camera_position(self._entity.position)
-            render_engine.render_screen(render_ctx, self.level, self.entities)  # type: ignore
+            render_engine.render_screen(self.level, self.entities, self._entity.position)  # type: ignore # noqa: B950
             self._logger.debug("Rendered")
 
             # cleanup frame
