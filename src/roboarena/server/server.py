@@ -28,7 +28,6 @@ from roboarena.shared.types import (
     ClientLobbyReadyEvent,
     EntityId,
     EventType,
-    Level,
     ServerConnectionConfirmEvent,
     ServerEntityEvent,
     ServerExtendLevelEvent,
@@ -107,8 +106,7 @@ class GameState(SharedGameState):
         self._logger.debug(f"initialize with clients: {clients}")
 
         self._level_generator = LevelGenerator()
-        # self.level = self._level_generator.get_level()
-        self.level = {}
+        self.level = self._level_generator.get_level()
         enemy_id = 0
         enemy = ServerEnemyRobot(
             self,
@@ -149,7 +147,7 @@ class GameState(SharedGameState):
             self._server.network.send(
                 client.ip,
                 ServerGameStartEvent(
-                    client.entity_id, spawn_events, {}
+                    client.entity_id, spawn_events, self.level
                 ),  # TODO Leveldiff
             )
 
@@ -208,10 +206,9 @@ class GameState(SharedGameState):
             for i in range(SERVER_FRAMES_PER_TIMESTEP):
                 t_frame = last_t + i * dt_frame
 
-                # level_diff = self._level_generator.extend_level(
-                #     client.entity.position for client in self._clients.values()
-                # )
-                level_diff: Level = {}
+                level_diff = self._level_generator.extend_level(
+                    [client.entity.position for client in self._clients.values()]
+                )
                 if len(level_diff) > 0:
                     extend_level_evt = ServerExtendLevelEvent(level_diff)
                     self.dispatch(None, f"extend-level/{t_frame}", extend_level_evt)

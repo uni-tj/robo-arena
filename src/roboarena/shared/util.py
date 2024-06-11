@@ -29,11 +29,13 @@ def counter():
         next += 1
 
 
-def gen_coord_space(xsize: int, ysize: int) -> list[Vector[int]]:
+def gen_coord_space(
+    xsize: tuple[int, int], ysize: tuple[int, int]
+) -> list[Vector[int]]:
     vects = []
-    lnx = np.linspace(0, xsize - 1, xsize)  # type: ignore
-    lny = np.linspace(0, ysize - 1, ysize)  # type: ignore
-    coords = np.array(np.meshgrid(lnx, lny)).ravel("F").reshape(-1, 2).astype(int)
+    lnx = np.linspace(xsize[0], xsize[1] - 1, xsize[1] - xsize[0])  # type: ignore
+    lny = np.linspace(ysize[0], ysize[1] - 1, ysize[1] - ysize[0])  # type: ignore
+    coords = np.array(np.meshgrid(lnx, lny)).ravel("F").reshape(-1, 2).astype(int)  # type: ignore
 
     def toVect2(x) -> Vector:  # type: ignore
         return Vector(x[0], x[1])  # type: ignore
