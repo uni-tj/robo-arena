@@ -204,7 +204,7 @@ def wave_function_collapse(
         selected_tile = get_collapsable(tg)
         cat += time.time() - t1
     print(
-        f"{bcolors.WARNING}pat: {pat*1000}, cat: {cat*1000},  Num Iterations: {num_iter} {bcolors.ENDC}"
+        f"{bcolors.WARNING}pat: {pat*1000}, cat: {cat*1000},  Num Iterations: {num_iter} {bcolors.ENDC}"  # noqa: B950
     )
 
 
