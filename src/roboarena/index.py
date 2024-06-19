@@ -46,7 +46,7 @@ server_thread.start()
 logger.info("started server")
 
 client = Client(network, 0x00000001)
-client.events.add_event_listener(QuitEvent, lambda e: stopAll(client, server))
+client.events.add_listener(QuitEvent, lambda e: stopAll(client, server))
 client.loop()
 logger.info("stopped client")
 

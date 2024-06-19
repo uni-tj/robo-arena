@@ -8,25 +8,38 @@ from pygame import RESIZABLE, Surface, event
 from pygame.font import Font
 from pygame.time import Clock
 
-from roboarena.client.entity import (ClientEnemyRobot, ClientEntityType,
-                                     ClientInputHandler, ClientPlayerRobot)
+from roboarena.client.entity import (
+    ClientEnemyRobot,
+    ClientEntityType,
+    ClientInputHandler,
+    ClientPlayerRobot,
+)
 from roboarena.shared.constants import CLIENT_TIMESTEP, SERVER_IP
 from roboarena.shared.custom_threading import Atom
 from roboarena.shared.game import GameState as SharedGameState
 from roboarena.shared.network import Arrived, IpV4, Network
 from roboarena.shared.rendering.render_engine import RenderEngine
 from roboarena.shared.time import Time, get_time
-from roboarena.shared.types import (INITIAL_ACKNOLEDGEMENT, Acknoledgement,
-                                    ClientConnectionRequestEvent,
-                                    ClientGameEvent, ClientGameEventType,
-                                    ClientId, ClientInputEvent,
-                                    ClientLobbyReadyEvent, EntityId, EventType,
-                                    Input, ServerConnectionConfirmEvent,
-                                    ServerEntityEvent, ServerExtendLevelEvent,
-                                    ServerGameEvent, ServerGameStartEvent,
-                                    ServerSpawnRobotEvent)
-from roboarena.shared.util import (Counter, EventTarget, Stoppable, Stopped,
-                                   counter)
+from roboarena.shared.types import (
+    INITIAL_ACKNOLEDGEMENT,
+    Acknoledgement,
+    ClientConnectionRequestEvent,
+    ClientGameEvent,
+    ClientGameEventType,
+    ClientId,
+    ClientInputEvent,
+    ClientLobbyReadyEvent,
+    EntityId,
+    EventType,
+    Input,
+    ServerConnectionConfirmEvent,
+    ServerEntityEvent,
+    ServerExtendLevelEvent,
+    ServerGameEvent,
+    ServerGameStartEvent,
+    ServerSpawnRobotEvent,
+)
+from roboarena.shared.util import Counter, EventTarget, Stoppable, Stopped, counter
 from roboarena.shared.utils.vector import Vector
 
 
@@ -225,7 +238,7 @@ class GameState(SharedGameState):
             for e in event.get():
                 match e.type:
                     case pygame.QUIT:
-                        self.events.dispatch_event(QuitEvent())
+                        self.events.dispatch(QuitEvent())
                     case _:
                         continue
 
@@ -303,7 +316,7 @@ class Client(Stoppable):
         self._logger.info("Started game")
 
         game_state = GameState(self, screen, client_id, start[0], start[1])
-        game_state.events.add_event_listener(QuitEvent, self.events.dispatch_event)
+        game_state.events.add_listener(QuitEvent, self.events.dispatch)
         return game_state.loop()
 
     def stop(self) -> None:

@@ -64,6 +64,13 @@ def getBounds(position: list[Vector[int]]) -> tuple[Vector[int], Vector[int]]:
 
 
 class EventTarget[Evt]:
+    """Class for emiting and listening to events.
+
+    Event handlers are called synchronousely.
+
+    Inheriting from this class is discouraged. Rather keep it as property `events`.
+    """
+
     _logger = logging.getLogger(f"{__name__}.EventTarget")
     """Dict from reference to original listener to internal listener"""
     _listeners: dict[Callable[[Any], None], Callable[[Evt], None]]
@@ -71,17 +78,17 @@ class EventTarget[Evt]:
     def __init__(self) -> None:
         self._listeners = {}
 
-    def add_event_listener[S](self, typ: type[S], listener: Callable[[S], None]):
+    def add_listener[S](self, typ: type[S], listener: Callable[[S], None]):
         def _listener(e: Evt):
             if isinstance(e, typ):
                 listener(e)
 
         self._listeners[listener] = _listener
 
-    def remove_event_listener(self, listener: Callable[[Evt], None]):
+    def remove_listener(self, listener: Callable[[Evt], None]):
         del self._listeners[listener]
 
-    def dispatch_event(self, event: Evt) -> None:
+    def dispatch(self, event: Evt) -> None:
         for listener in self._listeners.values():
             listener(event)
 
