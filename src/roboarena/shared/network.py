@@ -3,6 +3,7 @@ from threading import Lock, Thread
 
 from roboarena.shared.custom_threading import Atom
 from roboarena.shared.time import Time, add_seconds, get_time
+from roboarena.shared.util import Stoppable, Stopped
 
 type IpV4 = int
 """Time of arrival and message, internal type"""
@@ -62,7 +63,7 @@ class Network[Message]:
         return oldest
 
 
-class Receiver[Message]:
+class Receiver[Message](Stoppable):
     """Receiver is running constantly in seperate thread
 
     Enables messages to be tagged with exact time of arrival
@@ -71,15 +72,12 @@ class Receiver[Message]:
     _network: Network[Message]
     _ip: IpV4
     _received: Queue[Arrived[Message]] = Queue()
-    _deleted: Atom[bool] = Atom(False)
+    stopped = Atom(False)
 
     def __init__(self, network: Network[Message], ip: IpV4) -> None:
         self._network = network
         self._ip = ip
         Thread(target=self._receive_loop, args=()).start()
-
-    def __del__(self) -> None:
-        self._deleted.set(True)
 
     def received(self) -> list[Arrived[Message]]:
         """Get all messages arrived since last call"""
@@ -108,9 +106,14 @@ class Receiver[Message]:
             self._received.put(msg)
         return sorted(received, key=lambda _: _[0])
 
-    def _receive_loop(self):
+    def _receive_loop(self) -> Stopped:
         """[internal] receive messages and tag with exact receive time"""
-        while not self._deleted.get():
+        while True:
+            if self.stopped.get():
+                return Stopped()
             messages = self._network.receive(self._ip)
             for msg in messages:
                 self._received.put(msg)
+
+    def stop(self) -> None:
+        self.stopped.set(True)

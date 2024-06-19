@@ -8,42 +8,34 @@ from pygame import RESIZABLE, Surface, event
 from pygame.font import Font
 from pygame.time import Clock
 
-from roboarena.client.entity import (
-    ClientEnemyRobot,
-    ClientEntityType,
-    ClientInputHandler,
-    ClientPlayerRobot,
-)
+from roboarena.client.entity import (ClientEnemyRobot, ClientEntityType,
+                                     ClientInputHandler, ClientPlayerRobot)
 from roboarena.shared.constants import CLIENT_TIMESTEP, SERVER_IP
+from roboarena.shared.custom_threading import Atom
 from roboarena.shared.game import GameState as SharedGameState
 from roboarena.shared.network import Arrived, IpV4, Network
 from roboarena.shared.rendering.render_engine import RenderEngine
 from roboarena.shared.time import Time, get_time
-from roboarena.shared.types import (
-    INITIAL_ACKNOLEDGEMENT,
-    Acknoledgement,
-    ClientConnectionRequestEvent,
-    ClientGameEvent,
-    ClientGameEventType,
-    ClientId,
-    ClientInputEvent,
-    ClientLobbyReadyEvent,
-    EntityId,
-    EventType,
-    Input,
-    ServerConnectionConfirmEvent,
-    ServerEntityEvent,
-    ServerExtendLevelEvent,
-    ServerGameEvent,
-    ServerGameStartEvent,
-    ServerSpawnRobotEvent,
-)
-from roboarena.shared.util import counter
+from roboarena.shared.types import (INITIAL_ACKNOLEDGEMENT, Acknoledgement,
+                                    ClientConnectionRequestEvent,
+                                    ClientGameEvent, ClientGameEventType,
+                                    ClientId, ClientInputEvent,
+                                    ClientLobbyReadyEvent, EntityId, EventType,
+                                    Input, ServerConnectionConfirmEvent,
+                                    ServerEntityEvent, ServerExtendLevelEvent,
+                                    ServerGameEvent, ServerGameStartEvent,
+                                    ServerSpawnRobotEvent)
+from roboarena.shared.util import (Counter, EventTarget, Stoppable, Stopped,
+                                   counter)
 from roboarena.shared.utils.vector import Vector
 
 
 def unexpected_evt(expected: str, actual: Any) -> str:
     return f"Unexpected event. Expected {expected}, got {actual}"
+
+
+class QuitEvent:
+    pass
 
 
 @functools.lru_cache(typed=True)
@@ -55,10 +47,12 @@ def setup_font() -> Font:
 
 class MenuState:
     _logger = logging.getLogger(f"{__name__}.MenuState")
+    _client: "Client"
     _screen: Surface
     _font: Font
 
-    def __init__(self, screen: Surface) -> None:
+    def __init__(self, client: "Client", screen: Surface) -> None:
+        self._client = client
         self._screen = screen
         self._font = setup_font()
 
@@ -89,10 +83,12 @@ class MenuState:
 
 class GameOverState:
     _logger = logging.getLogger(f"{__name__}.GameOverState")
+    _client: "Client"
     _screen: Surface
     _font: Font
 
-    def __init__(self, screen: Surface) -> None:
+    def __init__(self, client: "Client", screen: Surface) -> None:
+        self._client = client
         self._screen = screen
         self._font = setup_font()
 
@@ -102,10 +98,12 @@ class GameOverState:
         self._screen.blit(text, (0, 0))
         pygame.display.flip()
 
-    def loop(self) -> None:
+    def loop(self) -> Stopped | None:
         self._logger.debug("Entered loop")
         clock = Clock()
         while True:
+            if self._client.stopped.get():
+                return Stopped()
             keys = pygame.key.get_pressed()
             if (
                 keys[pygame.K_RIGHT]
@@ -125,11 +123,12 @@ class GameState(SharedGameState):
     _logger = logging.getLogger(f"{__name__}.GameState")
     _client: "Client"
     _screen: Surface
-    _ack = counter()
+    _ack: Counter
     _client_id: ClientId
     _entity_id: EntityId
     _entity: ClientInputHandler
-    entities: dict[EntityId, ClientEntityType] = {}
+    entities: dict[EntityId, ClientEntityType]
+    events: EventTarget[QuitEvent]
 
     def __init__(
         self,
@@ -141,8 +140,11 @@ class GameState(SharedGameState):
     ) -> None:
         self._client = client
         self._screen = screen
+        self._ack = counter()
         self._client_id = client_id
         self._entity_id = start.client_entity
+        self.entities = {}
+        self.events = EventTarget()
 
         self._logger.debug(f"initialize with t_start: {t_start}, start: {start}")
 
@@ -195,13 +197,16 @@ class GameState(SharedGameState):
             mouse=renderer.screen2gu_vector(Vector.from_tuple(mouse_pos)),
         )
 
-    def loop(self) -> None:
+    def loop(self) -> Stopped:
         self._logger.debug("Enterered loop")
         last_t = get_time()
         clock = Clock()
         render_engine = RenderEngine(self._screen)
 
         while True:
+            if self._client.stopped.get():
+                return Stopped()
+
             # init frame
             t = get_time()
             dt = t - last_t
@@ -220,8 +225,7 @@ class GameState(SharedGameState):
             for e in event.get():
                 match e.type:
                     case pygame.QUIT:
-                        # TODO: implement
-                        continue
+                        self.events.dispatch_event(QuitEvent())
                     case _:
                         continue
 
@@ -234,14 +238,18 @@ class GameState(SharedGameState):
             clock.tick(1 / CLIENT_TIMESTEP)
 
 
-class Client:
+class Client(Stoppable):
     _logger = logging.getLogger(f"{__name__}/Client")
     ip: IpV4
     network: Network[EventType]
+    stopped: Atom[bool]
+    events: EventTarget[QuitEvent]
 
     def __init__(self, network: Network[EventType], ip: IpV4):
         self.ip = ip
         self.network = network
+        self.stopped = Atom(False)
+        self.events = EventTarget()
 
     def dispatch(self, event: EventType) -> None:
         self.network.send(SERVER_IP, event)
@@ -249,16 +257,20 @@ class Client:
     def receive(self) -> Sequence[Arrived[EventType]]:
         return self.network.receive(self.ip)
 
-    def loop(self) -> None:
+    def loop(self) -> Stopped:
         pygame.init()
         screen = pygame.display.set_mode((1000, 1000), flags=RESIZABLE)
 
-        MenuState(screen).loop()
+        menu_result = MenuState(self, screen).loop()
+        if isinstance(menu_result, Stopped):
+            return Stopped()
 
         self.dispatch(ClientConnectionRequestEvent(self.ip))
         # wait for connection confirmation
         client_id: None | ClientId = None
         while client_id is None:
+            if self.stopped.get():
+                return Stopped()
             arrived = self.network.receive_one(self.ip)
             if arrived is None:
                 continue
@@ -276,6 +288,8 @@ class Client:
         # wait for game start
         start: None | Arrived[ServerGameStartEvent] = None
         while start is None:
+            if self.stopped.get():
+                return Stopped()
             arrived = self.network.receive_one(self.ip)
             if arrived is None:
                 continue
@@ -288,4 +302,9 @@ class Client:
             start = t_msg, msg
         self._logger.info("Started game")
 
-        GameState(self, screen, client_id, start[0], start[1]).loop()
+        game_state = GameState(self, screen, client_id, start[0], start[1])
+        game_state.events.add_event_listener(QuitEvent, self.events.dispatch_event)
+        return game_state.loop()
+
+    def stop(self) -> None:
+        return self.stopped.set(True)

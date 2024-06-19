@@ -1,6 +1,9 @@
+import logging
+from abc import ABC, abstractmethod
 from collections.abc import Iterable
+from dataclasses import dataclass
 from random import getrandbits
-from typing import Any, Callable
+from typing import Any, Callable, Generator, NoReturn
 
 import numpy as np
 
@@ -14,6 +17,9 @@ def gen_id(ids: Iterable[int]) -> int:
         if next_id in ids:
             continue
         return next_id
+
+
+type Counter = Generator[int, Any, NoReturn]
 
 
 def counter():
@@ -58,7 +64,12 @@ def getBounds(position: list[Vector[int]]) -> tuple[Vector[int], Vector[int]]:
 
 
 class EventTarget[Evt]:
-    _listeners: dict[Callable[[Any], None], Callable[[Evt], None]] = {}
+    _logger = logging.getLogger(f"{__name__}.EventTarget")
+    """Dict from reference to original listener to internal listener"""
+    _listeners: dict[Callable[[Any], None], Callable[[Evt], None]]
+
+    def __init__(self) -> None:
+        self._listeners = {}
 
     def add_event_listener[S](self, typ: type[S], listener: Callable[[S], None]):
         def _listener(e: Evt):
@@ -71,5 +82,22 @@ class EventTarget[Evt]:
         del self._listeners[listener]
 
     def dispatch_event(self, event: Evt) -> None:
-        for listener in self._listeners:
+        for listener in self._listeners.values():
             listener(event)
+
+
+class Stoppable(ABC):
+    """Interface for objects supporting being stopped from another thread"""
+
+    @abstractmethod
+    def stop(self) -> None: ...
+
+
+def stopAll(*stoppables: Stoppable) -> None:
+    for stoppable in stoppables:
+        stoppable.stop()
+
+
+@dataclass(frozen=True)
+class Stopped:
+    pass

@@ -2,11 +2,12 @@ import argparse
 import logging
 from threading import Thread
 
-from roboarena.client.client import Client
+from roboarena.client.client import Client, QuitEvent
 from roboarena.server.server import Server
 from roboarena.shared.constants import SERVER_IP
 from roboarena.shared.network import Network
 from roboarena.shared.types import EventType
+from roboarena.shared.util import stopAll
 
 """ Command line argument parsing
 """
@@ -30,7 +31,8 @@ args = arg_parser.parse_args()
 
 loglevel = args.loglevel.upper()
 if args.logfile:
-    logging.basicConfig(filename=args.logfile, level=loglevel)
+    logfile = args.logfile[0]
+    logging.basicConfig(filename=logfile, level=loglevel)
 else:
     logging.basicConfig(level=loglevel)
 logger = logging.getLogger(__name__)
@@ -39,8 +41,14 @@ network = Network[EventType](0)
 logger.info("initialized network")
 
 server = Server(network, SERVER_IP)
-Thread(target=lambda: server.loop()).start()
+server_thread = Thread(target=lambda: server.loop())
+server_thread.start()
 logger.info("started server")
 
 client = Client(network, 0x00000001)
+client.events.add_event_listener(QuitEvent, lambda e: stopAll(client, server))
 client.loop()
+logger.info("stopped client")
+
+server_thread.join()
+logger.info("stoppped server")
