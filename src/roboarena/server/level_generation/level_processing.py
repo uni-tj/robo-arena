@@ -4,7 +4,6 @@ import pygame
 import pygame.locals
 
 from roboarena.server.level_generation.tile import Tile
-from roboarena.server.level_generation.wfc import BasicTile
 from roboarena.shared.block import Block, BlockCtx, FloorBlock, WallBlock
 from roboarena.shared.types import Level, TileMap, TileType
 from roboarena.shared.util import getBounds
@@ -136,6 +135,5 @@ TM = {
 }
 
 
-def convert_Tile(bt: BasicTile) -> Tile:
-    tt = bt.tt
-    return TM[tt]
+def convert_Tile(bt: TileType) -> Tile:
+    return TM[bt]
