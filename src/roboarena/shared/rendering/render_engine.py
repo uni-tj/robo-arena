@@ -1,6 +1,5 @@
 import logging
 
-from funcy import log_durations
 from pygame import Surface, display
 
 from roboarena.shared.block import Block, voidBlock
@@ -20,7 +19,7 @@ class RenderEngine:
     def __init__(self, screen: Surface) -> None:
         self.ctx = RenderCtx(screen, Vector(0, 0), {})
 
-    @log_durations(logger.debug, "render_screen: ", "ms")
+    # @log_durations(logger.debug, "render_screen: ", "ms")
     def render_screen(
         self, level: Level, entities: Entities, player_pos_gu: Vector[float]
     ) -> None:

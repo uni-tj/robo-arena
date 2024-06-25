@@ -82,7 +82,7 @@ class MenuState:
 
             pygame.event.pump()
             self.render()
-            self._logger.debug("Rendered")
+            # self._logger.debug("Rendered")
             clock.tick(1 / CLIENT_TIMESTEP)
 
 
@@ -116,7 +116,7 @@ class GameOverState:
 
             pygame.event.pump()
             self.render()
-            self._logger.debug("Rendered")
+            # self._logger.debug("Rendered")
             clock.tick(1 / CLIENT_TIMESTEP)
 
 
@@ -222,7 +222,7 @@ class GameState(SharedGameState):
 
             # rendering
             render_engine.render_screen(self.level, self.entities, self._entity.position)  # type: ignore # noqa: B950
-            self._logger.debug("Rendered")
+            # self._logger.debug("Rendered")
 
             # cleanup frame
             last_t = t

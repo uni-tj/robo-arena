@@ -42,7 +42,7 @@ class RenderCtx:
     def update_camera_position(self, camera_position_gu: Vector[float]):
         self.camera_position_gu = camera_position_gu
         self.fov = self.update_fov()
-        logging.info(f"fov: {self.fov}")
+        # logging.info(f"fov: {self.fov}")
 
     def update_screen_dimensions(self):
         self.screen_dimenions_px = Vector(
@@ -75,7 +75,7 @@ class RenderCtx:
     def scale_texture(self, surface: Surface) -> Surface:
         cache_key = surface
         if cache_key not in self._scale_cache:
-            self._logger.debug("texture cache miss")
+            # self._logger.debug("texture cache miss")
             self._scale_cache[cache_key] = pygame.transform.scale_by(
                 surface, self.scale_factor
             ).convert()
