@@ -11,14 +11,22 @@ class Vector[T: (int, float)]:
     y: T
 
     def __add__[
-        S: (int, float)
-    ](self, o: "Vector[S]",) -> "Vector[float]":
-        return Vector(self.x + o.x, self.y + o.y)
+        S: (int, float, "Vector[int]", "Vector[float]")
+    ](self, o: S) -> "Vector[float]":
+        match o:
+            case Vector(x, y):
+                return Vector(self.x + x, self.y + y)
+            case _:
+                return Vector(self.x + o, self.y + o)
 
     def __sub__[
-        S: (int, float)
-    ](self, o: "Vector[S]",) -> "Vector[float]":
-        return Vector(self.x - o.x, self.y - o.y)
+        S: (int, float, "Vector[int]", "Vector[float]")
+    ](self, o: S) -> "Vector[float]":
+        match o:
+            case Vector(x, y):
+                return Vector(self.x - x, self.y - y)
+            case _:
+                return Vector(self.x - o, self.y - o)
 
     def __mul__[S: (int, float)](self, o: "Vector[S]" | S) -> "Vector[float]":
         match o:
@@ -48,7 +56,7 @@ class Vector[T: (int, float)]:
         return (self.x, self.y)
 
     @staticmethod
-    def from_tuple[U: int | float](tup: tuple[U, U]) -> "Vector[U]":
+    def from_tuple[U: (int, float)](tup: tuple[U, U]) -> "Vector[U]":
         return Vector(tup[0], tup[1])
 
     def vector2_repr(self) -> Vector2:
@@ -76,4 +84,4 @@ class Vector[T: (int, float)]:
         return self / self.length()
 
     def distance_to(self, to: "Vector[T]") -> float:
-        return (to - self).length()
+        return (to - self).length()  # type: ignore

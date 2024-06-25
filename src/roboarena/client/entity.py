@@ -4,6 +4,7 @@ from bisect import insort_right
 from collections import deque
 from typing import TYPE_CHECKING, Callable
 
+import pygame
 from pygame import Color
 
 from roboarena.server.events import EventName
@@ -17,11 +18,12 @@ from roboarena.shared.entity import (
     interpolateMotion,
 )
 from roboarena.shared.time import Time
-from roboarena.shared.types import Acknoledgement, Input, Motion
+from roboarena.shared.types import Acknoledgement, Input, Motion, Position
 from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
     from roboarena.client.client import GameState
+    from roboarena.shared.rendering.render_ctx import RenderCtx
 
 
 class PredictedValue[T, Ctx](Value[T]):
@@ -182,14 +184,17 @@ type ClientEntityType = ClientPlayerRobot | ClientEnemyRobot
 class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
     motion: PredictedValue[Motion, PlayerRobotMoveCtx]
     color: PassiveRemoteValue[Color]
+    aim: Position
 
     def __init__(self, game: "GameState", motion: Motion, color: Color) -> None:
         super().__init__(game)
         self.motion = PredictedValue(motion, self.move)  # type: ignore
         self.color = PassiveRemoteValue(color)  # type: ignore
+        self.aim = Vector(0, 0)
 
     def on_input(self, input: Input, dt: Time, ack: Acknoledgement):
         self.motion.on_input((input, dt), ack)
+        self.aim = input.mouse
         pass
 
     def on_server(
@@ -212,6 +217,13 @@ class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
 
     def tick(self, dt: Time, t: Time):
         pass
+
+    def render(self, ctx: "RenderCtx") -> None:
+        super().render(ctx)
+        # render crosshair
+        r = 10
+        center = ctx.gu2screen_vector(self.aim)
+        pygame.draw.circle(ctx.screen, "orange", center.tuple_repr(), r)
 
 
 class ClientEnemyRobot(EnemyRobot, ClientEntity):

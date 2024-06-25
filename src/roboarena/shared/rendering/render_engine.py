@@ -19,6 +19,9 @@ class RenderEngine:
     def __init__(self, screen: Surface) -> None:
         self.ctx = RenderCtx(screen, Vector(0, 0), {})
 
+    def screen2gu_vector(self, vector_px: Vector[int]) -> Vector[float]:
+        return self.ctx.screen2gu_vector(vector_px)
+
     # @log_durations(logger.debug, "render_screen: ", "ms")
     def render_screen(
         self, level: Level, entities: Entities, player_pos_gu: Vector[float]

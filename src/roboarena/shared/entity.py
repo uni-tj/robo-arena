@@ -79,6 +79,7 @@ playerRobotTexture.fill("green")
 
 
 class PlayerRobot(Entity):
+    _logger = logging.getLogger(f"{__name__}.PlayerRobot")
     motion: Value[Motion]
     color: Value[Color]
     texture = playerRobotTexture

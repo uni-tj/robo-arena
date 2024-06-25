@@ -87,5 +87,17 @@ class RenderCtx:
     def scale_vector(self, vector: Vector[float]) -> Vector[float]:
         return vector * self.scale_factor
 
+    def gu2screen_vector(self, vector: Vector[float]) -> Vector[int]:
+        screen_center_px = self.screen_dimenions_px / 2
+        # vector relative to camera position
+        vector_rel_gu = vector - self.camera_position_gu
+        return (vector_rel_gu * self.px_per_gu + screen_center_px).floor()
+
+    def screen2gu_vector(self, vector_px: Vector[int]) -> Vector[float]:
+        screen_center_px = self.screen_dimenions_px / 2
+        # vector relative to camera position
+        vector_rel_gu = (vector_px - screen_center_px) / self.px_per_gu
+        return vector_rel_gu + self.camera_position_gu
+
     def get_scale_cache(self) -> dict[Surface, Surface]:
         return self._scale_cache

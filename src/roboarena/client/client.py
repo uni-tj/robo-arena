@@ -39,6 +39,7 @@ from roboarena.shared.types import (
     ServerSpawnRobotEvent,
 )
 from roboarena.shared.util import counter
+from roboarena.shared.utils.vector import Vector
 
 
 def unexpected_evt(expected: str, actual: Any) -> str:
@@ -180,14 +181,18 @@ class GameState(SharedGameState):
         )
         return ack
 
-    def get_input(self):
+    def get_input(self, renderer: RenderEngine):
         keys = pygame.key.get_pressed()
+        (mouse_1, _, mouse_3) = pygame.mouse.get_pressed()
+        mouse_pos = pygame.mouse.get_pos()
         return Input(
             move_right=keys[pygame.K_RIGHT],
             move_down=keys[pygame.K_DOWN],
             move_left=keys[pygame.K_LEFT],
             move_up=keys[pygame.K_UP],
-            action=keys[pygame.K_a],
+            primary=mouse_1,
+            secondary=mouse_3,
+            mouse=renderer.screen2gu_vector(Vector.from_tuple(mouse_pos)),
         )
 
     def loop(self) -> None:
@@ -204,7 +209,7 @@ class GameState(SharedGameState):
             for t_msg, msg in self._client.receive():
                 self.handle(t_msg, msg)
 
-            input = self.get_input()
+            input = self.get_input(render_engine)
             ack = self.dispatch(ClientInputEvent(input, dt))
             self._entity.on_input(input, dt, ack)
 

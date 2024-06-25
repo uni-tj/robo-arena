@@ -57,7 +57,10 @@ class Input:
     move_down: bool
     move_left: bool
     move_up: bool
-    action: bool
+
+    primary: bool
+    secondary: bool
+    mouse: Position
 
 
 # Server to client events
