@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass
 from random import getrandbits
-from typing import Any, Callable, Generator, NoReturn
+from typing import Any, Callable, Generator, NoReturn, Tuple
 
 import numpy as np
 import pygame
@@ -74,6 +74,21 @@ def getBounds(position: list[Vector[int]]) -> tuple[Vector[int], Vector[int]]:
     max_y = max(position, key=lambda x: x.y).y
     min_y = min(position, key=lambda x: x.y).y
     return (Vector(min_x, min_y), Vector(max_x, max_y))
+
+
+def gradientRect(
+    window: pygame.Surface,
+    left_colour: Tuple[int, int, int],
+    right_colour: Tuple[int, int, int],
+    target_rect: pygame.Rect,
+):
+    colour_rect = pygame.Surface((2, 2))
+    pygame.draw.line(colour_rect, left_colour, (0, 0), (1, 0))
+    pygame.draw.line(colour_rect, right_colour, (0, 1), (1, 1))
+    colour_rect: pygame.Surface = pygame.transform.smoothscale(
+        colour_rect, target_rect.size
+    )
+    window.blit(colour_rect, target_rect)
 
 
 class EventTarget[Evt]:

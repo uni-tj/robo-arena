@@ -1,5 +1,6 @@
 import logging
 import time
+from abc import ABC
 from collections import deque
 from dataclasses import dataclass, field
 from functools import cache, cached_property
@@ -17,6 +18,7 @@ from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
     from roboarena.client.client import GameState
+    from roboarena.client.menu.menu import Menu
 
 logger = logging.getLogger(f"{__name__}")
 
@@ -122,7 +124,7 @@ class RenderCtx:
             self._logger.debug(f"texture cache miss: {cache_key}")
             self._scale_cache[cache_key] = pygame.transform.scale(
                 surface, self.gu2px(size).to_tuple()
-            ).convert()
+            ).convert_alpha()
         return self._scale_cache[cache_key]
 
     def px2gu(self, vector_px: Vector[int]) -> Vector[float]:
@@ -130,19 +132,22 @@ class RenderCtx:
 
     def screen2gu(self, vector: Vector[int]) -> Vector[float]:
         return self.px2gu(vector - self.screen_center_px) + self.camera_position_gu  # type: ignore (subtracting two ints is int not float)
+    
+    def pct2px(self, vector_pct: Vector[int]) -> Vector[float]:
+        return (self.screen_size_px * vector_pct / 100)
 
 
-class Renderer:
+class Renderer(ABC):
     _screen: Surface
     _game: "GameState"
     _fps_counter: FPSCounter
 
+    
     _last_screen_size: Vector[int] | None
     _scale_cache: dict[tuple[Surface, Vector[float]], Surface]
 
-    def __init__(self, screen: Surface, game: "GameState") -> None:
+    def __init__(self, screen: Surface) -> None:
         self._screen = screen
-        self._game = game
         self._last_screen_size = None
         self._scale_cache = {}
         self._fps_counter = FPSCounter()
@@ -163,9 +168,15 @@ class Renderer:
         self, vector_px: Vector[int], camera_position: Vector[float]
     ) -> Vector[float]:
         return self._genCtx(camera_position).screen2gu(vector_px)
+    
 
-    """ Rendering functions
-    """
+class GameRenderer(Renderer):
+
+    _game: "GameState"
+
+    def __init__(self, screen: Surface, game: "GameState") -> None:
+        super().__init__(screen)
+        self._game = game
 
     # @log_durations(logger.debug, "render: ", "ms")
     def render(self, camera_position: Vector[float]) -> None:
@@ -194,3 +205,18 @@ class Renderer:
     def _render_entities(self, ctx: RenderCtx) -> None:
         for entity in self._game.entities.values():
             entity.render(ctx)
+
+
+class MenuRenderer(Renderer): 
+
+    def __init__(self, screen: Surface) -> None:
+        super().__init__(screen)
+
+    def render(self, menu: "Menu") -> None:
+        ctx = self._genCtx(Vector(0, 0))
+        self._screen.blit(menu.background_texture, (0,0))
+        for button in menu.buttons.values():
+            button.render_button(ctx)
+        for text_field in menu.text_fields.values():
+            text_field.render_text(ctx)
+        display.flip() 
