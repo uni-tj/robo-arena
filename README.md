@@ -13,3 +13,4 @@ Follow the development of our project here:
 - [Sprint 2](docs/sprintlogs/sprintlog-2.md)
 - [Sprint 3](docs/sprintlogs/sprintlog-3.md)
 - [Sprint 4](docs/sprintlogs/sprintlog-4.md)
+- [Sprint 5](docs/sprintlogs/sprintlog-5.md)
