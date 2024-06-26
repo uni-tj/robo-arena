@@ -14,6 +14,8 @@ from roboarena.client.entity import (
     ClientInputHandler,
     ClientPlayerRobot,
 )
+from roboarena.client.keys import load_keys
+from roboarena.client.menu.main_menue import MainMenu
 from roboarena.shared.constants import CLIENT_TIMESTEP, SERVER_IP
 from roboarena.shared.game import GameState as SharedGameState
 from roboarena.shared.network import Arrived, IpV4, Network
@@ -50,40 +52,6 @@ def setup_font() -> Font:
     pygame.font.init
     default_font = pygame.font.get_default_font()
     return pygame.font.SysFont(default_font, 48)
-
-
-class MenuState:
-    _logger = logging.getLogger(f"{__name__}.MenuState")
-    _screen: Surface
-    _font: Font
-
-    def __init__(self, screen: Surface) -> None:
-        self._screen = screen
-        self._font = setup_font()
-
-    def render(self):
-        self._screen.fill("black")
-        text = self._font.render("Main Menu. Press wasd to start.", True, "white")
-        self._screen.blit(text, (0, 0))
-        pygame.display.flip()
-
-    def loop(self) -> None:
-        self._logger.debug("Entered loop")
-        clock = Clock()
-        while True:
-            keys = pygame.key.get_pressed()
-            if (
-                keys[pygame.K_RIGHT]
-                or keys[pygame.K_DOWN]
-                or keys[pygame.K_LEFT]
-                or keys[pygame.K_UP]
-            ):
-                break
-
-            pygame.event.pump()
-            self.render()
-            self._logger.debug("Rendered")
-            clock.tick(1 / CLIENT_TIMESTEP)
 
 
 class GameOverState:
@@ -124,6 +92,7 @@ class GameState(SharedGameState):
     _logger = logging.getLogger(f"{__name__}.GameState")
     _client: "Client"
     _screen: Surface
+    _keys: dict[str, int] = {}
     _ack = counter()
     _client_id: ClientId
     _entity_id: EntityId
@@ -158,6 +127,8 @@ class GameState(SharedGameState):
             self._logger.debug(f"intialized client entity: {self._entity}")
         self._logger.debug(f"initialized all entities: {self.entities}")
 
+        self.set_keys()
+
     def handle(self, t_msg: Time, msg: EventType):
         if not isinstance(msg, ServerGameEvent):
             self._logger.error(f"Unexpected event: {msg}")
@@ -180,13 +151,16 @@ class GameState(SharedGameState):
         )
         return ack
 
+    def set_keys(self) -> None:
+        self._keys = load_keys()
+
     def get_input(self):
         keys = pygame.key.get_pressed()
         return Input(
-            move_right=keys[pygame.K_RIGHT],
-            move_down=keys[pygame.K_DOWN],
-            move_left=keys[pygame.K_LEFT],
-            move_up=keys[pygame.K_UP],
+            move_right=keys[self._keys["key_right"]],
+            move_down=keys[self._keys["key_down"]],
+            move_left=keys[self._keys["key_left"]],
+            move_up=keys[self._keys["key_up"]],
             action=keys[pygame.K_a],
         )
 
@@ -248,7 +222,8 @@ class Client:
         pygame.init()
         screen = pygame.display.set_mode((1000, 1000), flags=RESIZABLE)
 
-        MenuState(screen).loop()
+        main_menue = MainMenu(screen)
+        main_menue.menu_loop()
 
         self.dispatch(ClientConnectionRequestEvent(self.ip))
         # wait for connection confirmation

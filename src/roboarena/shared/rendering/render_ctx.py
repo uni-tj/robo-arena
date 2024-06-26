@@ -78,7 +78,7 @@ class RenderCtx:
             self._logger.debug("texture cache miss")
             self._scale_cache[cache_key] = pygame.transform.scale_by(
                 surface, self.scale_factor
-            ).convert()
+            ).convert_alpha()
         return self._scale_cache[cache_key]
 
     def scale_value[T: (int, float)](self, value: T) -> T:
