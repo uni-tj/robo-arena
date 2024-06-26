@@ -1,16 +1,18 @@
 import logging
 from abc import ABC
 from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pygame
 from pygame import Surface
 
+from roboarena.shared.rendering.util import size_from_texture
 from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
-    from roboarena.shared.rendering.render_ctx import RenderCtx
+    from roboarena.shared.rendering.renderer import RenderCtx
 
 logger = logging.getLogger(f"{__name__}")
 STANDARD_BLOCK_SIZE_PX = 50
@@ -19,15 +21,19 @@ STANDARD_BLOCK_SIZE_PX = 50
 @dataclass(frozen=True)
 class Block(ABC):
     texture: Surface
-    dimensions_px: Vector[int]
 
-    # @log_durations(logger.debug, "render_block: ", "ms")
-    def render_block(self, ctx: "RenderCtx", block_pos_px: Vector[float]) -> None:
-        corrected_block_pos_px: tuple[float, float] = (
-            block_pos_px
-            + ctx.scale_vector(Vector(0, STANDARD_BLOCK_SIZE_PX - self.dimensions_px.y))
-        ).tuple_repr()
-        ctx.screen.blit(ctx.scale_texture(self.texture), corrected_block_pos_px)
+    @cached_property
+    def texture_size(self) -> Vector[float]:
+        """In game units"""
+        return size_from_texture(self.texture, width=1.0)
+
+    # @log_durations(logger.debug, "render: ", "ms")
+    def render(self, pos_gu: Vector[float], ctx: "RenderCtx") -> None:
+        scaled_texture = ctx.scale_gu(self.texture, self.texture_size)
+        # the physical height of the block is simulated by larger y-size
+        z_gu = self.texture_size.y - 1
+        top_left_gu = pos_gu - Vector(0, z_gu)
+        ctx.screen.blit(scaled_texture, ctx.gu2screen(top_left_gu).to_tuple())
 
 
 @dataclass(frozen=True)
@@ -48,6 +54,7 @@ class VoidBlock(Block):
     pass
 
 
-voidBlock = VoidBlock(Surface((50, 65)), Vector(50, 65))
-voidBlock.texture.fill((0, 0, 0))
-pygame.draw.circle(voidBlock.texture, "blue", (25, 32.5), 10)
+voidTexture = Surface((50, 65))
+voidTexture.fill((0, 0, 0))
+pygame.draw.circle(voidTexture, "blue", (25, 40), 10)
+voidBlock = VoidBlock(voidTexture)

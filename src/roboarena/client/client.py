@@ -18,7 +18,7 @@ from roboarena.shared.constants import CLIENT_TIMESTEP, SERVER_IP
 from roboarena.shared.custom_threading import Atom
 from roboarena.shared.game import GameState as SharedGameState
 from roboarena.shared.network import Arrived, IpV4, Network
-from roboarena.shared.rendering.render_engine import RenderEngine
+from roboarena.shared.rendering.renderer import Renderer
 from roboarena.shared.time import Time, get_time
 from roboarena.shared.types import (
     INITIAL_ACKNOLEDGEMENT,
@@ -136,6 +136,7 @@ class GameState(SharedGameState):
     _logger = logging.getLogger(f"{__name__}.GameState")
     _client: "Client"
     _screen: Surface
+    _renderer: Renderer
     _ack: Counter
     _client_id: ClientId
     _entity_id: EntityId
@@ -153,6 +154,7 @@ class GameState(SharedGameState):
     ) -> None:
         self._client = client
         self._screen = screen
+        self._renderer = Renderer(screen, self)
         self._ack = counter()
         self._client_id = client_id
         self._entity_id = start.client_entity
@@ -196,10 +198,12 @@ class GameState(SharedGameState):
         )
         return ack
 
-    def get_input(self, renderer: RenderEngine):
+    def get_input(self):
         keys = pygame.key.get_pressed()
         (mouse_1, _, mouse_3) = pygame.mouse.get_pressed()
-        mouse_pos = pygame.mouse.get_pos()
+        mouse_pos_px = Vector.from_tuple(pygame.mouse.get_pos())
+        mouse_pos_gu = self._renderer.screen2gu(mouse_pos_px, self._entity.position)
+        # self._logger.debug(f"mouse_pos_gu: {mouse_pos_gu}")
         return Input(
             move_right=keys[pygame.K_RIGHT],
             move_down=keys[pygame.K_DOWN],
@@ -207,14 +211,13 @@ class GameState(SharedGameState):
             move_up=keys[pygame.K_UP],
             primary=mouse_1,
             secondary=mouse_3,
-            mouse=renderer.screen2gu_vector(Vector.from_tuple(mouse_pos)),
+            mouse=mouse_pos_gu,
         )
 
     def loop(self) -> Stopped:
         self._logger.debug("Enterered loop")
         last_t = get_time()
         clock = Clock()
-        render_engine = RenderEngine(self._screen)
 
         while True:
             if self._client.stopped.get():
@@ -227,7 +230,7 @@ class GameState(SharedGameState):
             for t_msg, msg in self._client.receive():
                 self.handle(t_msg, msg)
 
-            input = self.get_input(render_engine)
+            input = self.get_input()
             ack = self.dispatch(ClientInputEvent(input, dt))
             self._entity.on_input(input, dt, ack)
 
@@ -243,7 +246,7 @@ class GameState(SharedGameState):
                         continue
 
             # rendering
-            render_engine.render_screen(self.level, self.entities, self._entity.position)  # type: ignore # noqa: B950
+            self._renderer.render(camera_position=self._entity.position)
             # self._logger.debug("Rendered")
 
             # cleanup frame

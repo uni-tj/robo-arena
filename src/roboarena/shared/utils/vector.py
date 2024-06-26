@@ -44,6 +44,11 @@ class Vector[T: (int, float)]:
             case _:
                 return Vector(self.x / o, self.y / o)
 
+    def __floordiv__[
+        S: (int, float, "Vector[int]", "Vector[float]")
+    ](self, o: S) -> "Vector[int]":
+        return (self / o).floor()
+
     def apply_transform(self, f: Callable[[T], T] = lambda x: x):
         return Vector(f(self.x), f(self.y))
 
@@ -52,7 +57,7 @@ class Vector[T: (int, float)]:
             return False
         return (self.x - o.x, self.y - o.y) == (0, 0)  # type: ignore
 
-    def tuple_repr(self) -> tuple[T, T]:
+    def to_tuple(self) -> tuple[T, T]:
         return (self.x, self.y)
 
     @staticmethod

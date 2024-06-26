@@ -28,8 +28,6 @@ type Level = dict[Vector[int], "Block"]
 
 type Entities = dict[EntityId, "Entity"]
 
-type FieldOfView = tuple[Vector[int], Vector[int]]
-
 
 """Communication protocol
 """

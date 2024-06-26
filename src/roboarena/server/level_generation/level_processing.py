@@ -11,8 +11,8 @@ from roboarena.shared.utils.vector import Vector
 
 def tilesmap2levelmap(tm: TileMap) -> Level:
     (v_min, _) = getBounds(list(tm.keys()))
-    # (min_x, min_y) = v_min.tuple_repr()
-    # (max_x, max_y) = v_max.tuple_repr()
+    # (min_x, min_y) = v_min.to_tuple()
+    # (max_x, max_y) = v_max.to_tuple()
     level: Level = {}
     bl: dict[BlockCtx, Block] = {}
     for tcoord, tile in tm.items():

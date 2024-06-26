@@ -65,12 +65,12 @@ def get_grid(nodes: dict[Vector[int], Optional["Tile"]]):
     arranged by their (x, y) positions."""
 
     (v_min, v_max) = getBounds(list(nodes.keys()))
-    (min_x, min_y) = v_min.tuple_repr()
-    (max_x, max_y) = v_max.tuple_repr()
+    (min_x, min_y) = v_min.to_tuple()
+    (max_x, max_y) = v_max.to_tuple()
     grid = [[" " for _ in range(min_x, max_x + 1)] for _ in range(min_y, max_y + 1)]
 
     for position, cons in nodes.items():
-        x, y = position.tuple_repr()
+        x, y = position.to_tuple()
         grid[y - min_y][x - min_x] = str(cons) if cons is not None else "⑔"
     return grid
 
@@ -84,7 +84,7 @@ def get_constraint_grid(constraints: dict[Vector[int], set["TileType"]]):
     grid = [[" " for _ in range(min_x, max_x + 1)] for _ in range(min_y, max_y + 1)]
 
     for position, cons in constraints.items():
-        x, y = position.tuple_repr()
+        x, y = position.to_tuple()
         ns = "".join(map(lambda x: x.name, cons))
         grid[y - min_y][x - min_x] = ns
     return grid

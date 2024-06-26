@@ -4,16 +4,14 @@ from typing import TYPE_CHECKING
 
 from pygame import Rect, Surface
 
+from roboarena.shared.rendering.util import size_from_texture
 from roboarena.shared.time import Time
 from roboarena.shared.types import Color, Input, Motion, Position
 from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
     from roboarena.shared.game import GameState
-    from roboarena.shared.rendering.render_ctx import RenderCtx
-    from roboarena.shared.types import FieldOfView
-
-logger = logging.getLogger(f"{__name__}")
+    from roboarena.shared.rendering.renderer import RenderCtx
 
 logger = logging.getLogger(f"{__name__}")
 
@@ -28,6 +26,8 @@ class Entity(ABC):
     _game: "GameState"
     hitbox: Rect
     texture: Surface
+    """In gu"""
+    texture_size: Vector[float]
 
     def __init__(self, game: "GameState") -> None:
         super().__init__()
@@ -37,28 +37,15 @@ class Entity(ABC):
     @abstractmethod
     def position(self) -> Position: ...
 
-    def visible_in_fov(self, fov: "FieldOfView") -> bool:
-        position = self.position
-        return (
-            position.x >= fov[0].x
-            and position.x <= fov[1].x
-            and position.y >= fov[0].y
-            and position.y <= fov[1].y
-        )
-
     def render(self, ctx: "RenderCtx") -> None:
-        if not self.visible_in_fov(ctx.fov):
+        if not ctx.fov.contains(self.position):
             return
-
-        entity_pos_gu = self.position
-        entity_dim_px = Vector.from_tuple(self.texture.get_size())
-        entity_pos_px: Vector[float] = ctx.screen_dimenions_px * Vector(0.5, 0.5) - (
-            ctx.camera_position_gu - entity_pos_gu
-        ) * Vector(ctx.px_per_gu, ctx.px_per_gu)
-        corrected_entity_pos_px: tuple[float, float] = (
-            entity_pos_px - ctx.scale_vector(entity_dim_px * 0.5)
-        ).tuple_repr()
-        ctx.screen.blit(ctx.scale_texture(self.texture), corrected_entity_pos_px)
+        scaled_texture = ctx.scale_gu(self.texture, self.texture_size)
+        # Simulate physically square base surface by offsetting
+        # by half width to bottom
+        bottom_right_gu = self.position + (self.texture_size.x / 2)
+        top_left_gu = bottom_right_gu - self.texture_size
+        ctx.screen.blit(scaled_texture, ctx.gu2screen(top_left_gu).to_tuple())
 
     @abstractmethod
     def tick(self, dt: Time, t: Time): ...
@@ -83,6 +70,7 @@ class PlayerRobot(Entity):
     motion: Value[Motion]
     color: Value[Color]
     texture = playerRobotTexture
+    texture_size = size_from_texture(playerRobotTexture, width=1.0)
 
     @property
     def position(self) -> Position:
@@ -123,6 +111,7 @@ class EnemyRobot(Entity):
     motion: Value[Motion]
     color: Value[Color]
     texture = enemyRobotTexture
+    texture_size = size_from_texture(playerRobotTexture, width=1.0)
     initial_position: Position
 
     def __init__(self, game: "GameState", motion: Motion) -> None:

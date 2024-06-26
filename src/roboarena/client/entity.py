@@ -23,7 +23,7 @@ from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
     from roboarena.client.client import GameState
-    from roboarena.shared.rendering.render_ctx import RenderCtx
+    from roboarena.shared.rendering.renderer import RenderCtx
 
 
 class PredictedValue[T, Ctx](Value[T]):
@@ -222,8 +222,8 @@ class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
         super().render(ctx)
         # render crosshair
         r = 10
-        center = ctx.gu2screen_vector(self.aim)
-        pygame.draw.circle(ctx.screen, "orange", center.tuple_repr(), r)
+        center = ctx.gu2screen(self.aim)
+        pygame.draw.circle(ctx.screen, "orange", center.to_tuple(), r)
 
 
 class ClientEnemyRobot(EnemyRobot, ClientEntity):
