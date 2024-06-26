@@ -91,6 +91,12 @@ class Renderer:
     """
 
     def _genCtx(self, camera_position: Vector[float]) -> RenderCtx:
+        screen_size = Vector.from_tuple(self._screen.get_size())
+        if self._last_screen_size != screen_size:
+            # reset scale cache
+            self._last_screen_size = screen_size
+            self._scale_cache = {}
+
         return RenderCtx(self._screen, camera_position, self._scale_cache)
 
     def screen2gu(
@@ -103,12 +109,6 @@ class Renderer:
 
     # @log_durations(logger.debug, "render: ", "ms")
     def render(self, camera_position: Vector[float]) -> None:
-        screen_size = Vector.from_tuple(self._screen.get_size())
-        if self._last_screen_size != screen_size:
-            # reset scale cache
-            self._last_screen_size = screen_size
-            self._scale_cache = {}
-
         ctx = self._genCtx(camera_position)
         self._render_background(ctx)
         self._render_entities(ctx)
