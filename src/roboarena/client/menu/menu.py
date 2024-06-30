@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import TYPE_CHECKING, List, Tuple
+from typing import TYPE_CHECKING, Tuple
 
 import pygame
 from pygame import Rect, Surface
@@ -17,13 +17,11 @@ if TYPE_CHECKING:
 class Menu(ABC):
     _client: "Client"
     screen: Surface
-    background_colors: Tuple[Tuple[int, int, int], Tuple[int, int, int]]
     background_texture: Surface
     buttons: dict[str, Button]
     text_fields: dict[str, Text]
-    active: bool = False
+    closed: bool = False
     ctx: RenderCtx
-    menus: List["Menu"]
     renderer: MenuRenderer
 
     def __init__(
@@ -32,17 +30,14 @@ class Menu(ABC):
         background_colors: Tuple[Tuple[int, int, int], Tuple[int, int, int]],
         buttons: dict[str, Button],
         text_fields: dict[str, Text],
-        menus: List["Menu"],
         client: "Client",
     ) -> None:
         self.screen = screen
-        self.background_colors = background_colors
         self.buttons = buttons
         self.text_fields = text_fields
-        self.menus = menus
-        self.ctx = RenderCtx(screen, Vector(0, 0), {})
-        self.create_background_texture()
         self._client = client
+        self.ctx = RenderCtx(screen, Vector(0, 0), {})
+        self.background_texture = self.create_background_texture(background_colors)
         self.renderer = MenuRenderer(screen)
 
     def add_button(self, key: str, button: Button) -> None:
@@ -51,18 +46,19 @@ class Menu(ABC):
     def add_text_field(self, key: str, text_field: Text) -> None:
         self.text_fields[key] = text_field
 
-    def create_background_texture(self) -> None:
-        self.background_texture = pygame.Surface(
+    def create_background_texture(
+        self, colors: Tuple[Tuple[int, int, int], Tuple[int, int, int]]
+    ) -> Surface:
+        background_texture = pygame.Surface(
             (self.screen.get_width(), self.screen.get_height())
         )
         gradientRect(
-            self.background_texture,
-            self.background_colors[0],
-            self.background_colors[1],
+            background_texture,
+            colors[0],
+            colors[1],
             Rect(0, 0, self.screen.get_width(), self.screen.get_height()),
         )
-        self.background_texture.convert()
-    
+        return background_texture.convert()
 
     def handle_mouse_pos(self, mouse_pos_px: Tuple[int, int]) -> None:
         for button in self.buttons.values():
@@ -72,17 +68,16 @@ class Menu(ABC):
         for button in self.buttons.values():
             button.handle_mouse_click(mouse_pos_px)
 
-    def menu_loop(self) -> Stopped | None:
-        self.active = True
-        while self.active:
+    def loop(self) -> Stopped | None:
+        self.closed = False
+        while not self.closed:
             if self._client.stopped.get():
-                return Stopped() 
+                return Stopped()
             for ev in pygame.event.get():
                 if ev.type == pygame.MOUSEBUTTONDOWN:
                     self.handle_mouse_click(pygame.mouse.get_pos())
             self.handle_mouse_pos(pygame.mouse.get_pos())
-            self.create_background_texture()
             self.renderer.render(self)
 
-    def deactivate(self) -> None:
-        self.active = False
+    def close(self) -> None:
+        self.closed = True
