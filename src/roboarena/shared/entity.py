@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from pygame import Rect, Surface
 
-from roboarena.shared.rendering.util import size_from_texture
+from roboarena.shared.rendering.util import size_from_texture_width
 from roboarena.shared.time import Time
 from roboarena.shared.types import Color, Input, Motion, Position
 from roboarena.shared.utils.vector import Vector
@@ -70,7 +70,7 @@ class PlayerRobot(Entity):
     motion: Value[Motion]
     color: Value[Color]
     texture = playerRobotTexture
-    texture_size = size_from_texture(playerRobotTexture, width=1.0)
+    texture_size = size_from_texture_width(playerRobotTexture, width=1.0)
 
     @property
     def position(self) -> Position:
@@ -111,7 +111,7 @@ class EnemyRobot(Entity):
     motion: Value[Motion]
     color: Value[Color]
     texture = enemyRobotTexture
-    texture_size = size_from_texture(playerRobotTexture, width=1.0)
+    texture_size = size_from_texture_width(playerRobotTexture, width=1.0)
     initial_position: Position
 
     def __init__(self, game: "GameState", motion: Motion) -> None:

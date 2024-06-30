@@ -1,10 +1,8 @@
 from abc import ABC
-from functools import cached_property
 from typing import TYPE_CHECKING
 
 from pygame import Surface
 
-from roboarena.shared.rendering.util import size_from_texture
 from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
@@ -12,19 +10,18 @@ if TYPE_CHECKING:
 
 
 class Renderable(ABC):
-    dimensions_px: Vector[float] = Vector(0, 0)
     position_pct: Vector[int]
-    position_px: Vector[float] = Vector(0, 0)
     texture: Surface
+    texture_size: Vector[float]
+    position_px: Vector[float] = Vector(0, 0)
+    dimensions_px: Vector[int] = Vector(0, 0)
 
-    def __init__(self, position_pct: Vector[int], texture: Surface) -> None:
+    def __init__(
+        self, position_pct: Vector[int], texture: Surface, texture_size: Vector[float]
+    ) -> None:
         self.position_pct = position_pct
         self.texture = texture
-
-    @cached_property
-    def texture_size(self) -> Vector[float]:
-        """In game units"""
-        return size_from_texture(self.texture, width=1.5)
+        self.texture_size = texture_size
 
     def render(self, ctx: "RenderCtx") -> None:
         scaled_texture = ctx.scale_gu(self.texture, self.texture_size)

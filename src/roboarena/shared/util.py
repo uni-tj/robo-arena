@@ -8,7 +8,6 @@ from typing import Any, Callable, Generator, NoReturn, Tuple
 
 import numpy as np
 import pygame
-from pygame import Surface
 
 from roboarena.shared.utils.vector import Vector
 
@@ -91,6 +90,14 @@ def gradientRect(
     window.blit(colour_rect, target_rect)
 
 
+def graphic_path(path: str) -> str:
+    return os.path.join(os.path.dirname(__file__), "..", "resources", "graphics", path)
+
+
+def load_graphic(path: str) -> pygame.Surface:
+    return pygame.image.load(graphic_path(path))
+
+
 class EventTarget[Evt]:
     """Class for emiting and listening to events.
 
@@ -136,11 +143,3 @@ def stopAll(*stoppables: Stoppable) -> None:
 @dataclass(frozen=True)
 class Stopped:
     pass
-
-
-def graphic_path(path: str) -> str:
-    return os.path.join(os.path.dirname(__file__), "..", "resources", "graphics", path)
-
-
-def load_graphic(path: str) -> Surface:
-    return pygame.image.load(graphic_path(path))

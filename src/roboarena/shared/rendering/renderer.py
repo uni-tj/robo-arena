@@ -132,17 +132,15 @@ class RenderCtx:
 
     def screen2gu(self, vector: Vector[int]) -> Vector[float]:
         return self.px2gu(vector - self.screen_center_px) + self.camera_position_gu  # type: ignore (subtracting two ints is int not float)
-    
+
     def pct2px(self, vector_pct: Vector[int]) -> Vector[float]:
-        return (self.screen_size_px * vector_pct / 100)
+        return self.screen_size_px * vector_pct / 100
 
 
 class Renderer(ABC):
     _screen: Surface
     _game: "GameState"
     _fps_counter: FPSCounter
-
-    
     _last_screen_size: Vector[int] | None
     _scale_cache: dict[tuple[Surface, Vector[float]], Surface]
 
@@ -168,7 +166,7 @@ class Renderer(ABC):
         self, vector_px: Vector[int], camera_position: Vector[float]
     ) -> Vector[float]:
         return self._genCtx(camera_position).screen2gu(vector_px)
-    
+
 
 class GameRenderer(Renderer):
 
@@ -207,16 +205,19 @@ class GameRenderer(Renderer):
             entity.render(ctx)
 
 
-class MenuRenderer(Renderer): 
+class MenuRenderer(Renderer):
 
     def __init__(self, screen: Surface) -> None:
         super().__init__(screen)
 
     def render(self, menu: "Menu") -> None:
         ctx = self._genCtx(Vector(0, 0))
-        self._screen.blit(menu.background_texture, (0,0))
+        self._screen.blit(
+            pygame.transform.scale(menu.background_texture, ctx.screen.get_size()),
+            (0, 0),
+        )
         for button in menu.buttons.values():
-            button.render_button(ctx)
+            button.render(ctx)
         for text_field in menu.text_fields.values():
-            text_field.render_text(ctx)
-        display.flip() 
+            text_field.render(ctx)
+        display.flip()

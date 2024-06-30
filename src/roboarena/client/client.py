@@ -7,8 +7,12 @@ from pygame import RESIZABLE, Surface, event
 from pygame.font import Font
 from pygame.time import Clock
 
-from roboarena.client.entity import (ClientEnemyRobot, ClientEntityType,
-                                     ClientInputHandler, ClientPlayerRobot)
+from roboarena.client.entity import (
+    ClientEnemyRobot,
+    ClientEntityType,
+    ClientInputHandler,
+    ClientPlayerRobot,
+)
 from roboarena.client.keys import load_keys
 from roboarena.client.menu.main_menue import MainMenu
 from roboarena.shared.constants import CLIENT_TIMESTEP, SERVER_IP
@@ -17,17 +21,26 @@ from roboarena.shared.game import GameState as SharedGameState
 from roboarena.shared.network import Arrived, IpV4, Network, Receiver
 from roboarena.shared.rendering.renderer import GameRenderer
 from roboarena.shared.time import Time, get_time
-from roboarena.shared.types import (INITIAL_ACKNOLEDGEMENT, Acknoledgement,
-                                    ClientConnectionRequestEvent,
-                                    ClientGameEvent, ClientGameEventType,
-                                    ClientId, ClientInputEvent,
-                                    ClientLobbyReadyEvent, EntityId, EventType,
-                                    Input, ServerConnectionConfirmEvent,
-                                    ServerEntityEvent, ServerExtendLevelEvent,
-                                    ServerGameEvent, ServerGameStartEvent,
-                                    ServerSpawnRobotEvent)
-from roboarena.shared.util import (Counter, EventTarget, Stoppable, Stopped,
-                                   counter)
+from roboarena.shared.types import (
+    INITIAL_ACKNOLEDGEMENT,
+    Acknoledgement,
+    ClientConnectionRequestEvent,
+    ClientGameEvent,
+    ClientGameEventType,
+    ClientId,
+    ClientInputEvent,
+    ClientLobbyReadyEvent,
+    EntityId,
+    EventType,
+    Input,
+    ServerConnectionConfirmEvent,
+    ServerEntityEvent,
+    ServerExtendLevelEvent,
+    ServerGameEvent,
+    ServerGameStartEvent,
+    ServerSpawnRobotEvent,
+)
+from roboarena.shared.util import Counter, EventTarget, Stoppable, Stopped, counter
 from roboarena.shared.utils.vector import Vector
 
 
@@ -233,7 +246,7 @@ class Client(Stoppable):
         pygame.init()
         screen = pygame.display.set_mode((1000, 1000), flags=RESIZABLE)
 
-        menu_result = MainMenu(screen, self).menu_loop()
+        menu_result = MainMenu(screen, self).loop()
         if isinstance(menu_result, Stopped):
             return Stopped()
 

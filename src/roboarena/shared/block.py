@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import pygame
 from pygame import Surface
 
-from roboarena.shared.rendering.util import size_from_texture
+from roboarena.shared.rendering.util import size_from_texture_width
 from roboarena.shared.util import load_graphic
 from roboarena.shared.utils.vector import Vector
 
@@ -25,7 +25,7 @@ class Block(ABC):
     @cached_property
     def texture_size(self) -> Vector[float]:
         """In game units"""
-        return size_from_texture(self.texture, width=1.0)
+        return size_from_texture_width(self.texture, width=1.0)
 
     # @log_durations(logger.debug, "render: ", "ms")
     def render(self, pos_gu: Vector[float], ctx: "RenderCtx") -> None:
