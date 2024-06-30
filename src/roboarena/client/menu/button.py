@@ -10,21 +10,21 @@ if TYPE_CHECKING:
 
 
 class Button(Renderable):
-    texture_on_unhover: Surface
-    texture_on_hover: Surface
+    texture_uh: Surface
+    texture_h: Surface
     function: Callable[[], None]
 
     def __init__(
         self,
-        texture_on_unhover: Surface,
-        texture_on_hover: Surface,
+        texture_uh: Surface,
+        texture_h: Surface,
         position_pct: Vector[int],
         function: Callable[[], None],
     ) -> None:
-        self.texture_on_unhover = texture_on_unhover
-        self.texture_on_hover = texture_on_hover
+        self.texture_uh = texture_uh
+        self.texture_h = texture_h
         self.function = function
-        super().__init__(position_pct, texture_on_unhover)
+        super().__init__(position_pct, texture_uh)
 
     def mouse_over(self, mouse_pos_px: Tuple[int, int]) -> bool:
         return (
@@ -41,9 +41,9 @@ class Button(Renderable):
 
     def handle_mouse_pos(self, mouse_pos_px: Tuple[int, int]) -> None:
         if self.mouse_over(mouse_pos_px):
-            self.texture = self.texture_on_hover
+            self.texture = self.texture_h
         else:
-            self.texture = self.texture_on_unhover
+            self.texture = self.texture_uh
 
     def handle_mouse_click(self, mouse_pos_px: Tuple[int, int]) -> None:
         if self.mouse_over(mouse_pos_px):

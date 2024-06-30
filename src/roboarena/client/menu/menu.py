@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import List, Tuple
+from typing import Tuple
 
 import pygame
 from pygame import Rect, Surface
@@ -19,7 +19,6 @@ class Menu(ABC):
     text_fields: dict[str, Text]
     active: bool = False
     ctx: RenderCtx
-    menus: List["Menu"]
 
     def __init__(
         self,
@@ -27,13 +26,11 @@ class Menu(ABC):
         background_colors: Tuple[Tuple[int, int, int], Tuple[int, int, int]],
         buttons: dict[str, Button],
         text_fields: dict[str, Text],
-        menus: List["Menu"],
     ) -> None:
         self.screen = screen
         self.background_colors = background_colors
         self.buttons = buttons
         self.text_fields = text_fields
-        self.menus = menus
         self.ctx = RenderCtx(screen, Vector(0, 0), {})
         self.create_background_texture()
 

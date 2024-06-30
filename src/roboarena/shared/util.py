@@ -73,6 +73,10 @@ def gradientRect(
     window.blit(colour_rect, target_rect)
 
 
+def load_texture(path: str, dimension_px: Tuple[int, int]) -> pygame.Surface:
+    return pygame.transform.scale(pygame.image.load(path), dimension_px)
+
+
 class EventTarget[Evt]:
     _listeners: dict[Callable[[Any], None], Callable[[Evt], None]] = {}
 

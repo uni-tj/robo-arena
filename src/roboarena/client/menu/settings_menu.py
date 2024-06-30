@@ -8,6 +8,7 @@ from roboarena.client.keys import read_key
 from roboarena.client.menu.button import Button
 from roboarena.client.menu.menu import Menu
 from roboarena.client.menu.text import Text
+from roboarena.shared.util import load_texture
 from roboarena.shared.utils.vector import Vector
 
 BACK_BUTTON_UH_PATH = os.path.join(
@@ -56,137 +57,76 @@ RIGHT_BUTTON_H_PATH = os.path.join(
 
 class SettingsMenu(Menu):
 
-    def __init__(self, screen: Surface, menus: list[Menu]):
-        super().__init__(screen, ((80, 80, 80), (140, 140, 140)), {}, {}, menus)
-
-        header = Text("Settings", 50, Vector(50, 5))
-        super().add_text_field("header", header)
-
-        back_button_uh_texture = pygame.transform.scale(
-            pygame.image.load(BACK_BUTTON_UH_PATH), (100, 100)
-        )
-        back_button_h_texture = pygame.transform.scale(
-            pygame.image.load(BACK_BUTTON_H_PATH), (100, 100)
-        )
+    def __init__(self, screen: Surface, main_menue: Menu):
 
         deactivate = super().deactivate
 
         def switch_to_main_menue() -> None:
             deactivate()
-            menus[0].menu_loop()
-
-        back_button = Button(
-            back_button_uh_texture,
-            back_button_h_texture,
-            Vector(20, 70),
-            switch_to_main_menue,
-        )
-
-        super().add_button("back_button", back_button)
-
-        info_mute = Text("Toggle sound", 30, Vector(50, 15))
-        super().add_text_field("info_mute", info_mute)
-
-        sound_button_mute_texture = pygame.transform.scale(
-            pygame.image.load(SOUND_BUTTON_MUTE_PATH), (70, 70)
-        )
-        sound_button_unmute_texture = pygame.transform.scale(
-            pygame.image.load(SOUND_BUTTON_UNMUTE_PATH), (70, 70)
-        )
-
-        add_button = super().add_button
+            main_menue.menu_loop()
 
         def toggle_sound() -> None:
+
+            unmute_texture = load_texture(SOUND_BUTTON_UNMUTE_PATH, (70, 70))
+            mute_texture = load_texture(SOUND_BUTTON_MUTE_PATH, (70, 70))
+
             if pygame.mixer.get_busy():
                 pygame.mixer.pause()
-                add_button("mute_button", sound_button_muted)
+                buttons["mute_button"].texture_uh = mute_texture
+                buttons["mute_button"].texture_h = unmute_texture
             else:
                 pygame.mixer.unpause()
-                add_button("mute_button", sound_button_unmuted)
-
-        sound_button_muted = Button(
-            sound_button_mute_texture,
-            sound_button_unmute_texture,
-            Vector(50, 25),
-            toggle_sound,
-        )
-        sound_button_unmuted = Button(
-            sound_button_unmute_texture,
-            sound_button_mute_texture,
-            Vector(50, 25),
-            toggle_sound,
-        )
-
-        super().add_button("mute_button", sound_button_unmuted)
-
-        info_keys = Text(
-            "Click button and hit key to change key binding", 30, Vector(50, 35)
-        )
-        super().add_text_field("info_keys", info_keys)
+                buttons["mute_button"].texture_uh = unmute_texture
+                buttons["mute_button"].texture_h = mute_texture
 
         def change_key(key: str) -> Callable[[], None]:
             return lambda: read_key(key)
 
-        up_button_uh_texture = pygame.transform.scale(
-            pygame.image.load(UP_BUTTON_UH_PATH), (70, 70)
-        )
-        up_button_h_texture = pygame.transform.scale(
-            pygame.image.load(UP_BUTTON_H_PATH), (70, 70)
-        )
+        buttons: dict[str, Button] = {
+            "mute_button": Button(
+                load_texture(SOUND_BUTTON_UNMUTE_PATH, (70, 70)),
+                load_texture(SOUND_BUTTON_MUTE_PATH, (70, 70)),
+                Vector(50, 25),
+                toggle_sound,
+            ),
+            "back_button": Button(
+                load_texture(BACK_BUTTON_UH_PATH, (100, 100)),
+                load_texture(BACK_BUTTON_H_PATH, (100, 100)),
+                Vector(20, 70),
+                switch_to_main_menue,
+            ),
+            "up_button": Button(
+                load_texture(UP_BUTTON_UH_PATH, (70, 70)),
+                load_texture(UP_BUTTON_H_PATH, (70, 70)),
+                Vector(50, 45),
+                change_key("key_up"),
+            ),
+            "down_button": Button(
+                load_texture(DOWN_BUTTON_UH_PATH, (70, 70)),
+                load_texture(DOWN_BUTTON_H_PATH, (70, 70)),
+                Vector(50, 60),
+                change_key("key_down"),
+            ),
+            "left_button": Button(
+                load_texture(LEFT_BUTTON_UH_PATH, (70, 70)),
+                load_texture(LEFT_BUTTON_H_PATH, (70, 70)),
+                Vector(50, 75),
+                change_key("key_left"),
+            ),
+            "right_button": Button(
+                load_texture(RIGHT_BUTTON_UH_PATH, (70, 70)),
+                load_texture(RIGHT_BUTTON_H_PATH, (70, 70)),
+                Vector(50, 90),
+                change_key("key_right"),
+            ),
+        }
 
-        up_button = Button(
-            up_button_uh_texture,
-            up_button_h_texture,
-            Vector(50, 45),
-            change_key("key_up"),
-        )
+        text_fields: dict[str, Text] = {
+            "header": Text("Settings", 50, Vector(50, 5)),
+            "info_mute": Text("Toggle sound", 30, Vector(50, 15)),
+            "info_keys": Text(
+                "Click button and hit key to change key binding", 30, Vector(50, 35)
+            ),
+        }
 
-        super().add_button("up_button", up_button)
-
-        down_button_uh_texture = pygame.transform.scale(
-            pygame.image.load(DOWN_BUTTON_UH_PATH), (70, 70)
-        )
-        down_button_h_texture = pygame.transform.scale(
-            pygame.image.load(DOWN_BUTTON_H_PATH), (70, 70)
-        )
-
-        down_button = Button(
-            down_button_uh_texture,
-            down_button_h_texture,
-            Vector(50, 60),
-            change_key("key_down"),
-        )
-
-        super().add_button("down_button", down_button)
-
-        left_button_uh_texture = pygame.transform.scale(
-            pygame.image.load(LEFT_BUTTON_UH_PATH), (70, 70)
-        )
-        left_button_h_texture = pygame.transform.scale(
-            pygame.image.load(LEFT_BUTTON_H_PATH), (70, 70)
-        )
-
-        left_button = Button(
-            left_button_uh_texture,
-            left_button_h_texture,
-            Vector(50, 75),
-            change_key("key_left"),
-        )
-
-        super().add_button("left_button", left_button)
-
-        right_button_uh_texture = pygame.transform.scale(
-            pygame.image.load(RIGHT_BUTTON_UH_PATH), (70, 70)
-        )
-        right_button_h_texture = pygame.transform.scale(
-            pygame.image.load(RIGHT_BUTTON_H_PATH), (70, 70)
-        )
-
-        right_button = Button(
-            right_button_uh_texture,
-            right_button_h_texture,
-            Vector(50, 90),
-            change_key("key_right"),
-        )
-
-        super().add_button("right_button", right_button)
+        super().__init__(screen, ((80, 80, 80), (140, 140, 140)), buttons, text_fields)
