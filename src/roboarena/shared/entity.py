@@ -1,13 +1,14 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
-from pygame import Rect, Surface
+from pygame import Surface
 
 from roboarena.shared.constants import PlayerConstants
 from roboarena.shared.rendering.util import size_from_texture_width
 from roboarena.shared.time import Time
 from roboarena.shared.types import Color, Input, Motion, Position
+from roboarena.shared.utils.rect import Rect
 from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
@@ -23,9 +24,30 @@ class Value[T](ABC):
     def get(self) -> T: ...
 
 
+class Collidable(ABC):
+    @property
+    @abstractmethod
+    def hitbox(self) -> Rect: ...
+
+
+class CollideAroundCenter(Collidable):
+    "Hitbox is centered around the current center"
+
+    _center: Callable[[], Vector[float]]
+    _rect: Rect
+
+    def __init__(self, center: Callable[[], Vector[float]], rect: Rect) -> None:
+        self._center = center
+        self._rect = rect
+
+    @property
+    def hitbox(self) -> Rect:
+        return self._rect.centerAround(self._center())
+
+
 class Entity(ABC):
     _game: "GameState"
-    hitbox: Rect
+    collision: Collidable
     texture: Surface
     """In gu"""
     texture_size: Vector[float]
@@ -68,10 +90,17 @@ playerRobotTexture.fill("green")
 
 class PlayerRobot(Entity):
     _logger = logging.getLogger(f"{__name__}.PlayerRobot")
+    health: Value[int]
     motion: Value[Motion]
     color: Value[Color]
     texture = playerRobotTexture
     texture_size = size_from_texture_width(playerRobotTexture, width=1.0)
+
+    def __init__(self, game: "GameState") -> None:
+        super().__init__(game)
+        self.collision = CollideAroundCenter(
+            lambda: self.motion.get()[0], Rect.from_width_height(Vector.one())
+        )
 
     @property
     def position(self) -> Position:
@@ -108,6 +137,33 @@ class PlayerRobot(Entity):
         return (new_position, new_orientation)
 
 
+playerBulletTexture = Surface((10, 10))
+playerBulletTexture.fill((50, 168, 82))  # dark green
+
+type PlayerBulletMoveCtx = tuple[Time]
+
+
+class PlayerBullet(Entity):
+    texture = playerBulletTexture
+    texture_size = Vector(0.2, 0.2)
+    _position: Value[Vector[float]]
+    "In units/second"
+    _velocity: Value[Vector[float]]
+
+    def __init__(self, game: "GameState") -> None:
+        super().__init__(game)
+        self.collision = CollideAroundCenter(
+            lambda: self._position.get(), Rect.from_width_height(Vector.one())
+        )
+
+    @property
+    def position(self) -> Position:
+        return self._position.get()
+
+    def move(self, position: Vector[float], dt: Time, ctx: None) -> Vector[float]:
+        return position + self._velocity.get() * dt
+
+
 type EnemyRobotMoveCtx = tuple[Time]
 
 enemyRobotTexture = Surface((50, 50))
@@ -115,6 +171,7 @@ enemyRobotTexture.fill("red")
 
 
 class EnemyRobot(Entity):
+    health: Value[int]
     motion: Value[Motion]
     color: Value[Color]
     texture = enemyRobotTexture
@@ -123,6 +180,9 @@ class EnemyRobot(Entity):
 
     def __init__(self, game: "GameState", motion: Motion) -> None:
         super().__init__(game)
+        self.collision = CollideAroundCenter(
+            lambda: self.motion.get()[0], Rect.from_width_height(Vector.one())
+        )
         self.initial_position = motion[0]
 
     @property

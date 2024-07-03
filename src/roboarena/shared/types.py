@@ -29,8 +29,13 @@ type Entities = dict[EntityId, "Entity"]
 """
 
 type ServerGameEventType = (
-    ServerSpawnRobotEvent | ServerEntityEvent | ServerLevelUpdateEvent
+    ServerSpawnRobotEvent
+    | ServerSpawnPlayerBulletEvent
+    | ServerDeleteEntityEvent
+    | ServerEntityEvent
+    | ServerLevelUpdateEvent
 )
+type ServerSpawnEventType = (ServerSpawnRobotEvent | ServerSpawnPlayerBulletEvent)
 type ServerEventType = (
     ServerConnectionConfirmEvent
     | ServerGameStartEvent
@@ -47,6 +52,8 @@ type EventType = ServerEventType | ClientEventType
 
 @dataclass(frozen=True)
 class Input:
+    dt: Time
+
     move_right: bool
     move_down: bool
     move_left: bool
@@ -68,7 +75,7 @@ class ServerConnectionConfirmEvent:
 @dataclass(frozen=True)
 class ServerGameStartEvent:
     client_entity: EntityId
-    entities: Iterable["ServerSpawnRobotEvent"]
+    entities: Iterable[ServerSpawnEventType]
     level: "Level"
 
 
@@ -88,6 +95,7 @@ class ServerEntityEvent:
 @dataclass(frozen=True)
 class ServerSpawnRobotEvent:
     id: EntityId
+    health: int
     motion: Motion
     color: Color
 
@@ -95,6 +103,18 @@ class ServerSpawnRobotEvent:
 @dataclass(frozen=True)
 class ServerLevelUpdateEvent:
     update: "LevelUpdate"
+
+
+@dataclass(frozen=True)
+class ServerSpawnPlayerBulletEvent:
+    id: EntityId
+    position: Vector[float]
+    velocity: Vector[float]
+
+
+@dataclass(frozen=True)
+class ServerDeleteEntityEvent:
+    id: EntityId
 
 
 # Client to server events

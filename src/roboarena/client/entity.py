@@ -12,6 +12,7 @@ from roboarena.shared.constants import SERVER_TIMESTEP
 from roboarena.shared.entity import (
     EnemyRobot,
     Entity,
+    PlayerBullet,
     PlayerRobot,
     PlayerRobotMoveCtx,
     Value,
@@ -121,30 +122,34 @@ class InterpolatedValue[T, Ctx](Value[T]):
         return self.value
 
 
-# class ExtrapolatedValue[T](UpdatableValue[T], ABC):
-#     last_snapshot: tuple[Time, T]
-#     _value: T
+class ExtrapolatedValue[T, Ctx](Value[T]):
+    _last_snapshot: tuple[Acknoledgement, Time, T]
+    _extrapolate: Callable[[T, Time, Ctx], T]
+    _value: T
 
-#     def __init__(self, value: T, t: Time) -> None:
-#         super().__init__()
-#         self.last_snapshot = (t, value)
+    def __init__(
+        self,
+        value: T,
+        last_ack: Acknoledgement,
+        t_ack: Time,
+        extrapolate: Callable[[T, Time, Ctx], T],
+    ) -> None:
+        super().__init__()
+        self._last_snapshot = (last_ack, t_ack, value)
+        self._extrapolate = extrapolate
+        self._value = value
 
-#     @abstractmethod
-#     def extrapolate(self, value: T, dt: Time) -> T: ...
+    def tick(self, t: Time, ctx: Ctx) -> None:
+        dt = t - self._last_snapshot[1]
+        self._value = self._extrapolate(self._value, dt, ctx)
 
-#     def tick_client(self, input: Input, dt: Time, t: Time) -> None:
-#         self._value = self.extrapolate(self.last_snapshot[1], self.last_snapshot[0])
+    def on_server(self, value: T, last_ack: Acknoledgement, t_ack: Time) -> None:
+        if last_ack < self._last_snapshot[0]:
+            return
+        self.last_snapshot = (last_ack, t_ack, value)
 
-#     def on_server_update(
-#         self, value: T,
-#         last_ack: Acknoledgement,
-#         t_ack: Time
-#     ) -> None:
-#         self.last_snapshot = (t_ack, value)
-
-#     @property
-#     def value(self) -> T:
-#         return self._value
+    def get(self) -> T:
+        return self._value
 
 
 class PassiveRemoteValue[T](Value[T]):
@@ -178,16 +183,20 @@ class ClientEntity(Entity, ABC):
     ): ...
 
 
-type ClientEntityType = ClientPlayerRobot | ClientEnemyRobot
+type ClientEntityType = ClientPlayerRobot | ClientEnemyRobot | ClientPlayerBullet
 
 
 class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
+    health: PassiveRemoteValue[int]
     motion: PredictedValue[Motion, PlayerRobotMoveCtx]
     color: PassiveRemoteValue[Color]
     aim: Position
 
-    def __init__(self, game: "GameState", motion: Motion, color: Color) -> None:
+    def __init__(
+        self, game: "GameState", health: int, motion: Motion, color: Color
+    ) -> None:
         super().__init__(game)
+        self.health = PassiveRemoteValue(health)  # type: ignore
         self.motion = PredictedValue(motion, self.move)  # type: ignore
         self.color = PassiveRemoteValue(color)  # type: ignore
         self.aim = Vector(0, 0)
@@ -209,11 +218,12 @@ class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
                 (Vector(float(), float()), Vector(float(), float())) as e  # type: ignore
             ):
                 self.motion.on_server(e, last_ack)  # type: ignore
-                pass
             case "color", Color():
                 self.color.on_server(event)
-            case _:
-                raise ValueError("entity: invalid event")
+            case "health", int():
+                self.health.on_server(event)
+            case n, e:
+                raise ValueError(f"entity: invalid event {n}={e}")
 
     def tick(self, dt: Time, t: Time):
         pass
@@ -226,19 +236,59 @@ class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
         pygame.draw.circle(ctx.screen, "orange", center.to_tuple(), r)
 
 
+class ClientPlayerBullet(PlayerBullet, ClientEntity):
+    _position: ExtrapolatedValue[Vector[float], None]
+    _velocity: PassiveRemoteValue[Vector[float]]
+
+    def __init__(
+        self,
+        game: "GameState",
+        position: Vector[float],
+        velocity: Vector[float],
+        last_ack: Acknoledgement,
+        t_ack: Time,
+    ) -> None:
+        super().__init__(game)
+        self._position = ExtrapolatedValue(position, last_ack, t_ack, self.move)  # type: ignore
+        self._velocity = PassiveRemoteValue(velocity)  # type: ignore
+
+    def on_server(
+        self,
+        event_name: EventName,
+        event: object,
+        last_ack: Acknoledgement,
+        t_ack: Time,
+    ):
+        match event_name, event:
+            case "position", Vector(float(), float()):
+                _event: Vector[float] = event
+                self._position.on_server(_event, last_ack, t_ack)
+            case "velocity", Vector(float(), float()):
+                _event: Vector[float] = event
+                self._velocity.on_server(_event)
+            case _:
+                raise ValueError("entity: invalid event")
+
+    def tick(self, dt: Time, t: Time):
+        self._position.tick(t, None)
+
+
 class ClientEnemyRobot(EnemyRobot, ClientEntity):
+    health: PassiveRemoteValue[int]
     motion: InterpolatedValue[Motion, None]
     color: PassiveRemoteValue[Color]
 
     def __init__(
         self,
         game: "GameState",
+        health: int,
         motion: Motion,
         color: Color,
         last_ack: Acknoledgement,
         t_ack: Time,
     ) -> None:
         super().__init__(game, motion)
+        self.health = PassiveRemoteValue(health)  # type: ignore
         self.motion = InterpolatedValue(motion, last_ack, t_ack, interpolateMotion)  # type: ignore
         self.color = PassiveRemoteValue(color)  # type: ignore
 
@@ -256,6 +306,8 @@ class ClientEnemyRobot(EnemyRobot, ClientEntity):
                 self.motion.on_server(e, last_ack, t_ack)  # type: ignore
             case "color", Color():
                 self.color.on_server(event)
+            case "health", int():
+                self.health.on_server(event)
             case n, e:
                 raise ValueError(f"entity: invalid event {n}={e}")
 
