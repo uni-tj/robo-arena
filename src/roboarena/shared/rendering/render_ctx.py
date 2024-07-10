@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from roboarena.shared.types import FieldOfView
 
 STANDARD_BLOCK_SIZE_PX = 50
-STANDARD_GU_PER_SCREEN = 25
+STANDARD_GU_PER_SCREEN = 50
 OVERLAP_FOV_GU = Vector(2.0, 2.0)
 
 

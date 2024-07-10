@@ -221,7 +221,7 @@ class WFC:
     def get_implied_constraints(self, constraint: Constraint) -> DirConstraint:
         constr_num = self.constr_num(constraint)
         if constr_num not in self.const_cache:
-            logger.critical("Cache miss")
+            logger.debug("Cache miss")
             self.const_cache[constr_num] = self.gen_implied_constraints(constraint)
         return self.const_cache[constr_num]
 
@@ -265,7 +265,6 @@ class WFC:
                 self.constraints[sour][0] = False
             self.tiles[pos] = None
             self.not_collapsed.add(pos)
-            print(self.not_collapsed)
             update = True
         self.tile_bounds = get_dict_bounds(self.tiles)
         return update
@@ -273,14 +272,14 @@ class WFC:
     def print(self, sc: Optional[dict[Vector[int], str]] = None):
         print_constraint_grid(self.constraints, self.tile_types, sc)
         print_grid(self.tiles)
-        logger.critical(str("".join(["-" * 100])))
+        logger.debug(str("".join(["-" * 100])))
 
     def print2(self, sc: Optional[Vector[int]] = None):
         print_grid(self.tiles)
         print_constraint_grid(self.constraints, self.tile_types, sc)
-        logger.critical(str("".join(["-" * 100])))
+        logger.debug(str("".join(["-" * 100])))
 
-    # @log_durations(logger.critical, "slice: ", "ms")
+    # @log_durations(logger.debug, "slice: ", "ms")
     def slice_constraints(self, constr: DirConstraint) -> list[ConstraintSlice]:
         num_tile_types = len(self.tile_types)
         slices: list[ConstraintSlice] = [dict() for _ in range(num_tile_types)]
@@ -338,7 +337,7 @@ class WFC:
                 self.all_updated[-1].add(neighbour)
                 queue.append(neighbour)
 
-    # @log_durations(logger.critical, "low_entropy: ", "ms")
+    # @log_durations(logger.debug, "low_entropy: ", "ms")
     def low_entropy_tiles(
         self, entropy: Callable[[Constraint], float]
     ) -> list[Vector[int]]:
@@ -549,7 +548,7 @@ def print_adaptive_grid[
             f(constraints, tile_types),
         ),
     )
-    logger.critical("\n".join(grid))
+    logger.debug("\n".join(grid))
 
 
 def get_constraint_grid(
@@ -592,7 +591,7 @@ def print_entropy_grid(
 
 
 def print_grid(nodes: dict[Vector[int], Optional[Tile]]):
-    logger.critical("\n".join("".join(row) for row in get_grid(nodes)))
+    logger.debug("\n".join("".join(row) for row in get_grid(nodes)))
 
 
 # Example usag

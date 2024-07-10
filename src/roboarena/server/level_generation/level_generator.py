@@ -36,7 +36,7 @@ class LevelGenerator:
         self.s = 3
         self._init_level()
 
-    @log_durations(logger.critical, "init_level: ", "ms")
+    @log_durations(logger.debug, "init_level: ", "ms")
     def _init_level(self):
         s = 1
         self.wfc = WFC.init_wfc(s, s, list(TileType), self.constraint_map)

@@ -1,10 +1,14 @@
 import logging
-from dataclasses import dataclass
-from functools import cached_property
-from math import ceil, floor
+import time
+from collections import deque
+from dataclasses import dataclass, field
+from functools import cache, cached_property
+from math import ceil, floor, nan
 from typing import TYPE_CHECKING
 
+import numpy as np
 import pygame
+import pygame.freetype
 from pygame import Surface, display
 
 from roboarena.shared.block import voidBlock
@@ -17,11 +21,65 @@ if TYPE_CHECKING:
 logger = logging.getLogger(f"{__name__}")
 
 
-GU_PER_SCREEN = 15.0
+GU_PER_SCREEN = 25.0
 FOV_OVERLAP_GU = 1.0
 
 type FieldOfView = Rect
 """ In game units """
+
+
+@cache
+def get_default_font() -> pygame.freetype.Font:
+    pygame.freetype.init()
+    return pygame.freetype.SysFont(None, 24)
+
+
+@dataclass
+class FPSCounter:
+    _frame_times: deque[float] = field(default_factory=lambda: deque(maxlen=101))
+    _font = get_default_font()
+
+    @property
+    def fps_list(self) -> list[float]:
+        return list(1 / np.array(np.diff(self._frame_times)))
+
+    def tick(self):
+        now = time.time()
+        self._frame_times.append(now)
+
+    def get_rolling_avg(self) -> float:
+        if len(self._frame_times) < 2:
+            return 0.0
+        time_span = self._frame_times[-1] - self._frame_times[0]
+        return (len(self._frame_times) - 1) / time_span if time_span > 0 else 0.0
+
+    def get_95th_percentile(self) -> tuple[float, float]:
+        if len(self._frame_times) < 2:
+            return 0.0, 0.0
+        sorted_frame_times = list(sorted(np.diff(self._frame_times)))
+        enough_values = len(sorted_frame_times) == 100
+        low_95 = 1 / sorted_frame_times[5] if enough_values else nan
+        high_95 = 1 / sorted_frame_times[-5] if enough_values else nan
+        return low_95, high_95
+
+    def get_avg(self):
+        if len(self._frame_times) < 2:
+            return 0.0
+        time_span = self._frame_times[-1] - self._frame_times[0]
+        fps = (len(self._frame_times) - 1) / time_span if time_span > 0 else 0.0
+
+        return fps
+
+    def fps_text(self):
+        rolling_avg = self.get_avg()
+        high_95, low_95 = self.get_95th_percentile()
+        return (
+            f"Rolling FPS: {rolling_avg:.2f} | <5%: {low_95:.2f} | >95%: {high_95:.2f}"
+        )
+
+    def render(self, screen: pygame.Surface):
+        fps_text = self.fps_text()
+        self._font.render_to(screen, (10, 10), fps_text, (255, 255, 255))
 
 
 @dataclass(frozen=True)
@@ -77,6 +135,7 @@ class RenderCtx:
 class Renderer:
     _screen: Surface
     _game: "GameState"
+    _fps_counter: FPSCounter
 
     _last_screen_size: Vector[int] | None
     _scale_cache: dict[tuple[Surface, Vector[float]], Surface]
@@ -86,6 +145,7 @@ class Renderer:
         self._game = game
         self._last_screen_size = None
         self._scale_cache = {}
+        self._fps_counter = FPSCounter()
 
     """ Helper functions
     """
@@ -109,9 +169,12 @@ class Renderer:
 
     # @log_durations(logger.debug, "render: ", "ms")
     def render(self, camera_position: Vector[float]) -> None:
+        self._fps_counter.tick()
+
         ctx = self._genCtx(camera_position)
         self._render_background(ctx)
         self._render_entities(ctx)
+        self._fps_counter.render(self._screen)
         display.flip()
 
     # @log_durations(logger.debug, "_render_background: ", "ms")
