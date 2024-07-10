@@ -1,14 +1,14 @@
 import logging
 from abc import ABC
-from dataclasses import dataclass
-from functools import cached_property
-from pathlib import Path
+from dataclasses import dataclass, field
+from functools import cache, cached_property
 from typing import TYPE_CHECKING
 
 import pygame
 from pygame import Surface
 
 from roboarena.shared.rendering.util import size_from_texture
+from roboarena.shared.util import load_graphic
 from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
@@ -36,25 +36,30 @@ class Block(ABC):
         ctx.screen.blit(scaled_texture, ctx.gu2screen(top_left_gu).to_tuple())
 
 
+wall_texture = load_graphic("walls/wall-top.PNG")
+
+
 @dataclass(frozen=True)
-class BlockCtx(ABC):
-    graphics_path: Path
-    collision: bool
-
-
 class WallBlock(Block):
-    pass
+    texture: Surface = field(default=wall_texture)
 
 
+floor_texture = load_graphic("floor/floor2.PNG")
+
+
+@dataclass(frozen=True)
 class FloorBlock(Block):
-    pass
+    texture: Surface = field(default=floor_texture)
 
 
+@cache
+def load_void_texture() -> Surface:
+    voidTexture = Surface((50, 65))
+    voidTexture.fill((0, 0, 0))
+    pygame.draw.circle(voidTexture, "blue", (25, 40), 10)
+    return voidTexture
+
+
+@dataclass(frozen=True)
 class VoidBlock(Block):
-    pass
-
-
-voidTexture = Surface((50, 65))
-voidTexture.fill((0, 0, 0))
-pygame.draw.circle(voidTexture, "blue", (25, 40), 10)
-voidBlock = VoidBlock(voidTexture)
+    texture: Surface = field(default_factory=load_void_texture)

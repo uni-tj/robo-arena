@@ -4,7 +4,7 @@ from typing import List
 from funcy import log_durations
 
 from roboarena.server.level_generation.level_config import UCM
-from roboarena.server.level_generation.level_processing import tilesmap2levelmap
+from roboarena.server.level_generation.level_processing import tiles2level
 from roboarena.server.level_generation.wfc import (
     WFC,
     ConstraintMap,
@@ -44,7 +44,7 @@ class LevelGenerator:
 
     def get_level(self) -> Level:
         tm = self.wfc.tiles
-        new_level: Level = tilesmap2levelmap(tm, self.tilesize)
+        new_level: Level = tiles2level(tm, self.tilesize)
         if self.new_diff:
             self.last_level = new_level
             self.new_diff = False

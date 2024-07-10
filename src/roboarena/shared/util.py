@@ -1,4 +1,5 @@
 import logging
+import os
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -6,6 +7,8 @@ from random import getrandbits
 from typing import Any, Callable, Generator, NoReturn
 
 import numpy as np
+import pygame
+from pygame import Surface
 
 from roboarena.shared.utils.vector import Vector
 
@@ -47,6 +50,10 @@ def gen_coord_space(
     coords = np.array(np.meshgrid(lnx, lny)).ravel("F").reshape(-1, 2).astype(int)
 
     return [Vector.from_sequence(coord) for coord in coords]
+
+
+def enumerate2d[T](iter: Iterable[Iterable[T]]) -> Iterable[tuple[tuple[int, int], T]]:
+    return [((i, j), v) for i, row in enumerate(iter) for j, v in enumerate(row)]
 
 
 def dict_diff_keys[K, V](dict1: dict[K, V], dict2: dict[K, V]) -> dict[K, V]:
@@ -114,3 +121,11 @@ def stopAll(*stoppables: Stoppable) -> None:
 @dataclass(frozen=True)
 class Stopped:
     pass
+
+
+def graphic_path(path: str) -> str:
+    return os.path.join(os.path.dirname(__file__), "..", "resources", "graphics", path)
+
+
+def load_graphic(path: str) -> Surface:
+    return pygame.image.load(graphic_path(path))

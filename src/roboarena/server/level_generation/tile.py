@@ -1,13 +1,15 @@
 from dataclasses import dataclass
 from enum import Enum
+from typing import TYPE_CHECKING
 
-from roboarena.shared.block import BlockCtx
+if TYPE_CHECKING:
+    from roboarena.shared.block import Block
 
 
 @dataclass(frozen=True)
 class Tile:
     type: "TileType"
-    blocks: list[list[BlockCtx]]
+    blocks: list[list["Block"]]
 
 
 @dataclass(frozen=True)

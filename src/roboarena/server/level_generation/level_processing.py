@@ -1,65 +1,28 @@
-from pathlib import Path
-
-import pygame
-import pygame.locals
-
 from roboarena.server.level_generation.tile import Tile
-from roboarena.shared.block import Block, BlockCtx, FloorBlock, WallBlock
-from roboarena.shared.types import Level, TileMap, TileType
-from roboarena.shared.util import getBounds
+from roboarena.server.level_generation.wfc import Tiles
+from roboarena.shared.block import FloorBlock, WallBlock
+from roboarena.shared.types import Level, TileType
+from roboarena.shared.util import enumerate2d
 from roboarena.shared.utils.vector import Vector
 
 
-def tilesmap2levelmap(tm: TileMap, tilesize: Vector[int]) -> Level:
-    (v_min, _) = getBounds(list(tm.keys()))
-    # (min_x, min_y) = v_min.to_tuple()
-    # (max_x, max_y) = v_max.to_tuple()
+def tiles2level(tiles: Tiles, tilesize: Vector[int]) -> Level:
     level: Level = {}
-    bs: dict[BlockCtx, Block] = {}
-    for tcoord, tile in tm.items():
+    for tcoord, tile in tiles.items():
         if tile is None:
-            continue
-            raise ValueError(
-                """Not all tiles were filled after the application
-                of wave function collapse"""
-            )
-        # for, bctx in tile.blocks.items():
-        new_tiles = convert_Tile(tile).blocks
-        for i, r in enumerate(new_tiles):
-            for j, bctx in enumerate(r):
-                gcoord = Vector(j, i)
-                bcoord = (tcoord * tilesize + gcoord).round()
-                level[bcoord] = generateBlock(bctx, bs)
+            msg = "Not all tiles were filled after the application of wave function collapse"  # noqa: B950
+            raise ValueError(msg)
+        blocks = TILES[tile].blocks
+        for bcoord, block in enumerate2d(blocks):
+            coord = (tcoord * tilesize + Vector.from_tuple(bcoord)).round()
+            level[coord] = block
     return level
 
 
-def generateBlock(bc: BlockCtx, bs: dict[BlockCtx, Block]) -> Block:
-    if bc in bs:
-        return bs[bc]
-    if bc.collision:
+w = WallBlock()
+f = FloorBlock()
 
-        block = WallBlock(
-            pygame.transform.scale(pygame.image.load(bc.graphics_path), (50, 65)),
-        )
-    else:
-        block = FloorBlock(
-            pygame.transform.scale(pygame.image.load(bc.graphics_path), (50, 50)),
-        )
-    bs[bc] = block
-    return block
-
-
-def load_graphics(gp: Path) -> pygame.Surface:
-    return pygame.image.load(gp)
-
-
-PATH_PREFIX = "./src/roboarena/resources/graphics/"
-
-
-w = BlockCtx(Path(PATH_PREFIX + "walls/wall-top.PNG"), True)
-f = BlockCtx(Path(PATH_PREFIX + "/floor/floor2.PNG"), False)
-
-TM = {
+TILES = {
     TileType.C: Tile(
         TileType.C,
         blocks=[
@@ -131,7 +94,3 @@ TM = {
         ],
     ),
 }
-
-
-def convert_Tile(bt: TileType) -> Tile:
-    return TM[bt]
