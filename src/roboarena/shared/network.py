@@ -1,9 +1,9 @@
+from collections.abc import Iterable
 from queue import Empty, Queue
-from threading import Lock, Thread
+from threading import Lock
+from typing import Optional
 
-from roboarena.shared.custom_threading import Atom
 from roboarena.shared.time import Time, add_seconds, get_time
-from roboarena.shared.util import Stoppable, Stopped
 
 type IpV4 = int
 """Time of arrival and message, internal type"""
@@ -32,10 +32,12 @@ class Network[Message]:
         t_arrive = add_seconds(get_time(), self._delay)
         self._clients[ip].put((t_arrive, msg))
 
-    def receive(self, ip: IpV4) -> list[Arrived[Message]]:
+    def receive(
+        self, ip: IpV4, *, until: Optional[Time] = None
+    ) -> list[Arrived[Message]]:
         """receive a list of messages for this ip, sorted oldest first"""
         self.add_client_if_missing(ip)
-        t = get_time()
+        t = until or get_time()
         arrived = list[Packet[Message]]()
         not_arrived = list[Packet[Message]]()
         while True:
@@ -63,57 +65,15 @@ class Network[Message]:
         return oldest
 
 
-class Receiver[Message](Stoppable):
-    """Receiver is running constantly in seperate thread
-
-    Enables messages to be tagged with exact time of arrival
-    """
-
-    _network: Network[Message]
+class Receiver[T]:
+    _network: Network[T]
     _ip: IpV4
-    _received: Queue[Arrived[Message]] = Queue()
-    stopped = Atom(False)
+    _received: Iterable[Arrived[T]]
 
-    def __init__(self, network: Network[Message], ip: IpV4) -> None:
+    def __init__(self, network: Network[T], ip: IpV4) -> None:
         self._network = network
         self._ip = ip
-        Thread(target=self._receive_loop, args=()).start()
+        self._received = list()
 
-    def received(self) -> list[Arrived[Message]]:
-        """Get all messages arrived since last call"""
-        received = list[Arrived[Message]]()
-        while True:
-            try:
-                received.append(self._received.get_nowait())
-            except Empty:
-                break
-        return sorted(received, key=lambda _: _[0])
-
-    def received_until(self, t: Time) -> list[Arrived[Message]]:
-        """Get all messages arrived between last requested time and t"""
-        received = list[Arrived[Message]]()
-        not_received = list[Arrived[Message]]()
-        while True:
-            try:
-                msg = self._received.get_nowait()
-                if msg[0] > t:
-                    not_received.append(msg)
-                else:
-                    received.append(msg)
-            except Empty:
-                break
-        for msg in not_received:
-            self._received.put(msg)
-        return sorted(received, key=lambda _: _[0])
-
-    def _receive_loop(self) -> Stopped:
-        """[internal] receive messages and tag with exact receive time"""
-        while True:
-            if self.stopped.get():
-                return Stopped()
-            messages = self._network.receive(self._ip)
-            for msg in messages:
-                self._received.put(msg)
-
-    def stop(self) -> None:
-        self.stopped.set(True)
+    def receive(self, *, until: Optional[Time] = None) -> list[Arrived[T]]:
+        return self._network.receive(self._ip, until=until)

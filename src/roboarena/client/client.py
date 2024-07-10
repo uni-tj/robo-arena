@@ -1,6 +1,5 @@
 import functools
 import logging
-from collections.abc import Sequence
 from typing import Any
 
 import pygame
@@ -17,7 +16,7 @@ from roboarena.client.entity import (
 from roboarena.shared.constants import CLIENT_TIMESTEP, SERVER_IP
 from roboarena.shared.custom_threading import Atom
 from roboarena.shared.game import GameState as SharedGameState
-from roboarena.shared.network import Arrived, IpV4, Network
+from roboarena.shared.network import Arrived, IpV4, Network, Receiver
 from roboarena.shared.rendering.renderer import Renderer
 from roboarena.shared.time import Time, get_time
 from roboarena.shared.types import (
@@ -227,7 +226,7 @@ class GameState(SharedGameState):
             t = get_time()
             dt = t - last_t
 
-            for t_msg, msg in self._client.receive():
+            for t_msg, msg in self._client.receiver.receive():
                 self.handle(t_msg, msg)
 
             input = self.get_input()
@@ -258,20 +257,19 @@ class Client(Stoppable):
     _logger = logging.getLogger(f"{__name__}/Client")
     ip: IpV4
     network: Network[EventType]
+    receiver: Receiver[EventType]
     stopped: Atom[bool]
     events: EventTarget[QuitEvent]
 
     def __init__(self, network: Network[EventType], ip: IpV4):
         self.ip = ip
         self.network = network
+        self.receiver = Receiver(network, ip)
         self.stopped = Atom(False)
         self.events = EventTarget()
 
     def dispatch(self, event: EventType) -> None:
         self.network.send(SERVER_IP, event)
-
-    def receive(self) -> Sequence[Arrived[EventType]]:
-        return self.network.receive(self.ip)
 
     def loop(self) -> Stopped:
         pygame.init()

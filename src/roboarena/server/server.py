@@ -74,7 +74,7 @@ class LobbyState:
         ):
             if self._server.stopped.get():
                 return Stopped()
-            for t_msg, msg in self._server.receiver.received():
+            for t_msg, msg in self._server.receiver.receive():
                 self.handle(t_msg, msg)
         self._logger.debug(f"close lobby with clients {self._clients}")
         return {client_id: client.ip for client_id, client in self._clients.items()}
@@ -211,7 +211,7 @@ class GameState(SharedGameState):
                     extend_level_evt = ServerExtendLevelEvent(level_diff)
                     self.dispatch(None, f"extend-level/{t_frame}", extend_level_evt)
 
-                for t_msg, msg in self._server.receiver.received_until(t_frame):
+                for t_msg, msg in self._server.receiver.receive(until=t_frame):
                     self.handle(t_msg, msg)
 
                 for entity in self._entities.values():
@@ -251,5 +251,4 @@ class Server(Stoppable):
         self._logger.info("stopped game")
 
     def stop(self) -> None:
-        self.receiver.stop()
         self.stopped.set(True)
