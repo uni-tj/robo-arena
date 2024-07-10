@@ -30,19 +30,23 @@ def counter():
 
 
 def gen_coord_space(
-    xsize: tuple[int, int], ysize: tuple[int, int]
+    xbounds: tuple[int, int], ybounds: tuple[int, int]
 ) -> list[Vector[int]]:
-    vects = []
-    lnx = np.linspace(xsize[0], xsize[1] - 1, xsize[1] - xsize[0])  # type: ignore
-    lny = np.linspace(ysize[0], ysize[1] - 1, ysize[1] - ysize[0])  # type: ignore
-    coords = np.array(np.meshgrid(lnx, lny)).ravel("F").reshape(-1, 2).astype(int)  # type: ignore
+    """Generates a list of coordinates in the rectangle given by xbounds and ybounds
 
-    def toVect2(x) -> Vector:  # type: ignore
-        return Vector(x[0], x[1])  # type: ignore
+    Args:
+        xbounds (tuple[int, int]): (min x val, max x val)
+        ybounds (tuple[int, int]): (min y val, may y val)
 
-    for coord in coords:
-        vects.append(toVect2(coord))  # type: ignore
-    return vects  # type: ignore
+    Returns:
+        list[Vector[int]]: list of Vector coordinates
+            in the space defined by xbounds and ybounds
+    """
+    lnx = np.linspace(xbounds[0], xbounds[1] - 1, xbounds[1] - xbounds[0])
+    lny = np.linspace(ybounds[0], ybounds[1] - 1, ybounds[1] - ybounds[0])
+    coords = np.array(np.meshgrid(lnx, lny)).ravel("F").reshape(-1, 2).astype(int)
+
+    return [Vector.from_sequence(coord) for coord in coords]
 
 
 def dict_diff_keys[K, V](dict1: dict[K, V], dict2: dict[K, V]) -> dict[K, V]:

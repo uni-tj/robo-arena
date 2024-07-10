@@ -5,7 +5,7 @@ from funcy import log_durations
 
 from roboarena.server.level_generation.level_config import UCM
 from roboarena.server.level_generation.level_processing import tilesmap2levelmap
-from roboarena.server.level_generation.wfc_new import (
+from roboarena.server.level_generation.wfc import (
     WFC,
     ConstraintMap,
     TileType,

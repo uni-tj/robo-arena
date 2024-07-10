@@ -1,6 +1,6 @@
 import math
 from dataclasses import dataclass
-from typing import Callable
+from typing import Callable, Sequence
 
 from pygame import Vector2
 
@@ -63,6 +63,10 @@ class Vector[T: (int, float)]:
     @staticmethod
     def from_tuple[U: (int, float)](tup: tuple[U, U]) -> "Vector[U]":
         return Vector(tup[0], tup[1])
+
+    @staticmethod
+    def from_sequence[U: (int, float)](x: Sequence[U]) -> "Vector[U]":
+        return Vector(x[0], x[1])
 
     def vector2_repr(self) -> Vector2:
         return Vector2(self.x, self.y)
