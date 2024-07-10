@@ -16,6 +16,9 @@ class BasicTile:
 
 
 class TileType(Enum):
+    # A = "A"
+    # B = "B"
+    IM = " "
     C = "┼"
     TI = "┴"
     T = "┬"

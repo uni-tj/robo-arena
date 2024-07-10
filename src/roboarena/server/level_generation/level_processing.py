@@ -28,7 +28,7 @@ def tilesmap2levelmap(tm: TileMap, tilesize: Vector[int]) -> Level:
         for i, r in enumerate(new_tiles):
             for j, bctx in enumerate(r):
                 gcoord = Vector(j, i)
-                bcoord = (v_min + (tcoord * tilesize) + gcoord).round()
+                bcoord = (tcoord * tilesize + gcoord).round()
                 level[bcoord] = generateBlock(bctx, bs)
     return level
 
@@ -40,12 +40,10 @@ def generateBlock(bc: BlockCtx, bs: dict[BlockCtx, Block]) -> Block:
 
         block = WallBlock(
             pygame.transform.scale(pygame.image.load(bc.graphics_path), (50, 65)),
-            Vector(50, 65),
         )
     else:
         block = FloorBlock(
-            pygame.transform.scale(pygame.image.load(bc.graphics_path), (65, 50)),
-            Vector(50, 50),
+            pygame.transform.scale(pygame.image.load(bc.graphics_path), (50, 50)),
         )
     bs[bc] = block
     return block

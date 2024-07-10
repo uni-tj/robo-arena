@@ -1,14 +1,35 @@
 from roboarena.server.level_generation.tile import TileType
 from roboarena.shared.types import Direction, UserConstraint, UserConstraintList
 
+# UCM: UserConstraintList = [
+#     UserConstraint(
+#         TileType.A,
+#         {
+#             Direction.UP: [TileType.B],
+#             Direction.DOWN: [TileType.B],
+#             Direction.LEFT: [TileType.B],
+#             Direction.RIGHT: [TileType.B],
+#         },
+#     )
+# ]
+TL = list(x for x in TileType.__members__.values())
 UCM: UserConstraintList = [
+    UserConstraint(
+        TileType.IM,
+        {
+            Direction.UP: TL,
+            Direction.DOWN: TL,
+            Direction.LEFT: TL,
+            Direction.RIGHT: TL,
+        },
+    ),
     UserConstraint(
         TileType.C,
         {
-            Direction.UP: [TileType.E, TileType.EI, TileType.T],
-            Direction.DOWN: [TileType.E, TileType.EI, TileType.TI],
-            Direction.LEFT: [TileType.E, TileType.T, TileType.TI],
-            Direction.RIGHT: [TileType.EI, TileType.T, TileType.TI],
+            Direction.UP: [TileType.E, TileType.EI, TileType.T, TileType.C],
+            Direction.DOWN: [TileType.E, TileType.EI, TileType.TI, TileType.C],
+            Direction.LEFT: [TileType.E, TileType.T, TileType.TI, TileType.C],
+            Direction.RIGHT: [TileType.EI, TileType.T, TileType.TI, TileType.C],
         },
     ),
     UserConstraint(
@@ -50,11 +71,9 @@ UCM: UserConstraintList = [
             ],
             Direction.LEFT: [
                 TileType.EI,
-                TileType.V,
             ],
             Direction.RIGHT: [
                 TileType.E,
-                TileType.V,
             ],
         },
     ),
@@ -75,11 +94,9 @@ UCM: UserConstraintList = [
             ],
             Direction.UP: [
                 TileType.TI,
-                TileType.H,
             ],
             Direction.DOWN: [
                 TileType.T,
-                TileType.H,
             ],
         },
     ),

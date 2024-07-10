@@ -90,3 +90,9 @@ class Vector[T: (int, float)]:
 
     def distance_to(self, to: "Vector[T]") -> float:
         return (to - self).length()  # type: ignore
+
+    def any_leq(self, o: "Vector[T]") -> bool:
+        return self.x <= o.x or self.y <= o.y
+
+    def any_geq(self, o: "Vector[T]") -> bool:
+        return self.x >= o.x or self.y >= o.y

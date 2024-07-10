@@ -146,9 +146,7 @@ class GameState(SharedGameState):
         for client in self._clients.values():
             self._server.network.send(
                 client.ip,
-                ServerGameStartEvent(
-                    client.entity_id, spawn_events, self.level
-                ),  # TODO Leveldiff
+                ServerGameStartEvent(client.entity_id, spawn_events, self.level),
             )
 
     def dispatch_factory(

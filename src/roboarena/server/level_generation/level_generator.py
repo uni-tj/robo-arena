@@ -1,9 +1,6 @@
 import logging
-import time
 from typing import List
 
-import numpy as np
-import pygame
 from funcy import log_durations
 
 from roboarena.server.level_generation.level_config import UCM
@@ -14,7 +11,8 @@ from roboarena.server.level_generation.wfc_new import (
     TileType,
     convUcmCm,
 )
-from roboarena.shared.rendering.render_engine import RenderEngine
+
+# from roboarena.shared.rendering.render_engine import RenderEngine
 from roboarena.shared.types import Level
 from roboarena.shared.util import dict_diff_keys, gen_coord_space
 from roboarena.shared.utils.vector import Vector
@@ -40,7 +38,7 @@ class LevelGenerator:
 
     @log_durations(logger.critical, "init_level: ", "ms")
     def _init_level(self):
-        s = 3
+        s = 1
         self.wfc = WFC.init_wfc(s, s, list(TileType), self.constraint_map)
         self.wfc.collapse_map()
 
@@ -54,6 +52,7 @@ class LevelGenerator:
         return new_level
 
     def get_level_diff(self) -> Level:
+        # return self.get_level()
         return dict_diff_keys(self.last_level, self.get_level())
 
     def extend_level(self, posm: List[Vector[float]]) -> Level:
@@ -66,9 +65,7 @@ class LevelGenerator:
         ]
         if not self.wfc.extend_level(tposs):
             return {}
-        t0 = time.time()
         self.wfc.collapse_map()
-        logger.critical(f"Wfc_time {time.time() - t0}")
         self.new_diff = True
         diff = self.get_level_diff()
         return diff
@@ -76,10 +73,8 @@ class LevelGenerator:
 
 if __name__ == "__main__":
     l_gen = LevelGenerator()
-    pygame.init()
-    screen = pygame.display.set_mode((1000, 1000))
+
     ppos = Vector(2.5, 2.5)
-    eng = RenderEngine(screen)
     while True:
         ppos += Vector(1, 0)
         try:
@@ -87,6 +82,22 @@ if __name__ == "__main__":
         except Exception as e:
             logger.error(f"Error extending level: {e}")
         lvl = l_gen.get_level()
-        eng.render_screen(lvl, dict(), ppos)
         print(l_gen.get_level_diff())
-        # time.sleep(1)
+        input()
+
+# if __name__ == "__main__":
+#     l_gen = LevelGenerator()
+#     pygame.init()
+#     screen = pygame.display.set_mode((1000, 1000))
+#     ppos = Vector(2.5, 2.5)
+#     eng = RenderEngine(screen)
+#     while True:
+#         ppos += Vector(1, 0)
+#         try:
+#             l_gen.extend_level([ppos])
+#         except Exception as e:
+#             logger.error(f"Error extending level: {e}")
+#         lvl = l_gen.get_level()
+#         eng.render_screen(lvl, dict(), ppos)
+#         print(l_gen.get_level_diff())
+#         # time.sleep(1)
