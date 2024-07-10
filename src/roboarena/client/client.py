@@ -12,6 +12,7 @@ from roboarena.client.entity import (
     ClientEnemyRobot,
     ClientEntityType,
     ClientInputHandler,
+    ClientPlayerBullet,
     ClientPlayerRobot,
 )
 from roboarena.shared.constants import CLIENT_TIMESTEP, SERVER_IP
@@ -33,10 +34,12 @@ from roboarena.shared.types import (
     EventType,
     Input,
     ServerConnectionConfirmEvent,
+    ServerDeleteEntityEvent,
     ServerEntityEvent,
     ServerExtendLevelEvent,
     ServerGameEvent,
     ServerGameStartEvent,
+    ServerSpawnPlayerBulletEvent,
     ServerSpawnRobotEvent,
 )
 from roboarena.shared.util import Counter, EventTarget, Stoppable, Stopped, counter
@@ -158,7 +161,7 @@ class GameState(SharedGameState):
         self._ack = counter()
         self._client_id = client_id
         self._entity_id = start.client_entity
-        self.entities = {}
+        self.entities = {}  # type: ignore
         self.events = EventTarget()
 
         self._logger.debug(f"initialize with t_start: {t_start}, start: {start}")
@@ -170,7 +173,10 @@ class GameState(SharedGameState):
                 self.handle(t_start, ServerGameEvent(INITIAL_ACKNOLEDGEMENT, spawn))
                 continue
             # initialize client entity
-            entity = ClientPlayerRobot(self, spawn.motion, spawn.color)
+            if not isinstance(spawn, ServerSpawnRobotEvent):
+                self._logger.critical("client entity no robot")
+                raise Exception("client entity no robot")
+            entity = ClientPlayerRobot(self, spawn.health, spawn.motion, spawn.color)
             self.entities[spawn.id] = entity
             self._entity = entity
             self._logger.debug(f"intialized client entity: {self._entity}")
@@ -185,9 +191,16 @@ class GameState(SharedGameState):
         match event:
             case ServerEntityEvent(id, name, payload):
                 self.entities[id].on_server(name, payload, msg.last_ack, t_msg)
-            case ServerSpawnRobotEvent(id, motion, color):
-                entity = ClientEnemyRobot(self, motion, color, last_ack, t_msg)
+            case ServerSpawnRobotEvent(id, health, motion, color):
+                entity = ClientEnemyRobot(self, health, motion, color, last_ack, t_msg)
                 self.entities[id] = entity
+            case ServerSpawnPlayerBulletEvent(id, position, velocity):
+                entity = ClientPlayerBullet(
+                    self, position, velocity, msg.last_ack, t_msg
+                )
+                self.entities[id] = entity
+            case ServerDeleteEntityEvent(id):
+                del self.entities[id]
             case ServerExtendLevelEvent(level_diff):
                 self.level |= level_diff
 
@@ -198,13 +211,14 @@ class GameState(SharedGameState):
         )
         return ack
 
-    def get_input(self):
+    def get_input(self, dt: Time):
         keys = pygame.key.get_pressed()
         (mouse_1, _, mouse_3) = pygame.mouse.get_pressed()
         mouse_pos_px = Vector.from_tuple(pygame.mouse.get_pos())
         mouse_pos_gu = self._renderer.screen2gu(mouse_pos_px, self._entity.position)
         # self._logger.debug(f"mouse_pos_gu: {mouse_pos_gu}")
         return Input(
+            dt=dt,
             move_right=keys[pygame.K_RIGHT],
             move_down=keys[pygame.K_DOWN],
             move_left=keys[pygame.K_LEFT],
@@ -230,7 +244,7 @@ class GameState(SharedGameState):
             for t_msg, msg in self._client.receive():
                 self.handle(t_msg, msg)
 
-            input = self.get_input()
+            input = self.get_input(dt)
             ack = self.dispatch(ClientInputEvent(input, dt))
             self._entity.on_input(input, dt, ack)
 

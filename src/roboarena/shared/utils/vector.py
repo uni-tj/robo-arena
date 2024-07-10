@@ -90,3 +90,11 @@ class Vector[T: (int, float)]:
 
     def distance_to(self, to: "Vector[T]") -> float:
         return (to - self).length()  # type: ignore
+
+    @staticmethod
+    def zero() -> "Vector[float]":
+        return Vector(0, 0)
+
+    @staticmethod
+    def one() -> "Vector[float]":
+        return Vector(1, 1)
