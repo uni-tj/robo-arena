@@ -184,6 +184,7 @@ class GameRenderer(Renderer):
         self._render_background(ctx)
         self._render_entities(ctx)
         self._fps_counter.render(self._screen)
+        self._render_game_ui(ctx)
         display.flip()
 
     @cached_property
@@ -203,6 +204,9 @@ class GameRenderer(Renderer):
     def _render_entities(self, ctx: RenderCtx) -> None:
         for entity in self._game.entities.values():
             entity.render(ctx)
+
+    def _render_game_ui(self, ctx: RenderCtx) -> None:
+        self._game.game_ui.render(ctx)
 
 
 class MenuRenderer(Renderer):
