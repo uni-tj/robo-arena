@@ -12,7 +12,7 @@ import pygame
 import pygame.freetype
 from pygame import Surface, display
 
-from roboarena.shared.block import VoidBlock
+from roboarena.shared.block import void
 from roboarena.shared.utils.rect import Rect
 from roboarena.shared.utils.vector import Vector
 
@@ -186,17 +186,13 @@ class GameRenderer(Renderer):
         self._fps_counter.render(self._screen)
         display.flip()
 
-    @cached_property
-    def void_block(self) -> VoidBlock:
-        return VoidBlock()
-
     # @log_durations(logger.debug, "_render_background: ", "ms")
     def _render_background(self, ctx: RenderCtx) -> None:
         self._screen.fill((0, 0, 0))
         for y in range(floor(ctx.fov.top_left.y), ceil(ctx.fov.bottom_right.y)):
             for x in range(floor(ctx.fov.top_left.x), ceil(ctx.fov.bottom_right.x)):
                 pos_gu = Vector(x, y)
-                block = self._game.level.get(pos_gu) or self.void_block
+                block = self._game.level.get(pos_gu) or void
                 block.render(pos_gu * 1.0, ctx)
 
     # @log_durations(logger.debug, "_render_entities: ", "ms")

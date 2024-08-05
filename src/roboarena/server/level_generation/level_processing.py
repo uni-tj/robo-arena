@@ -1,6 +1,6 @@
 from roboarena.server.level_generation.tile import Tile
 from roboarena.server.level_generation.wfc import Tiles
-from roboarena.shared.block import FloorBlock, WallBlock
+from roboarena.shared.block import floor, wall
 from roboarena.shared.types import Level, TileType
 from roboarena.shared.util import enumerate2d
 from roboarena.shared.utils.vector import Vector
@@ -19,8 +19,8 @@ def tiles2level(tiles: Tiles, tilesize: Vector[int]) -> Level:
     return level
 
 
-w = WallBlock()
-f = FloorBlock()
+w = wall
+f = floor
 
 TILES = {
     TileType.C: Tile(
