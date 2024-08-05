@@ -1,6 +1,6 @@
 import logging
 from abc import ABC
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from functools import cache, cached_property
 from typing import TYPE_CHECKING
 
@@ -36,22 +36,6 @@ class Block(ABC):
         ctx.screen.blit(scaled_texture, ctx.gu2screen(top_left_gu).to_tuple())
 
 
-wall_texture = load_graphic("walls/wall-top.PNG")
-
-
-@dataclass(frozen=True)
-class WallBlock(Block):
-    texture: Surface = field(default=wall_texture)
-
-
-floor_texture = load_graphic("floor/floor2.PNG")
-
-
-@dataclass(frozen=True)
-class FloorBlock(Block):
-    texture: Surface = field(default=floor_texture)
-
-
 @cache
 def load_void_texture() -> Surface:
     voidTexture = Surface((50, 65))
@@ -60,6 +44,8 @@ def load_void_texture() -> Surface:
     return voidTexture
 
 
-@dataclass(frozen=True)
-class VoidBlock(Block):
-    texture: Surface = field(default_factory=load_void_texture)
+floor = Block(load_graphic("floor/floor2.PNG"))
+floor_room_spawn = Block(load_graphic("floor/floor2.PNG"))
+floor_door = Block(load_graphic("floor/floor2.PNG"))
+wall = Block(load_graphic("walls/wall-top.PNG"))
+void = Block(load_void_texture())
