@@ -71,6 +71,9 @@ class PlayerRobot(Entity):
     color: Value[Color]
     texture = playerRobotTexture
     texture_size = size_from_texture_width(playerRobotTexture, width=1.0)
+    MAX_SPEED = 0.8
+    ACCELEARTE = 0.5
+    DECELERATE = 0.9
 
     @property
     def position(self) -> Position:
@@ -82,23 +85,29 @@ class PlayerRobot(Entity):
 
         new_orientation = Vector[float](0.0, 0.0)
         if input.move_right:
-            new_orientation += Vector(1.0, 0.0)
+            new_orientation += Vector(self.ACCELEARTE, 0.0)
         if input.move_down:
-            new_orientation += Vector(0.0, 1.0)
+            new_orientation += Vector(0.0, self.ACCELEARTE)
         if input.move_left:
-            new_orientation += Vector(-1.0, 0.0)
+            new_orientation += Vector(-self.ACCELEARTE, 0.0)
         if input.move_up:
-            new_orientation += Vector(0.0, -1.0)
+            new_orientation += Vector(0.0, -self.ACCELEARTE)
         if new_orientation.length() != 0.0:
             new_orientation.normalize()
+            new_orientation = new_orientation + cur_orientation
+        else:
+            new_orientation = cur_orientation * self.DECELERATE
 
-        new_position = cur_position + new_orientation * 5 * dt
-        cached_orientation = (
-            new_orientation
-            if not (new_orientation == Vector(0.0, 0.0))
-            else cur_orientation
-        )
-        return (new_position, cached_orientation)
+        if new_orientation.length() > self.MAX_SPEED:
+            new_orientation.normalize()
+            new_orientation *= self.MAX_SPEED
+
+        if new_orientation.length() < 0.1:
+            new_orientation = Vector(0.0, 0.0)
+
+        new_position = cur_position + new_orientation * dt
+
+        return (new_position, new_orientation)
 
 
 type EnemyRobotMoveCtx = tuple[Time]
