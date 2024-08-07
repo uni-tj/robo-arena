@@ -81,7 +81,14 @@ class FPSCounter:
 
     def render(self, screen: pygame.Surface):
         fps_text = self.fps_text()
-        self._font.render_to(screen, (10, 10), fps_text, (255, 255, 255))
+        img = self._font.render(fps_text, (255, 255, 255))[0]
+        screen.blit(
+            img,
+            (
+                screen.get_width() - 10 - img.get_width(),
+                screen.get_height() - 10 - img.get_height(),
+            ),
+        )
 
 
 @dataclass(frozen=True)
@@ -184,6 +191,7 @@ class GameRenderer(Renderer):
         self._render_background(ctx)
         self._render_entities(ctx)
         self._fps_counter.render(self._screen)
+        self._render_game_ui(ctx)
         display.flip()
 
     # @log_durations(logger.debug, "_render_background: ", "ms")
@@ -199,6 +207,9 @@ class GameRenderer(Renderer):
     def _render_entities(self, ctx: RenderCtx) -> None:
         for entity in self._game.entities.values():
             entity.render(ctx)
+
+    def _render_game_ui(self, ctx: RenderCtx) -> None:
+        self._game.game_ui.render(ctx)
 
 
 class MenuRenderer(Renderer):

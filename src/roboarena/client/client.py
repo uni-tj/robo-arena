@@ -20,6 +20,7 @@ from roboarena.client.menu.main_menu import MainMenu
 from roboarena.shared.constants import CLIENT_TIMESTEP, SERVER_IP
 from roboarena.shared.custom_threading import Atom
 from roboarena.shared.game import GameState as SharedGameState
+from roboarena.shared.game_ui import GameUI
 from roboarena.shared.network import Arrived, IpV4, Network, Receiver
 from roboarena.shared.rendering.renderer import GameRenderer
 from roboarena.shared.time import Time, get_time
@@ -44,6 +45,7 @@ from roboarena.shared.types import (
 )
 from roboarena.shared.util import Counter, EventTarget, Stoppable, Stopped, counter
 from roboarena.shared.utils.vector import Vector
+from roboarena.shared.weapon import LaserGun
 
 if TYPE_CHECKING:
     from roboarena.server.level_generation.level_generator import Level
@@ -165,6 +167,7 @@ class GameState(SharedGameState):
         self._screen = screen
         self._renderer = GameRenderer(screen, self)
         self._master_mixer = master_mixer
+        self.game_ui = GameUI(LaserGun())
         self._ack = counter()
         self._client_id = client_id
         self._entity_id = start.client_entity
