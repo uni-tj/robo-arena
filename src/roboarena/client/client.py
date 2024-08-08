@@ -1,6 +1,6 @@
 import functools
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pygame
 from pygame import RESIZABLE, Surface, event
@@ -33,13 +33,16 @@ from roboarena.shared.types import (
     Input,
     ServerConnectionConfirmEvent,
     ServerEntityEvent,
-    ServerExtendLevelEvent,
     ServerGameEvent,
     ServerGameStartEvent,
+    ServerLevelUpdateEvent,
     ServerSpawnRobotEvent,
 )
 from roboarena.shared.util import Counter, EventTarget, Stoppable, Stopped, counter
 from roboarena.shared.utils.vector import Vector
+
+if TYPE_CHECKING:
+    from roboarena.server.level_generation.level_generator import Level
 
 
 def unexpected_evt(expected: str, actual: Any) -> str:
@@ -141,6 +144,7 @@ class GameState(SharedGameState):
     _entity_id: EntityId
     _entity: ClientInputHandler
     entities: dict[EntityId, ClientEntityType]
+    level: "Level"
     events: EventTarget[QuitEvent]
 
     def __init__(
@@ -187,8 +191,8 @@ class GameState(SharedGameState):
             case ServerSpawnRobotEvent(id, motion, color):
                 entity = ClientEnemyRobot(self, motion, color, last_ack, t_msg)
                 self.entities[id] = entity
-            case ServerExtendLevelEvent(level_diff):
-                self.level |= level_diff
+            case ServerLevelUpdateEvent(update):
+                self.level |= update
 
     def dispatch(self, event: ClientGameEventType) -> Acknoledgement:
         ack = next(self._ack)

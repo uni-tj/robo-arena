@@ -13,6 +13,7 @@ from roboarena.server.entity import (
 )
 from roboarena.server.events import Dispatch, EventBuffer, EventName
 from roboarena.server.level_generation.level_generator import LevelGenerator
+from roboarena.server.level_generation.tileset import tileset
 from roboarena.shared.constants import SERVER_FRAMES_PER_TIMESTEP, SERVER_TIMESTEP
 from roboarena.shared.custom_threading import Atom
 from roboarena.shared.game import GameState as SharedGameState
@@ -30,13 +31,19 @@ from roboarena.shared.types import (
     EventType,
     ServerConnectionConfirmEvent,
     ServerEntityEvent,
-    ServerExtendLevelEvent,
     ServerGameEvent,
     ServerGameEventType,
     ServerGameStartEvent,
+    ServerLevelUpdateEvent,
     ServerSpawnRobotEvent,
 )
-from roboarena.shared.util import Stoppable, Stopped, gen_id
+from roboarena.shared.util import (
+    Stoppable,
+    Stopped,
+    flatten,
+    gen_id,
+    square_space_around,
+)
 from roboarena.shared.utils.vector import Vector
 
 logger = logging.getLogger(__name__)
@@ -96,7 +103,7 @@ class GameState(SharedGameState):
     _clients: dict[ClientId, ClientInfo]
     _entities: dict[EntityId, ServerEntityType]
 
-    _level_generator: LevelGenerator
+    _level_gen: LevelGenerator
 
     def __init__(self, server: "Server", clients: dict[ClientId, IpV4]) -> None:
         self._server = server
@@ -105,8 +112,7 @@ class GameState(SharedGameState):
 
         self._logger.debug(f"initialize with clients: {clients}")
 
-        self._level_generator = LevelGenerator()
-        self.level = self._level_generator.get_level()
+        self._level_gen = LevelGenerator(tileset)
         enemy_id = 0
         enemy = ServerEnemyRobot(
             self,
@@ -144,10 +150,9 @@ class GameState(SharedGameState):
 
         spawn_events = [entity_as_event(i, e) for i, e in self._entities.items()]
         for client in self._clients.values():
-            self._server.network.send(
-                client.ip,
-                ServerGameStartEvent(client.entity_id, spawn_events, self.level),
-            )
+            level = self._level_gen.level
+            event = ServerGameStartEvent(client.entity_id, spawn_events, level)
+            self._server.network.send(client.ip, event)
 
     def dispatch_factory(
         self, client: Optional[ClientId], entity: EntityId
@@ -204,12 +209,12 @@ class GameState(SharedGameState):
             for i in range(SERVER_FRAMES_PER_TIMESTEP):
                 t_frame = last_t + i * dt_frame
 
-                level_diff = self._level_generator.extend_level(
-                    [client.entity.position for client in self._clients.values()]
-                )
-                if len(level_diff) > 0:
-                    extend_level_evt = ServerExtendLevelEvent(level_diff)
-                    self.dispatch(None, f"extend-level/{t_frame}", extend_level_evt)
+                # generate level
+                players = (c.entity.position for c in self._clients.values())
+                near_players = flatten(square_space_around(p, 10) for p in players)
+                level_update = self._level_gen.generate(near_players)
+                level_update_evt = ServerLevelUpdateEvent(level_update)
+                self.dispatch(None, f"level-update/{t_frame}", level_update_evt)
 
                 for t_msg, msg in self._server.receiver.receive(until=t_frame):
                     self.handle(t_msg, msg)

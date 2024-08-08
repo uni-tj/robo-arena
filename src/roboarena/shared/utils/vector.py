@@ -1,6 +1,6 @@
 import math
 from dataclasses import dataclass
-from typing import Callable, Sequence
+from typing import Callable, Sequence, overload
 
 from pygame import Vector2
 
@@ -10,25 +10,60 @@ class Vector[T: (int, float)]:
     x: T
     y: T
 
-    def __add__[
-        S: (int, float, "Vector[int]", "Vector[float]")
-    ](self, o: S) -> "Vector[float]":
+    @overload
+    def __add__(self, o: T) -> "Vector[T]": ...  # type: ignore
+
+    @overload
+    def __add__(self, o: "Vector[T]") -> "Vector[T]": ...
+
+    @overload
+    def __add__(
+        self, o: "int | float | Vector[int] | Vector[float]"
+    ) -> "Vector[float]": ...
+
+    def __add__(  # type: ignore
+        self, o: "int | float | Vector[int] | Vector[float]"
+    ) -> "Vector[float] | Vector[int]":
         match o:
             case Vector(x, y):
                 return Vector(self.x + x, self.y + y)
             case _:
                 return Vector(self.x + o, self.y + o)
 
-    def __sub__[
-        S: (int, float, "Vector[int]", "Vector[float]")
-    ](self, o: S) -> "Vector[float]":
+    @overload
+    def __sub__(self, o: T) -> "Vector[T]": ...  # type: ignore
+
+    @overload
+    def __sub__(self, o: "Vector[T]") -> "Vector[T]": ...
+
+    @overload
+    def __sub__(
+        self, o: "int | float | Vector[int] | Vector[float]"
+    ) -> "Vector[float]": ...
+
+    def __sub__(  # type: ignore
+        self, o: "int | float | Vector[int] | Vector[float]"
+    ) -> "Vector[float] | Vector[int]":
         match o:
             case Vector(x, y):
                 return Vector(self.x - x, self.y - y)
             case _:
                 return Vector(self.x - o, self.y - o)
 
-    def __mul__[S: (int, float)](self, o: "Vector[S]" | S) -> "Vector[float]":
+    @overload
+    def __mul__(self, o: T) -> "Vector[T]": ...  # type: ignore
+
+    @overload
+    def __mul__(self, o: "Vector[T]") -> "Vector[T]": ...
+
+    @overload
+    def __mul__(
+        self, o: "int | float | Vector[int] | Vector[float]"
+    ) -> "Vector[float]": ...
+
+    def __mul__(  # type: ignore
+        self, o: "int | float | Vector[int] | Vector[float]"
+    ) -> "Vector[float] | Vector[int]":
         match o:
             case Vector(x, y):
                 return Vector(self.x * x, self.y * y)
@@ -100,3 +135,6 @@ class Vector[T: (int, float)]:
 
     def any_geq(self, o: "Vector[T]") -> bool:
         return self.x >= o.x or self.y >= o.y
+
+    def mirror(self) -> "Vector[T]":
+        return Vector(self.y, self.x)
