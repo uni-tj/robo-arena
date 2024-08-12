@@ -18,8 +18,15 @@ type LevelUpdate = Iterable[tuple[BlockPosition, "Block"]]
 
 
 @dataclass(frozen=True)
+class Edge:
+    pass
+
+
+@dataclass(frozen=True)
 class Tile:
     blocks: Sequence[Sequence["Block"]]
+    edges: tuple[Edge, Edge, Edge, Edge]
+    """(top, right, bottom, left) specifies which tiles can neighbour each other"""
 
 
 def is_tile(x: Any) -> TypeGuard[Tile]:
@@ -61,6 +68,21 @@ class Tileset:
             [fallback] + list(filter(is_tile, tiles.values())),
             filter(both_tile, ((tiles[a], tiles[b]) for a, b in neighbours_horiz(mat))),
             filter(both_tile, ((tiles[a], tiles[b]) for a, b in neighbours_vert(mat))),
+        )
+
+    @staticmethod
+    def from_edges(tiles: list[Tile], fallback: Tile):
+        """
+        Generate the tileset rules from the tile edges.
+
+        If Tile A has edge I at the top and tile B has the same on the bottom,
+        then tile B can be placed above tile A.
+        """
+        return Tileset(
+            len(fallback.blocks),
+            [fallback] + tiles,
+            ((a, b) for a in tiles for b in tiles if a.edges[1] is b.edges[3]),
+            ((a, b) for a in tiles for b in tiles if a.edges[2] is b.edges[0]),
         )
 
     def to_wfc(self) -> wfc.Tileset:
