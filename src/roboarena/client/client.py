@@ -15,7 +15,8 @@ from roboarena.client.entity import (
     ClientPlayerRobot,
 )
 from roboarena.client.keys import load_keys
-from roboarena.client.menu.main_menue import MainMenu
+from roboarena.client.master_mixer import MasterMixer
+from roboarena.client.menu.main_menu import MainMenu
 from roboarena.shared.constants import CLIENT_TIMESTEP, SERVER_IP
 from roboarena.shared.custom_threading import Atom
 from roboarena.shared.game import GameState as SharedGameState
@@ -141,6 +142,7 @@ class GameState(SharedGameState):
     _client: "Client"
     _screen: Surface
     _renderer: GameRenderer
+    _master_mixer: MasterMixer
     _ack: Counter
     _client_id: ClientId
     _entity_id: EntityId
@@ -157,10 +159,12 @@ class GameState(SharedGameState):
         client_id: ClientId,
         t_start: Time,
         start: ServerGameStartEvent,
+        master_mixer: MasterMixer,
     ) -> None:
         self._client = client
         self._screen = screen
         self._renderer = GameRenderer(screen, self)
+        self._master_mixer = master_mixer
         self._ack = counter()
         self._client_id = client_id
         self._entity_id = start.client_entity
@@ -280,6 +284,7 @@ class Client(Stoppable):
     receiver: Receiver[EventType]
     stopped: Atom[bool]
     events: EventTarget[QuitEvent]
+    _master_mixer: MasterMixer
 
     def __init__(self, network: Network[EventType], ip: IpV4):
         self.ip = ip
@@ -287,6 +292,7 @@ class Client(Stoppable):
         self.receiver = Receiver(network, ip)
         self.stopped = Atom(False)
         self.events = EventTarget()
+        self._master_mixer = MasterMixer()
 
     def dispatch(self, event: EventType) -> None:
         self.network.send(SERVER_IP, event)
@@ -295,7 +301,7 @@ class Client(Stoppable):
         pygame.init()
         screen = pygame.display.set_mode((1000, 1000), flags=RESIZABLE)
 
-        menu_result = MainMenu(screen, self).loop()
+        menu_result = MainMenu(screen, self, self._master_mixer).loop()
         if isinstance(menu_result, Stopped):
             return Stopped()
 
@@ -336,7 +342,9 @@ class Client(Stoppable):
             start = t_msg, msg
         self._logger.info("Started game")
 
-        game_state = GameState(self, screen, client_id, start[0], start[1])
+        game_state = GameState(
+            self, screen, client_id, start[0], start[1], self._master_mixer
+        )
         game_state.events.add_listener(QuitEvent, self.events.dispatch)
         return game_state.loop()
 

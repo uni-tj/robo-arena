@@ -162,6 +162,10 @@ def graphic_path(path: str) -> str:
     return os.path.join(os.path.dirname(__file__), "..", "resources", "graphics", path)
 
 
+def sound_path(path: str) -> str:
+    return os.path.join(os.path.dirname(__file__), "..", "resources", "sounds", path)
+
+
 def load_graphic(path: str) -> pygame.Surface:
     return pygame.image.load(graphic_path(path))
 

@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Tuple
 import pygame
 from pygame import Rect, Surface
 
+from roboarena.client.master_mixer import MasterMixer
 from roboarena.client.menu.button import Button
 from roboarena.client.menu.text import Text
 from roboarena.shared.rendering.renderer import MenuRenderer, RenderCtx
@@ -16,6 +17,7 @@ if TYPE_CHECKING:
 
 class Menu(ABC):
     _client: "Client"
+    _master_mixer: MasterMixer
     screen: Surface
     background_texture: Surface
     buttons: dict[str, Button]
@@ -31,6 +33,7 @@ class Menu(ABC):
         buttons: dict[str, Button],
         text_fields: dict[str, Text],
         client: "Client",
+        master_mixer: MasterMixer,
     ) -> None:
         self.screen = screen
         self.buttons = buttons
@@ -39,6 +42,7 @@ class Menu(ABC):
         self.ctx = RenderCtx(screen, Vector(0, 0), {})
         self.background_texture = self.create_background_texture(background_colors)
         self.renderer = MenuRenderer(screen)
+        self._master_mixer = master_mixer
 
     def add_button(self, key: str, button: Button) -> None:
         self.buttons[key] = button
