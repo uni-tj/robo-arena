@@ -1,602 +1,252 @@
 import logging
 import random
 import sys
-import time
-from collections import defaultdict, deque
+from collections import deque
 from copy import deepcopy
 from dataclasses import dataclass
-from functools import cache
-from typing import Callable, Iterable, Optional
+from enum import Enum
+from functools import cache, cached_property
+from itertools import chain
+from math import ceil, sqrt
+from random import choice
+from typing import Iterable, Sequence, SupportsIndex
 
 import numpy as np
-from funcy import log_durations
+from attr import define, field
 from numpy.typing import NDArray
 
-from roboarena.server.level_generation.level_config import UCM
-from roboarena.server.level_generation.tile import TileType
-from roboarena.shared.types import Direction, UserConstraint
-from roboarena.shared.util import gen_coord_space
+from roboarena.shared.util import Color, EventTarget, color, square_space_around
 from roboarena.shared.utils.vector import Vector
 
-type Constraint = NDArray[np.bool_]  # 1d Vector containing the constraints (one hot)
-type ConstraintSGrid = NDArray[
-    np.bool_
-]  # 2d grid with two dims representing the postion one hot values
-type DirConstraint = dict[Vector[int], Constraint]
-type ConstraintMap = dict[TileType, DirConstraint]
-type ConstraintSlice = dict[Vector[int], bool]
-type Tile = TileType
-type Tiles = dict[Vector[int], Optional[Tile]]
-
-logger = logging.getLogger(f"{__name__}")
-# formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
-fh = logging.FileHandler("spam.log")
+# logger = logging.getLogger(__file__)
+logger = logging.Logger("wfc")
+fh = logging.FileHandler("wfc.log")
 fh.setLevel(logging.DEBUG)
 logger.addHandler(fh)
 stdout_handler = logging.StreamHandler(sys.stdout)
 stdout_handler.setLevel(logging.DEBUG)
-# stdout_handler.setFormatter(formatter)
 logger.addHandler(stdout_handler)
-SEED = 100  # Seed 100 Produces a small map
-random.seed(SEED)
-np.random.seed(SEED)
+
+seed = 24
+np.random.seed(seed)
+random.seed(seed)
+
+# General purpose helpers
+
+type ShapeLike = SupportsIndex | Sequence[SupportsIndex]
 
 
-class bcolors:
-    HEADER = "\033[95m"
-    OKBLUE = "\033[94m"
-    OKCYAN = "\033[96m"
-    OKGREEN = "\033[92m"
-    WARNING = "\033[93m"
-    FAIL = "\033[91m"
-    ENDC = "\033[0m"
-    BOLD = "\033[1m"
-    UNDERLINE = "\033[4m"
+def flatnonzero_inv(indices: Iterable[int], shape: ShapeLike) -> NDArray[np.bool_]:
+    arr = np.zeros(shape, dtype=np.bool_)
+    flat_view = arr.ravel()
+    for index in indices:
+        flat_view[index] = True
+    return arr
 
 
-def convUcmCm(UCM: list[UserConstraint]) -> ConstraintMap:
-    direction_to_vector: dict[Direction, Vector[int]] = {
-        Direction.UP: Vector(0, -1),
-        Direction.DOWN: Vector(0, 1),
-        Direction.LEFT: Vector(-1, 0),
-        Direction.RIGHT: Vector(1, 0),
-    }
+# Wave Function Collapse implementation
 
-    inverse_direction: dict[Direction, Direction] = {
-        Direction.UP: Direction.DOWN,
-        Direction.DOWN: Direction.UP,
-        Direction.LEFT: Direction.RIGHT,
-        Direction.RIGHT: Direction.LEFT,
-    }
-
-    constraint_map: defaultdict[
-        TileType, defaultdict[Vector[int], NDArray[np.bool_]]
-    ] = defaultdict(
-        lambda: defaultdict(lambda: np.zeros(len(TileType), dtype=np.bool_))
-    )
-
-    tile_type_to_index: dict[TileType, int] = {
-        tile_type: index for index, tile_type in enumerate(TileType)
-    }
-
-    for uc in UCM:
-        match uc:
-            case UserConstraint(tt, constr):
-                for direction, allowed_tile_types in constr.items():
-                    pos = direction_to_vector[direction]
-                    inv_pos = direction_to_vector[inverse_direction[direction]]
-                    for att in allowed_tile_types:
-                        constraint_map[tt][pos][tile_type_to_index[att]] = True
-                        constraint_map[att][inv_pos][
-                            tile_type_to_index[tt]
-                        ] = True  # Adding inverse Constraint
-
-    d = {k: dict(v) for k, v in constraint_map.items()}
-    return d
+type Tile = int
+type TilePosition = Vector[int]
+type PossibleTiles = NDArray[np.bool_]
+type WFCMap = dict[TilePosition, PossibleTiles]
+type WFCUpdate = Iterable[tuple[TilePosition, int]]
 
 
-def print_constraint_map(constraint_map: ConstraintMap, tile_types: list[TileType]):
-    tile_type_to_index = {
-        tile_type: index for index, tile_type in enumerate(tile_types)
-    }
-    index_to_tile_type = {
-        index: tile_type for tile_type, index in tile_type_to_index.items()
-    }
+class Direction(Enum):
+    UP = Vector[int](0, -1)
+    DOWN = Vector[int](0, 1)
+    LEFT = Vector[int](-1, 0)
+    RIGHT = Vector[int](1, 0)
 
-    for tile_type, directions in constraint_map.items():
-        ir = {}
-        for direction, constraints in directions.items():
-            allowed_tiles = [
-                index_to_tile_type[i].value
-                for i, allowed in enumerate(constraints)
-                if allowed
-            ]
-            ir[direction] = allowed_tiles
+    def is_horizontal(self):
+        return self.value.y == 0
 
-        print(tile_type, "\n", ir)
-
-
-type PropInfo = tuple[list[str], list[str], list[str], list[str]]
-type ConstraintNum = int
-type BoundValues = tuple[Vector[int], Vector[int]]
+    def is_bottom_right(self):
+        return self.value.x >= 0 and self.value.y >= 0
 
 
 @dataclass(frozen=True)
-class Boundaries:
-    min: Vector[int]
-    max: Vector[int]
+class Tileset:
+    tiles: int
+    """Tiles. First element must be the fallback tile"""
+    rules_horiz: frozenset[tuple[Tile, Tile]]
+    """Possible horizontal patterns as (left, right)"""
+    rules_vert: frozenset[tuple[Tile, Tile]]
+    """Possible vertical patterns as (top, bottom)"""
 
-    def extend(self, other: Vector[int]) -> "Boundaries":
-        new_min = Vector(
-            min(self.min.x, self.min.x + other.x), min(self.min.y, self.min.y + other.y)
-        )
-        new_max = Vector(
-            max(self.max.x, self.max.x + other.x), max(self.max.y, self.max.y + other.y)
-        )
-        return Boundaries(new_min, new_max)
-
-    def in_bounds(self, other: Vector[int]) -> bool:
-        return not (other.any_geq(other) or other.any_leq(other))
+    @staticmethod
+    def validate(ts: "Tileset") -> None:
+        assert ts.tiles >= 1, "Empty tiles. At least a fallback tiles required."
 
 
-def get_dict_bounds[T](d: dict[Vector[int], T]) -> Boundaries:
-    positions = d.keys()
-    return get_bounds(positions)
+type Ts = Tileset
 
 
-def get_bounds[T](positions: Iterable[Vector[int]]) -> Boundaries:
-    max_x = max(positions, key=lambda x: x.x).x
-    min_x = min(positions, key=lambda x: x.x).x
-    max_y = max(positions, key=lambda x: x.y).y
-    min_y = min(positions, key=lambda x: x.y).y
-    return Boundaries(Vector(min_x, min_y), Vector(max_x, max_y))
+def one_hot(value: int, classes: int) -> NDArray[np.bool_]:
+    arr = np.zeros((classes,), np.bool_)
+    arr[value] = True
+    return arr
 
 
-@cache
-def get_direction(size: int) -> list[Vector[int]]:
-    return gen_coord_space((-size, size), (-size, size))
+def entropy(possible: PossibleTiles) -> int:
+    return possible.sum()
 
 
-@cache
-def sourround_directions(size: int, center: Vector[int]) -> list[Vector[int]]:
-    return [(dir + center).round() for dir in get_direction(size)]
+@define
+class Tank:
+    mileage: int = field(default=0, init=False)
+    reach: int
+
+    def use(self) -> None:
+        self.mileage += 1
+        logger.critical(f"mileage: {self.mileage}")
+        if self.mileage >= self.reach:
+            raise Exception("Out of fuel.")
 
 
-@dataclass
+tank = Tank(309)
+tank2 = Tank(119)
+
+
+@dataclass(frozen=True)
+class CollapsedOneEvent:
+    position: TilePosition
+
+
+@dataclass(frozen=True)
+class CollapsedAllEvent:
+    positions: Sequence[TilePosition]
+
+
+@dataclass(frozen=True)
+class PropagatedOneEvent:
+    position: TilePosition
+
+
+@define
 class WFC:
-    tile_types: list[TileType]
-    constraints: DirConstraint
-    tiles: Tiles
-    constraint_map: ConstraintMap
-    not_collapsed: set[Vector[int]]
-    all_updated: list[set[Vector[int]]]
-    full_propagation: list[dict[Vector[int], dict[Vector[int], PropInfo]]]
-    const_cache: dict[ConstraintNum, DirConstraint]
-    # skip_expansion: Callable[["WFC", Vector[int]], bool]
-    # tile_bounds: Boundaries = field(init=False)
+    tileset: Tileset
+    map: WFCMap = field(init=False, factory=dict)
+    collapsed: set[TilePosition] = field(init=False, factory=set)
+    not_collapsed: set[TilePosition] = field(init=False, factory=set)
+    events: EventTarget[CollapsedOneEvent | CollapsedAllEvent | PropagatedOneEvent] = (
+        field(init=False, factory=EventTarget)
+    )
 
-    @staticmethod
-    def init_wfc(
-        xsize: int,
-        ysize: int,
-        tile_types: list[TileType],
-        constraint_map: ConstraintMap,
-    ) -> "WFC":
-        coords = gen_coord_space((-xsize, xsize), (-ysize, ysize))
-
-        wfc = WFC(
-            tile_types,
-            {},
-            {},
-            deepcopy(constraint_map),
-            set(),
-            [],
-            [],
-            {},
-        )
-        wfc.extend_level(coords)
-        return wfc
-
-    @staticmethod
-    def constr_num(constaint: Constraint) -> ConstraintNum:
-        return int(np.sum(2 ^ constaint))
-
-    def gen_implied_constraints(self, constr: Constraint) -> DirConstraint:
-        num_tile_types = len(self.tile_types)
-        implied_map: DirConstraint = {}
-        constraint_map = self.constraint_map
-
-        for ti, val in enumerate(constr):
-            if not val:
-                continue
-
-            tile_type = self.tile_types[ti]
-            for neighbor_pos, neighbor_constraint in constraint_map[tile_type].items():
-                if neighbor_pos not in implied_map:
-                    implied_map[neighbor_pos] = np.zeros(num_tile_types, dtype=np.bool_)
-                implied_map[neighbor_pos] |= neighbor_constraint
-
-        return implied_map
-
-    def get_implied_constraints(self, constraint: Constraint) -> DirConstraint:
-        constr_num = self.constr_num(constraint)
-        if constr_num not in self.const_cache:
-            logger.debug("Cache miss")
-            self.const_cache[constr_num] = self.gen_implied_constraints(constraint)
-        return self.const_cache[constr_num]
-
-    @staticmethod
-    def get_neighbors(pos: Vector[int]) -> list[Vector[int]]:
-        return [pos + dir for dir in [dir.value for dir in Direction]]
-
-    def validate_contraint_map(self) -> Optional[Vector[int]]:
-        for pos, allowed in self.constraints.items():
-            allowed_by_neighbours = np.ones(len(self.tile_types), dtype=np.bool_)
-            for dir in [dir.value for dir in Direction]:
-                neighbour = pos + dir
-                if neighbour not in self.constraints:
+    def collapse(self, positions: Iterable[TilePosition]) -> WFCUpdate:
+        """Guarantee positions to be collapsed and return newly collapsed"""
+        positions = set(positions)
+        init_possible = np.ones(self.tileset.tiles, dtype=np.bool_)
+        init_possible[0] = False
+        alloc_apothem = 2 * self.tileset.tiles  # works empirically
+        for pos in positions:
+            for sur in square_space_around(pos, alloc_apothem):
+                if sur in self.map:
                     continue
-                allowed_by_neighbour = np.zeros(len(self.tile_types), dtype=np.bool_)
-                for neighbour_allowed_tile in conv_npconstraints(
-                    self.constraints[neighbour], self.tile_types
-                ):
-                    allowed_by_neighbour |= self.constraint_map[neighbour_allowed_tile][
-                        dir * (-1)
-                    ]
-                allowed_by_neighbours &= allowed_by_neighbour
-            if not np.array_equal(allowed, allowed_by_neighbours):
-                return pos
-        return None
+                self.map[sur] = init_possible.copy()
+                self.not_collapsed.add(sur)
+        # print(self.map)
+        positions -= self.collapsed
+        map_update: WFCUpdate = list()
+        while len(positions) > 0:
+            # collapse tile with lowest entropy
+            pos = self._lowest_entropy_position()
+            selected = self._select_possible(self.map[pos])
+            self.map[pos] = one_hot(selected, self.tileset.tiles)
+            if selected != 0:
+                self._propagate(pos)
+            self.collapsed.add(pos)
+            self.not_collapsed.remove(pos)
+            positions.discard(pos)
+            map_update.append((pos, selected))
+            # logger.critical(f"collapsed: {pos}, selected: {selected}")
+            # self.print(pos)
+            # input()
+            # tank.use()
+            self.events.dispatch(CollapsedOneEvent(pos))
+        self.events.dispatch(CollapsedAllEvent(list(p for p, _ in map_update)))
+        return map_update
 
-    def extend_level(self, pos_list: list[Vector[int]]) -> bool:
-        update = False
+    def _lowest_entropy_position(self) -> TilePosition:
+        not_collapsed = deepcopy(self.not_collapsed)
+        min_entropy = min(map(lambda p: entropy(self.map[p]), not_collapsed))
+        min_poss = filter(lambda p: entropy(self.map[p]) == min_entropy, not_collapsed)
+        return choice(list(min_poss))
 
-        for pos in pos_list:
-            if pos in self.tiles:
-                continue
-            positions = sourround_directions(
-                len(self.tile_types) * 2,
-                pos,
-            )
-            for sour in positions:
-                if sour in self.constraints:
-                    continue
-                self.constraints[sour] = np.ones(len(self.tile_types), dtype=np.bool_)
-                self.constraints[sour][0] = False
-            self.tiles[pos] = None
-            self.not_collapsed.add(pos)
-            update = True
-        self.tile_bounds = get_dict_bounds(self.tiles)
-        return update
+    def _select_possible(self, possible: PossibleTiles) -> Tile:
+        if np.sum(possible) == 0:
+            return 0
+        return np.random.choice(np.flatnonzero(possible))
 
-    def print(self, sc: Optional[dict[Vector[int], str]] = None):
-        print_constraint_grid(self.constraints, self.tile_types, sc)
-        print_grid(self.tiles)
-        logger.debug(str("".join(["-" * 100])))
-
-    def print2(self, sc: Optional[Vector[int]] = None):
-        print_grid(self.tiles)
-        print_constraint_grid(self.constraints, self.tile_types, sc)
-        logger.debug(str("".join(["-" * 100])))
-
-    # @log_durations(logger.debug, "slice: ", "ms")
-    def slice_constraints(self, constr: DirConstraint) -> list[ConstraintSlice]:
-        num_tile_types = len(self.tile_types)
-        slices: list[ConstraintSlice] = [dict() for _ in range(num_tile_types)]
-
-        for pos, constraint in constr.items():
-            for k in range(num_tile_types):
-                if constraint[k]:
-                    slices[k][pos] = constraint[k]
-
-        return slices
-
-    def propagate_constraints(self, start_pos: Vector[int]) -> None:
-        queue = deque([start_pos])
-        self.all_updated.append(set())
-        # self.full_propagation.append(defaultdict(lambda: dict()))
+    def _propagate(self, start: TilePosition) -> None:
+        queue = deque([start])
         while len(queue) > 0:
             pos = queue.popleft()
-            # self.all_updated[-1].add(pos)
-            # neighbour_allowed_by_pos = self.get_implied_constraints(
-            #     self.constraints[pos]
-
-            for dir in [dir.value for dir in Direction]:
-                neighbour: Vector[int] = pos + dir  # type: ignore
-                # if self.skip_expansion(self):
-                #     continue
-                if neighbour not in self.constraints:
+            if np.array_equal(self.zeros, self.map[pos]):
+                continue
+            for dir in Direction:
+                neigh = pos + dir.value
+                if neigh not in self.map:
                     continue
-                    self.constraints[neighbour] = np.ones(
-                        len(self.tile_types), dtype=np.bool_
-                    )
-                neighbour_allowed_by_pos = np.zeros(
-                    (len(self.tile_types),), dtype=np.bool_
-                )
-                for tile_index, pos_is_allowed in enumerate(self.constraints[pos]):
-                    if not pos_is_allowed:
-                        continue
-                    neighbour_allowed_by_pos |= self.constraint_map[
-                        self.tile_types[tile_index]
-                    ][dir]
-                # if dir not in neighbour_allowed_by_pos:
-                #     continue
-                new_constraints = self.constraints[neighbour] & neighbour_allowed_by_pos
-                new_constraints[0] = False
-                # self.full_propagation[-1][pos][neighbour] = (
-                #     conv_npconstraints_str(self.constraints[pos], self.tile_types),
-                #     conv_npconstraints_str(
-                #         self.constraints[neighbour], self.tile_types
-                #     ),
-                #     conv_npconstraints_str(neighbour_allowed_by_pos, self.tile_types),
-                #     conv_npconstraints_str(new_constraints, self.tile_types),
-                # )
-                if np.sum(self.constraints[neighbour]) == np.sum(new_constraints):
-                    continue
-                self.constraints[neighbour] = new_constraints
-                self.all_updated[-1].add(neighbour)
-                queue.append(neighbour)
+                before = self.map[neigh].copy()
+                possible = frozenset(np.flatnonzero(self.map[pos]))
+                ts = self.tileset
+                self.map[neigh] &= self._propagation_by_poss(possible, dir, ts)
+                assert before.sum() >= self.map[neigh].sum()
+                no_change = np.array_equal(before, self.map[neigh])
+                if not no_change:
+                    queue.append(neigh)
+            self.events.dispatch(PropagatedOneEvent(pos))
 
-    # @log_durations(logger.debug, "low_entropy: ", "ms")
-    def low_entropy_tiles(
-        self, entropy: Callable[[Constraint], float]
-    ) -> list[Vector[int]]:
-        entropy_map_new: dict[float, list[Vector[int]]] = defaultdict(lambda: list())
-        entropy_map_old: dict[float, list[Vector[int]]] = defaultdict(lambda: list())
-        min_entropy = float("inf")
+    @staticmethod
+    @cache
+    def _propagation_by_poss(tiles: set[Tile], dir: Direction, ts: Ts) -> PossibleTiles:
+        """_propagate helper. Get possible neighbours for all possible tiles"""
+        prop = np.zeros((ts.tiles,), dtype=np.bool_)
+        for tile in tiles:
+            prop |= WFC._propagation_by_tile(tile, dir, ts)
+        return prop
 
-        for pos, constr in self.constraints.items():
-            if pos not in self.tiles or self.tiles[pos] is None:
-                ent = entropy(constr)
-                if ent > min_entropy:
-                    continue
-                if ent < min_entropy:
-                    min_entropy = ent
-                if pos in self.tiles:
-                    entropy_map_old[ent].append(pos)
-                else:
-                    entropy_map_new[ent].append(pos)
-        if len(entropy_map_old[min_entropy]) > 0:
-            return entropy_map_old[min_entropy]
-        else:
-            return entropy_map_new[min_entropy]
+    @staticmethod
+    @cache
+    def _propagation_by_tile(tile: Tile, dir: Direction, ts: Ts) -> PossibleTiles:
+        """_propagate helper. Get possible neighbours for one tile"""
+        rules = ts.rules_horiz if dir.is_horizontal() else ts.rules_vert
+        index = 0 if dir.is_bottom_right() else 1
+        return flatnonzero_inv(
+            chain([0], (rule[1 - index] for rule in rules if rule[index] == tile)),
+            (ts.tiles,),
+        )
 
-    def get_steps_with_last_index(
-        self, checking: Vector[int]
-    ) -> list[tuple[Vector[int], Vector[int], PropInfo]]:
-        result = []
-
-        for propagation_dict in self.full_propagation:
-            for start_vector, inner_dict in propagation_dict.items():
-                for end_vector, (
-                    original_c,
-                    pos_c,
-                    actions,
-                    conditions,
-                ) in inner_dict.items():
-                    if end_vector == checking:
-                        result.append(
-                            (
-                                start_vector,
-                                end_vector,
-                                (original_c, pos_c, actions, conditions),
-                            )
-                        )
-
-        return result
-
-    @log_durations(logger.debug, "collapse_map: ", "ms")
-    def collapse_map(self) -> Tiles:
-        def entropy(constraint: Constraint) -> float:
-            return float(np.sum(constraint))
-            probabilities = constraint / np.sum(constraint)
-            return -np.sum(probabilities * np.log(probabilities + 1e-6))  # type: ignore
-
-        i = 0
-        timings: defaultdict[str, float] = defaultdict(lambda: 0)
-        while len(self.not_collapsed) > 0:
-            i += 1
-            t0 = time.time()
-            chosen_positions = self.low_entropy_tiles(entropy)
-            chosen_positions = [chosen_positions[0]]
-            timings["entropy"] += time.time() - t0
-            for chosen_position in chosen_positions:
-                t0 = time.time()
-                self.tiles[chosen_position] = None
-                timings["chose"] += time.time() - t0
-
-                possible_tiles = self.constraints[chosen_position].copy()
-                possible_tiles[0] = False
-                if np.sum(possible_tiles) == 0:
-                    chosen_tile = 0
-                else:
-                    chosen_tile = np.random.choice(np.flatnonzero(possible_tiles))
-
-                self.tiles[chosen_position] = self.tile_types[chosen_tile]
-
-                self.constraints[chosen_position] = np.zeros_like(
-                    possible_tiles, dtype=np.bool_
-                )
-                self.constraints[chosen_position][chosen_tile] = True
-
-                t0 = time.time()
-                self.propagate_constraints(chosen_position)
-                timings["prop"] += time.time() - t0
-
-                if chosen_position in self.not_collapsed:
-                    self.not_collapsed.remove(chosen_position)
-
-        return self.tiles
+    @cached_property
+    def zeros(self) -> NDArray[np.bool_]:
+        return np.zeros((self.tileset.tiles,), dtype=np.bool_)
 
 
-def one_hot_to_tiletype(constraint: Constraint, tile_types: list[TileType]) -> TileType:
-    tile_index = np.argmax(constraint)
-    return tile_types[tile_index]
-
-
-def conv_npconstraints(
-    constraint: Constraint, tile_types: list[TileType]
-) -> list[TileType]:
-    return [tile_types[i] for i, c in enumerate(constraint) if c]
-
-
-def conv_npconstraints_str(
-    constraint: Constraint, tile_types: list[TileType]
-) -> list[str]:
-    return [tile_types[i].value for i, c in enumerate(constraint) if c]
-
-
-def conv_propagationconstr_str(
-    constraint: tuple[Constraint, Constraint], tile_types: list[TileType]
-) -> tuple[list[str], list[str]]:
-    match constraint:
-        case (np_1, np_2):
-            return (
-                conv_npconstraints_str(np_1, tile_types),
-                conv_npconstraints_str(np_2, tile_types),
-            )
-
-
-def get_grid(nodes: dict[Vector[int], Optional[Tile]]) -> list[list[str]]:
-    return get_adaptive_grid(lambda x: str(x.value) if x else "*", nodes, pad=0)
-
-
-def get_adaptive_grid[
-    T
-](
-    f: Callable[[T], str],
-    constraints: dict[Vector[int], T],
-    special_coord: Optional[dict[Vector[int], str]] = None,
-    pad: int = 10,
-) -> list[list[str]]:
-    min_x = min(coord.x for coord in constraints)
-    max_x = max(coord.x for coord in constraints)
-    min_y = min(coord.y for coord in constraints)
-    max_y = max(coord.y for coord in constraints)
-
-    grid = [[" " for _ in range(min_x, max_x + 1)] for _ in range(min_y, max_y + 1)]
-
-    for coord, constraint in constraints.items():
-
-        grid[coord.y - min_y][coord.x - min_x] = f(constraint).ljust(pad)
-        c_str = grid[coord.y - min_y][coord.x - min_x]
-        if coord == Vector(0, 0):
-            grid[coord.y - min_y][
-                coord.x - min_x
-            ] = f"{bcolors.OKGREEN}{c_str}{bcolors.ENDC}"
-        if special_coord and coord in special_coord.keys():  # ! Debug
-            grid[coord.y - min_y][
-                coord.x - min_x
-            ] = f"{special_coord[coord]}{c_str}{bcolors.ENDC}"
-
-    return grid
-
-
-def print_tile_grid[
-    T
-](
-    f: Callable[
-        [dict[Vector[int], T], list[TileType], Optional[Vector[int]]], list[list[str]]
-    ],
-    constraints: dict[Vector[int], T],
-    tile_types: list[TileType],
-    sc: Optional[Vector[int]] = None,
+def print_wfc(
+    wfc: WFC,
+    tiles: dict[int, str | None] = {},  # noqa: B006
+    colors: dict[TilePosition, Color] = {},  # noqa: B006
 ):
-    grid = map(
-        lambda x: x + "\n" + "#" * len(x),
-        map(
-            lambda x: "#".join(map(lambda x: str(x).ljust(1), x)),
-            f(constraints, tile_types, sc),
-        ),
-    )
-    print("\n".join(grid))
+    min_pos = Vector(min(p.x for p in wfc.map), min(p.y for p in wfc.map))
+    max_pos = Vector(max(p.x for p in wfc.map), max(p.y for p in wfc.map))
+    dim = max_pos - min_pos + 1
+    tile_size = ceil(sqrt(wfc.tileset.tiles))
+    char_dim = dim * (tile_size + 1) + 1
 
+    # fill screen with divider
+    matrix = [["#" for _ in range(char_dim.x)] for _ in range(char_dim.y)]
+    # print possibilities
+    for tile_pos, possible in wfc.map.items():
+        char_tile_pos = (tile_pos - min_pos) * (tile_size + 1) + 1
+        for x in range(tile_size):
+            for y in range(tile_size):
+                tile = y * tile_size + x
+                poss = tile < len(possible) and possible[tile]
+                char_pos = char_tile_pos + Vector(x, y)
+                c = colors.get(tile_pos) or Color.NONE
+                str = (tiles.get(tile) or f"{tile}") if poss else " "
+                matrix[char_pos.y][char_pos.x] = color(str, c)
 
-def print_adaptive_grid[
-    T
-](
-    f: Callable[
-        [dict[Vector[int], T], list[TileType]],
-        list[list[str]],
-    ],
-    constraints: dict[Vector[int], T],
-    tile_types: list[TileType],
-    sc: Optional[dict[Vector[int], str]] = None,
-):
-    grid = map(
-        lambda x: x + "\n" + "#" * len(x),
-        map(
-            lambda x: "#".join(map(lambda x: str(x).ljust(10), x)),
-            f(constraints, tile_types),
-        ),
-    )
-    logger.debug("\n".join(grid))
-
-
-def get_constraint_grid(
-    constraints: dict[Vector[int], Constraint],
-    tile_types: list[TileType],
-    special_coord: Optional[dict[Vector[int], str]] = None,
-) -> list[list[str]]:
-    def f(constraint: Constraint) -> str:
-        symbols = [tile_types[i].value for i, c in enumerate(constraint) if c]
-        return "".join(symbols)
-
-    return get_adaptive_grid(f, constraints, special_coord)
-
-
-def print_constraint_grid(
-    constraints: dict[Vector[int], Constraint],
-    tile_types: list[TileType],
-    sc: Optional[dict[Vector[int], str]] = None,
-):
-    print_adaptive_grid(get_constraint_grid, constraints, tile_types, sc)
-
-
-def get_entropy_grid(
-    constraints: dict[Vector[int], Constraint],
-    tile_types: list[TileType],
-    special_coord: Optional[Vector[int]] = None,
-) -> list[list[str]]:
-    def f(constraint: Constraint) -> str:
-        return f"{(constraint.sum())}"
-
-    return get_adaptive_grid(f, constraints, special_coord)
-
-
-def print_entropy_grid(
-    constraints: dict[Vector[int], Constraint],
-    tile_types: list[TileType],
-    sc: Optional[Vector[int]] = None,
-):
-    print_adaptive_grid(get_entropy_grid, constraints, tile_types, sc)
-
-
-def print_grid(nodes: dict[Vector[int], Optional[Tile]]):
-    logger.debug("\n".join("".join(row) for row in get_grid(nodes)))
-
-
-# Example usag
-if __name__ == "__main__":
-    # pass
-    TL = list(x for x in TileType.__members__.values())
-    cm = convUcmCm(UCM)
-    print_constraint_map(cm, TL)
-    s = 1
-    wfc = WFC.init_wfc(s, s, TL, cm)
-    c_pos = Vector(-1, -2)
-    s = 3
-    extend_dir = gen_coord_space((-s, s), (-s, s))
-    wfc.print()
-    wfc.collapse_map()
-    wfc.print(c_pos)
-    while True:
-        tposs = [(c_pos + edir).floor() for edir in extend_dir]
-        c_pos = (c_pos + Vector(0, 1)).floor()
-        # wfc.print()
-        wfc.extend_level(tposs)
-        # print(wfc.tiles.keys(), c_pos)
-        wfc.collapse_map()
-        wfc.print(c_pos)
-        input()
-        # time.sleep(1)
+    logger.critical("\n".join(["".join(row) for row in matrix]))

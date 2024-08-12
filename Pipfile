@@ -8,6 +8,7 @@ pygame = "~=2.5.2"
 numpy = "~=1.26.4"
 funcy = "~=2.0"
 pyyaml = "~=6.0.1"
+keyboard = "~=0.13.5"
 
 [dev-packages]
 flake8 = "==7.0.0"
