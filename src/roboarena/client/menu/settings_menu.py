@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING, Callable
 
-import pygame
 from pygame import Surface
 
 from roboarena.client.keys import read_key
+from roboarena.client.master_mixer import MasterMixer
 from roboarena.client.menu.button import Button
 from roboarena.client.menu.menu import Menu
 from roboarena.client.menu.text import Text
@@ -29,30 +29,37 @@ RIGHT_BUTTON_H_TEXTURE = load_graphic("buttons/button-rightkey-hover.png")
 
 class SettingsMenu(Menu):
 
-    def __init__(self, screen: Surface, main_menue: Menu, client: "Client"):
+    def __init__(
+        self,
+        screen: Surface,
+        main_menu: Menu,
+        client: "Client",
+        master_mixer: MasterMixer,
+    ) -> None:
 
         close = super().close
 
-        def switch_to_main_menue() -> None:
+        def switch_to_main_menu() -> None:
             close()
-            main_menue.loop()
+            main_menu.loop()
 
         def toggle_sound() -> None:
 
             unmute_texture = SOUND_BUTTON_UNMUTE_TEXTURE
             mute_texture = SOUND_BUTTON_MUTE_TEXTURE
+            mixer = master_mixer
 
-            if pygame.mixer.get_busy():
-                pygame.mixer.pause()
+            if not mixer.muted:
+                mixer.mute()
                 buttons["mute_button"].texture_uh = mute_texture
                 buttons["mute_button"].texture_h = unmute_texture
             else:
-                pygame.mixer.unpause()
+                mixer.unmute()
                 buttons["mute_button"].texture_uh = unmute_texture
                 buttons["mute_button"].texture_h = mute_texture
 
         def change_key(key: str) -> Callable[[], None]:
-            return lambda: read_key(key)
+            return lambda: read_key(key, master_mixer)
 
         buttons: dict[str, Button] = {
             "mute_button": Button(
@@ -60,36 +67,42 @@ class SettingsMenu(Menu):
                 SOUND_BUTTON_MUTE_TEXTURE,
                 Vector(50, 25),
                 toggle_sound,
+                master_mixer,
             ),
             "back_button": Button(
                 BACK_BUTTON_UH_TEXTURE,
                 BACK_BUTTON_H_TEXTURE,
                 Vector(20, 70),
-                switch_to_main_menue,
+                switch_to_main_menu,
+                master_mixer,
             ),
             "up_button": Button(
                 UP_BUTTON_UH_TEXTURE,
                 UP_BUTTON_H_TEXTURE,
                 Vector(50, 45),
                 change_key("key_up"),
+                master_mixer,
             ),
             "down_button": Button(
                 DOWN_BUTTON_UH_TEXTURE,
                 DOWN_BUTTON_H_TEXTURE,
                 Vector(50, 60),
                 change_key("key_down"),
+                master_mixer,
             ),
             "left_button": Button(
                 LEFT_BUTTON_UH_TEXTURE,
                 LEFT_BUTTON_H_TEXTURE,
                 Vector(50, 75),
                 change_key("key_left"),
+                master_mixer,
             ),
             "right_button": Button(
                 RIGHT_BUTTON_UH_TEXTURE,
                 RIGHT_BUTTON_H_TEXTURE,
                 Vector(50, 90),
                 change_key("key_right"),
+                master_mixer,
             ),
         }
 
@@ -102,5 +115,10 @@ class SettingsMenu(Menu):
         }
 
         super().__init__(
-            screen, ((80, 80, 80), (140, 140, 140)), buttons, text_fields, client
+            screen,
+            ((80, 80, 80), (140, 140, 140)),
+            buttons,
+            text_fields,
+            client,
+            master_mixer,
         )
