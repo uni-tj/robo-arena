@@ -1,14 +1,15 @@
+import heapq
 import logging
 import os
 import string
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from functools import cache
 from itertools import count
 from random import getrandbits
-from typing import Any, Callable, Generator, NoReturn, Tuple
+from typing import Any, Callable, Collection, Generator, NoReturn
 
 import numpy as np
 import pygame
@@ -143,8 +144,8 @@ def print_points(points: Iterable[Vector[int]]):
 
 def gradientRect(
     window: pygame.Surface,
-    left_colour: Tuple[int, int, int],
-    right_colour: Tuple[int, int, int],
+    left_colour: tuple[int, int, int],
+    right_colour: tuple[int, int, int],
     target_rect: pygame.Rect,
 ):
     colour_rect = pygame.Surface((2, 2))
@@ -209,6 +210,44 @@ def stopAll(*stoppables: Stoppable) -> None:
 @dataclass(frozen=True)
 class Stopped:
     pass
+
+
+@dataclass
+class Tag[K: (int, float), T]:
+    key: K
+    value: T
+
+    def __lt__(self, other: "Tag[K, T]"):
+        return self.key < other.key
+
+
+@dataclass
+class Heap[T](Collection[T]):
+    heap: list[T] = field(default_factory=list)
+
+    def __iter__(self) -> Iterator[T]:
+        return iter(self.heap)
+
+    def __len__(self) -> int:
+        return len(self.heap)
+
+    def __contains__(self, x: object) -> bool:
+        return x in self.heap
+
+    def push(self, item: T) -> None:
+        heapq.heappush(self.heap, item)
+
+    def pop(self) -> T:
+        return heapq.heappop(self.heap)
+
+    def smallest(self) -> T:
+        return self.heap[0]
+
+    def nlargest(self, n: int) -> list[T]:
+        return heapq.nlargest(n, self.heap)
+
+    def nsmallest(self, n: int) -> list[T]:
+        return heapq.nsmallest(n, self.heap)
 
 
 class Color(Enum):

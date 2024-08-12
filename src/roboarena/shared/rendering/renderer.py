@@ -176,7 +176,7 @@ class GameRenderer(Renderer):
         super().__init__(screen)
         self._game = game
 
-    # @log_durations(logger.debug, "render: ", "ms")
+    # @log_durations(logger.critical, "render: ", "ms")
     def render(self, camera_position: Vector[float]) -> None:
         self._fps_counter.tick()
 

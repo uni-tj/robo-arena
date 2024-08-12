@@ -3,6 +3,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import NoReturn, overload
 
+import keyboard
 from attr import define, field
 
 from roboarena.server.level_generation.tileset import str_tile_dict, tileset
@@ -126,7 +127,7 @@ class WFCStepper:
     def print_state(
         self, state: PropagatedOneStep | CollapsedOneStep | CollapsedAllStep
     ) -> None:
-        c_colors = {p: Color.CYAN_BG for p in state.wfc.collapsed}
+        c_colors = {p: Color.CYAN_BG for p in state.wfc._collapsed}  # type: ignore
         match state:
             case PropagatedOneStep():
                 print_wfc(
@@ -152,9 +153,12 @@ class WFCStepper:
         while True:
             backup = c_all, c_one, p_one
             try:
-                match input(
-                    f"q/e: c_all -/+, a/d: c_one -/+, y/c: p_one -/+, step: {step}"
-                ):
+                print(f"q/e: c_all -/+, a/d: c_one -/+, y/c: p_one -/+, step: {step}")
+                evt = keyboard.read_event()
+                print(evt)
+                if evt.event_type != keyboard.KEY_DOWN:
+                    continue
+                match evt.name:
                     case "-":
                         step = max(step // 10, 1)
                     case "+":
