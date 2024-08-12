@@ -1,8 +1,12 @@
 import logging
 import os
+import string
 from abc import ABC, abstractmethod
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
+from enum import Enum
+from functools import cache
+from itertools import count
 from random import getrandbits
 from typing import Any, Callable, Generator, NoReturn, Tuple
 
@@ -31,6 +35,13 @@ def counter():
         next += 1
 
 
+def safe_next[T](iterator: Iterator[T]) -> T | None:
+    try:
+        return next(iterator)
+    except StopIteration:
+        return None
+
+
 def gen_coord_space(
     xbounds: tuple[int, int], ybounds: tuple[int, int]
 ) -> list[Vector[int]]:
@@ -51,28 +62,83 @@ def gen_coord_space(
     return [Vector.from_sequence(coord) for coord in coords]
 
 
+@cache
+def square_space(apothem: int) -> list[Vector[int]]:
+    return gen_coord_space((-apothem, apothem), (-apothem, apothem))
+
+
+@cache
+def square_space_around(center: Vector[int], apothem: int) -> list[Vector[int]]:
+    return [(pos + center).round() for pos in square_space(apothem)]
+
+
+def spiral_space() -> Iterable[Vector[int]]:
+    yield Vector(0, 0)
+    for apothem in count(start=1):
+        for i in range(2 * apothem):
+            yield Vector(-apothem + i, -apothem)
+        for i in range(2 * apothem):
+            yield Vector(apothem, -apothem + i)
+        for i in range(2 * apothem):
+            yield Vector(apothem - i, apothem)
+        for i in range(2 * apothem):
+            yield Vector(-apothem, apothem - i)
+
+
 def enumerate2d[T](iter: Iterable[Iterable[T]]) -> Iterable[tuple[tuple[int, int], T]]:
-    return [((i, j), v) for i, row in enumerate(iter) for j, v in enumerate(row)]
+    return (((i, j), v) for i, row in enumerate(iter) for j, v in enumerate(row))
 
 
-def dict_diff_keys[K, V](dict1: dict[K, V], dict2: dict[K, V]) -> dict[K, V]:
-    diff_keys = set(dict1.keys()) ^ set(dict2.keys())
-    diff_dict: dict[K, V] = {}
-    for key in diff_keys:
-        if key in dict1:
-            diff_dict[key] = dict1[key]
-        else:
-            diff_dict[key] = dict2[key]
-
-    return diff_dict
+def enumerate2d_vec[T](iter: Iterable[Iterable[T]]) -> Iterable[tuple[Vector[int], T]]:
+    return ((Vector.from_tuple(coord), v) for coord, v in enumerate2d(iter))
 
 
-def getBounds(position: list[Vector[int]]) -> tuple[Vector[int], Vector[int]]:
-    max_x = max(position, key=lambda x: x.x).x
-    min_x = min(position, key=lambda x: x.x).x
-    max_y = max(position, key=lambda x: x.y).y
-    min_y = min(position, key=lambda x: x.y).y
-    return (Vector(min_x, min_y), Vector(max_x, max_y))
+def neighbours_horiz[T](matrix: Iterable[Iterable[T]]) -> Iterable[tuple[T, T]]:
+    """
+    Returns all (left, right) pairs of horiz. neighbouring elements in a matrix
+
+    Rows of matrix may have different length.
+    """
+    for row in matrix:
+        iterator = iter(row)
+        left = safe_next(iterator)
+        if left is None:
+            continue
+        for right in iterator:
+            yield (left, right)
+            left = right
+
+
+def neighbours_vert[T](matrix: Iterable[Iterable[T]]) -> Iterable[tuple[T, T]]:
+    """
+    Returns all (top, bottom) pairs of vert. neighbouring elements in a matrix
+
+    Rows of matrix may have different length.
+    """
+    iterator = iter(matrix)
+    top_row = safe_next(iterator)
+    if top_row is None:
+        return
+    for bottom_row in iterator:
+        for n in zip(top_row, bottom_row):
+            yield n
+        top_row = bottom_row
+
+
+def flatten[T](xss: Iterable[Iterable[T]]) -> Iterable[T]:
+    return (x for xs in xss for x in xs)
+
+
+def print_points(points: Iterable[Vector[int]]):
+    labels = string.digits + string.ascii_letters
+
+    min_pos = Vector(min(p.x for p in points), min(p.y for p in points))
+    max_pos = Vector(max(p.x for p in points), max(p.y for p in points))
+    dim = max_pos - min_pos + 1
+    matrix = [["#" for _ in range(dim.x)] for _ in range(dim.y)]
+    for i, point in enumerate(points):
+        matrix[point.y - min_pos.y][point.x - min_pos.x] = labels[i % len(labels)]
+    print("\n".join(["".join(row) for row in matrix]))
 
 
 def gradientRect(
@@ -120,7 +186,7 @@ class EventTarget[Evt]:
 
         self._listeners[listener] = _listener
 
-    def remove_listener(self, listener: Callable[[Evt], None]):
+    def remove_listener(self, listener: Callable[[Any], None]):
         del self._listeners[listener]
 
     def dispatch(self, event: Evt) -> None:
@@ -143,3 +209,21 @@ def stopAll(*stoppables: Stoppable) -> None:
 @dataclass(frozen=True)
 class Stopped:
     pass
+
+
+class Color(Enum):
+    RED = "\033[31m"
+    RED_BG = "\033[41m"
+    GREEN = "\033[32m"
+    GREEN_BG = "\033[42m"
+    BLUE = "\033[34m"
+    BLUE_BG = "\033[44;30m"
+    BRIGHT_BLUE = "\033[94m"
+    BRIGHT_BLUE_BG = "\033[104;30m"
+    CYAN = "\033[36m"
+    CYAN_BG = "\033[46;30m"
+    NONE = ""
+
+
+def color(str: str, color: Color) -> str:
+    return f"{color.value}{str}\033[0m"
