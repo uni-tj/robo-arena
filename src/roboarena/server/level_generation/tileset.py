@@ -1,11 +1,14 @@
 from bidict import bidict
 
-from roboarena.server.level_generation.level_generator import Tile, Tileset
+from roboarena.server.level_generation.level_generator import Edge, Tile, Tileset
 from roboarena.shared.block import floor, void, wall
 
 w = wall
 f = floor
 v = void
+
+e_floor = Edge()
+e_wall = Edge()
 
 cr = cross = Tile(
     (
@@ -15,6 +18,7 @@ cr = cross = Tile(
         (f, f, f, f, f),
         (w, f, f, f, w),
     ),
+    edges=(e_floor, e_floor, e_floor, e_floor),
 )
 lv = line_vertical = Tile(
     (
@@ -24,6 +28,7 @@ lv = line_vertical = Tile(
         (w, f, f, f, w),
         (w, f, f, f, w),
     ),
+    edges=(e_floor, e_wall, e_floor, e_wall),
 )
 lh = line_horizontal = Tile(
     (
@@ -33,6 +38,7 @@ lh = line_horizontal = Tile(
         (f, f, f, f, f),
         (w, w, w, w, w),
     ),
+    edges=(e_wall, e_floor, e_wall, e_floor),
 )
 tn = t_normal = Tile(
     (
@@ -42,6 +48,7 @@ tn = t_normal = Tile(
         (f, f, f, f, f),
         (w, f, f, f, w),
     ),
+    edges=(e_wall, e_floor, e_floor, e_floor),
 )
 ti = t_inverse = Tile(
     (
@@ -51,6 +58,7 @@ ti = t_inverse = Tile(
         (f, f, f, f, f),
         (w, w, w, w, w),
     ),
+    edges=(e_floor, e_floor, e_wall, e_floor),
 )
 en = e_normal = Tile(
     (
@@ -60,6 +68,7 @@ en = e_normal = Tile(
         (w, f, f, f, f),
         (w, f, f, f, w),
     ),
+    edges=(e_floor, e_floor, e_floor, e_wall),
 )
 ei = e_inverse = Tile(
     (
@@ -69,6 +78,7 @@ ei = e_inverse = Tile(
         (f, f, f, f, w),
         (w, f, f, f, w),
     ),
+    edges=(e_floor, e_wall, e_floor, e_floor),
 )
 wa = walls = Tile(
     (
@@ -77,7 +87,8 @@ wa = walls = Tile(
         (w, w, w, w, w),
         (w, w, w, w, w),
         (w, w, w, w, w),
-    )
+    ),
+    edges=(e_wall, e_wall, e_wall, e_wall),
 )
 fallback = Tile(
     (
@@ -86,7 +97,8 @@ fallback = Tile(
         (v, v, v, v, v),
         (v, v, v, v, v),
         (v, v, v, v, v),
-    )
+    ),
+    edges=(Edge(), Edge(), Edge(), Edge()),
 )
 
 # mapping for debugging. Not used by production code.
@@ -118,4 +130,5 @@ example = """
 ███│█│███│██
 ███├─┴─┬─┤██
 """
-tileset = Tileset.from_example(example, dict(str_tile_dict), fallback)
+# tileset = Tileset.from_example(example, dict(str_tile_dict), fallback)
+tileset = Tileset.from_edges([cr, lv, lh, tn, ti, en, ei, wa], fallback)
