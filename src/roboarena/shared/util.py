@@ -95,6 +95,12 @@ def enumerate2d_vec[T](iter: Iterable[Iterable[T]]) -> Iterable[tuple[Vector[int
     return ((Vector.from_tuple(coord), v) for coord, v in enumerate2d(iter))
 
 
+def map2d[
+    T, U
+](f: Callable[[T], U], xss: Iterable[Iterable[T]]) -> Iterable[Iterable[U]]:
+    return ((f(x) for x in xs) for xs in xss)
+
+
 def neighbours_horiz[T](matrix: Iterable[Iterable[T]]) -> Iterable[tuple[T, T]]:
     """
     Returns all (left, right) pairs of horiz. neighbouring elements in a matrix
@@ -129,6 +135,20 @@ def neighbours_vert[T](matrix: Iterable[Iterable[T]]) -> Iterable[tuple[T, T]]:
 
 def flatten[T](xss: Iterable[Iterable[T]]) -> Iterable[T]:
     return (x for xs in xss for x in xs)
+
+
+def flatmap[T](f: Callable[[T], Iterable[T]], xs: Iterable[T]) -> Iterable[T]:
+    return (y for x in xs for y in f(x))
+
+
+def dedupe[T](xs: Iterable[T]) -> Iterable[T]:
+    """Deduplicate xs. Algorithm is stable."""
+    seen = set[T]()
+    for x in xs:
+        if x in seen:
+            continue
+        yield x
+        seen.add(x)
 
 
 def print_points(points: Iterable[Vector[int]]):

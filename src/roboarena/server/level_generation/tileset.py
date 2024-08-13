@@ -1,134 +1,394 @@
 from bidict import bidict
 
-from roboarena.server.level_generation.level_generator import Edge, Tile, Tileset
-from roboarena.shared.block import floor, void, wall
+from roboarena.server.level_generation.level_generator import (
+    Edge,
+    Tile,
+    Tileset,
+    rotations,
+)
+from roboarena.shared.block import floor, floor_door, floor_room_spawn, void, wall
+from roboarena.shared.util import dedupe
+
+" Blocks "
 
 w = wall
 f = floor
+r = floor_room_spawn
+d = floor_door
 v = void
 
-e_floor = Edge()
-e_wall = Edge()
+blocks = bidict({"#": wall, ".": floor, "X": floor_room_spawn, "+": floor_door, " ": v})
 
-cr = cross = Tile(
+
+" Edges "
+
+e_floor = Edge()
+e_void = Edge()
+
+
+" Tiles "
+
+end = Tile(
     (
-        (w, f, f, f, w),
-        (f, f, f, f, f),
-        (f, f, f, f, f),
-        (f, f, f, f, f),
-        (w, f, f, f, w),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, w, w, w, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+    ),
+    edges=(e_void, e_void, e_floor, e_void),
+)
+end_room = Tile(
+    (
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, r, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, w, w, w, w, w, d, d, d, w, w, w, w, w, w, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+    ),
+    edges=(e_void, e_void, e_floor, e_void),
+)
+line = Tile(
+    (
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+    ),
+    edges=(e_floor, e_void, e_floor, e_void),
+)
+line_room = Tile(
+    (
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, w, w, w, w, w, w, d, d, d, w, w, w, w, w, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, r, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, w, w, w, w, w, d, d, d, w, w, w, w, w, w, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+    ),
+    edges=(e_floor, e_void, e_floor, e_void),
+)
+corner = Tile(
+    (
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, f),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, f),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, f),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, w, w, w, w, w, w, w, w, w, w),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+    ),
+    edges=(e_void, e_floor, e_floor, e_void),
+)
+corner_room = Tile(
+    (
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, w, w, w, w, w),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, d, f, f, f, f, f),
+        (v, v, v, v, v, w, f, f, f, f, f, f, r, f, f, f, f, f, f, d, f, f, f, f, f),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, d, f, f, f, f, f),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, w, w, w, w, w),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, w, w, w, w, w, d, d, d, w, w, w, w, w, w, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+    ),
+    edges=(e_void, e_floor, e_floor, e_void),
+)
+tee = Tile(
+    (
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
+        (f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f),
+        (f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f),
+        (f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f),
+        (w, w, w, w, w, w, w, w, w, w, w, f, f, f, w, w, w, w, w, w, w, w, w, w, w),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+    ),
+    edges=(e_void, e_floor, e_floor, e_floor),
+)
+tee_room = Tile(
+    (
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (w, w, w, w, w, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, w, w, w, w, w),
+        (f, f, f, f, f, d, f, f, f, f, f, f, f, f, f, f, f, f, f, d, f, f, f, f, f),
+        (f, f, f, f, f, d, f, f, f, f, f, f, r, f, f, f, f, f, f, d, f, f, f, f, f),
+        (f, f, f, f, f, d, f, f, f, f, f, f, f, f, f, f, f, f, f, d, f, f, f, f, f),
+        (w, w, w, w, w, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, w, w, w, w, w),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, w, w, w, w, w, d, d, d, w, w, w, w, w, w, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+    ),
+    edges=(e_void, e_floor, e_floor, e_floor),
+)
+cross = Tile(
+    (
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (w, w, w, w, w, w, w, w, w, w, w, f, f, f, w, w, w, w, w, w, w, w, w, w, w),
+        (f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f),
+        (f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f),
+        (f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f),
+        (w, w, w, w, w, w, w, w, w, w, w, f, f, f, w, w, w, w, w, w, w, w, w, w, w),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
     ),
     edges=(e_floor, e_floor, e_floor, e_floor),
 )
-lv = line_vertical = Tile(
+cross_r = Tile(
     (
-        (w, f, f, f, w),
-        (w, f, f, f, w),
-        (w, f, f, f, w),
-        (w, f, f, f, w),
-        (w, f, f, f, w),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, w, w, w, w, w, w, d, d, d, w, w, w, w, w, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (w, w, w, w, w, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, w, w, w, w, w),
+        (f, f, f, f, f, d, f, f, f, f, f, f, f, f, f, f, f, f, f, d, f, f, f, f, f),
+        (f, f, f, f, f, d, f, f, f, f, f, f, r, f, f, f, f, f, f, d, f, f, f, f, f),
+        (f, f, f, f, f, d, f, f, f, f, f, f, f, f, f, f, f, f, f, d, f, f, f, f, f),
+        (w, w, w, w, w, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, w, w, w, w, w),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, f, f, f, f, f, f, f, f, f, f, f, f, f, w, v, v, v, v, v),
+        (v, v, v, v, v, w, w, w, w, w, w, d, d, d, w, w, w, w, w, w, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
+        (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
     ),
-    edges=(e_floor, e_wall, e_floor, e_wall),
-)
-lh = line_horizontal = Tile(
-    (
-        (w, w, w, w, w),
-        (f, f, f, f, f),
-        (f, f, f, f, f),
-        (f, f, f, f, f),
-        (w, w, w, w, w),
-    ),
-    edges=(e_wall, e_floor, e_wall, e_floor),
-)
-tn = t_normal = Tile(
-    (
-        (w, w, w, w, w),
-        (f, f, f, f, f),
-        (f, f, f, f, f),
-        (f, f, f, f, f),
-        (w, f, f, f, w),
-    ),
-    edges=(e_wall, e_floor, e_floor, e_floor),
-)
-ti = t_inverse = Tile(
-    (
-        (w, f, f, f, w),
-        (f, f, f, f, f),
-        (f, f, f, f, f),
-        (f, f, f, f, f),
-        (w, w, w, w, w),
-    ),
-    edges=(e_floor, e_floor, e_wall, e_floor),
-)
-en = e_normal = Tile(
-    (
-        (w, f, f, f, w),
-        (w, f, f, f, f),
-        (w, f, f, f, f),
-        (w, f, f, f, f),
-        (w, f, f, f, w),
-    ),
-    edges=(e_floor, e_floor, e_floor, e_wall),
-)
-ei = e_inverse = Tile(
-    (
-        (w, f, f, f, w),
-        (f, f, f, f, w),
-        (f, f, f, f, w),
-        (f, f, f, f, w),
-        (w, f, f, f, w),
-    ),
-    edges=(e_floor, e_wall, e_floor, e_floor),
-)
-wa = walls = Tile(
-    (
-        (w, w, w, w, w),
-        (w, w, w, w, w),
-        (w, w, w, w, w),
-        (w, w, w, w, w),
-        (w, w, w, w, w),
-    ),
-    edges=(e_wall, e_wall, e_wall, e_wall),
+    edges=(e_floor, e_floor, e_floor, e_floor),
 )
 fallback = Tile(
     (
-        (v, v, v, v, v),
-        (v, v, v, v, v),
-        (v, v, v, v, v),
-        (v, v, v, v, v),
-        (v, v, v, v, v),
+        (w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
+        (w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
+        (w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
+        (w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
+        (w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
+        (w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
+        (w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
+        (w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
+        (w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
+        (w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
+        (w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
+        (w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
+        (w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
+        (w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
+        (w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
+        (w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
+        (w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
+        (w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
+        (w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
+        (w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
+        (w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
+        (w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
+        (w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
+        (w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
+        (w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w, w),
     ),
     edges=(Edge(), Edge(), Edge(), Edge()),
 )
 
-# mapping for debugging. Not used by production code.
-str_tile_dict = bidict(
-    {
-        # "┼": cross,
-        "│": line_vertical,
-        "─": line_horizontal,
-        "┬": t_normal,
-        "┴": t_inverse,
-        "├": e_normal,
-        "┤": e_inverse,
-        "█": walls,
-        # "╳": fallback,
-        " ": None,
-    }
+tiles = bidict(
+    (
+        *zip("╵╶╷╴", rotations(end)),
+        *zip("╹╺╻╸", rotations(end_room)),
+        *zip("│─", dedupe(rotations(line))),
+        *zip("┃━", dedupe(rotations(line_room))),
+        *zip("┌┐┘└", rotations(corner)),
+        *zip("┏┓┛┗", rotations(corner_room)),
+        *zip("┬┤┴├", rotations(tee)),
+        *zip("┳┫┻┣", rotations(tee_room)),
+        ("█", fallback),
+        # (" ", None),
+    )
 )
 
-example = """
-███├─┴─┬─┤██
-███│███│█│██
-─┬─┤███├─┴─┬
-█│█│███│███│
-█├─┴─┬─┤███├
-█│███│█│███│
-─┤███├─┴─┬─┤
-█│███│███│█│
-─┴─┬─┤███├─┴
-███│█│███│██
-███├─┴─┬─┤██
-"""
+
+" Tileset "
+
+# example = """
+# ███├─┴─┬─┤██
+# ███│███│█│██
+# ─┬─┤███├─┴─┬
+# █│█│███│███│
+# █├─┴─┬─┤███├
+# █│███│█│███│
+# ─┤███├─┴─┬─┤
+# █│███│███│█│
+# ─┴─┬─┤███├─┴
+# ███│█│███│██
+# ███├─┴─┬─┤██
+# """
 # tileset = Tileset.from_example(example, dict(str_tile_dict), fallback)
-tileset = Tileset.from_edges([cr, lv, lh, tn, ti, en, ei, wa], fallback)
+tileset = Tileset.from_edges(tiles.values(), fallback)

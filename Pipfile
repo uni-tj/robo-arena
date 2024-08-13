@@ -10,6 +10,7 @@ funcy = "~=2.0"
 pyyaml = "~=6.0.1"
 keyboard = "~=0.13.5"
 bidict = "~=0.23.1"
+more-itertools = "~=10.4.0"
 
 [dev-packages]
 flake8 = "==7.0.0"

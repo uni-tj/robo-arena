@@ -1,7 +1,9 @@
 import logging
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, TypeGuard
+from typing import TYPE_CHECKING, Any, Callable, TypeGuard
+
+from more_itertools import iterate, take
 
 import roboarena.server.level_generation.wfc as wfc
 from roboarena.shared.util import enumerate2d_vec, neighbours_horiz, neighbours_vert
@@ -19,7 +21,23 @@ type LevelUpdate = Iterable[tuple[BlockPosition, "Block"]]
 
 @dataclass(frozen=True)
 class Edge:
-    pass
+    """
+    The type of one edge of a tile.
+
+    If Tile A has edge I at the top and tile B has the same on the bottom,
+    then tile B can be placed above tile A.
+
+    Comparison by object identity:
+
+    .. code-block:: python
+        Edge() == Edge() # False
+    """
+
+    def __eq__(self, value: object) -> bool:
+        return self is value
+
+    def __hash__(self) -> int:
+        return id(self)
 
 
 @dataclass(frozen=True)
@@ -37,12 +55,24 @@ def both_tile(x: tuple[Any, Any]) -> TypeGuard[tuple[Tile, Tile]]:
     return all(map(is_tile, x))
 
 
+def rotate(tile: Tile) -> Tile:
+    """Rotate a tile right."""
+    return Tile(
+        tuple(zip(*reversed(tile.blocks))),
+        (tile.edges[3], tile.edges[0], tile.edges[1], tile.edges[2]),
+    )
+
+
+def rotations(tile: Tile) -> Sequence[Tile]:
+    return take(4, iterate(rotate, tile))
+
+
 @dataclass(frozen=True)
 class Tileset:
     blocks_per_tile: int
     """The edge length of a tile in blocks"""
     tiles: list[Tile]
-    """Tiles. First element must be the fallback tile"""
+    fallback: Tile
     rules_horiz: Iterable[tuple[Tile, Tile]]
     """Possible horizontal patterns as (left, right)"""
     rules_vert: Iterable[tuple[Tile, Tile]]
@@ -65,32 +95,35 @@ class Tileset:
         mat = example.split("\n")
         return Tileset(
             len(fallback.blocks),
-            [fallback] + list(filter(is_tile, tiles.values())),
+            list(filter(is_tile, tiles.values())),
+            fallback,
             filter(both_tile, ((tiles[a], tiles[b]) for a, b in neighbours_horiz(mat))),
             filter(both_tile, ((tiles[a], tiles[b]) for a, b in neighbours_vert(mat))),
         )
 
     @staticmethod
-    def from_edges(tiles: list[Tile], fallback: Tile):
+    def from_edges(tiles: Iterable[Tile], fallback: Tile):
         """
         Generate the tileset rules from the tile edges.
 
         If Tile A has edge I at the top and tile B has the same on the bottom,
         then tile B can be placed above tile A.
         """
+        tiles = list(tiles)
         return Tileset(
             len(fallback.blocks),
-            [fallback] + tiles,
+            tiles,
+            fallback,
             ((a, b) for a in tiles for b in tiles if a.edges[1] is b.edges[3]),
             ((a, b) for a in tiles for b in tiles if a.edges[2] is b.edges[0]),
         )
 
     def to_wfc(self) -> wfc.Tileset:
-        ts = self.tiles
+        index: Callable[[Tile], int] = lambda tile: self.tiles.index(tile) + 1
         return wfc.Tileset(
-            len(ts),
-            frozenset((ts.index(a), ts.index(b)) for a, b in self.rules_horiz),
-            frozenset((ts.index(a), ts.index(b)) for a, b in self.rules_vert),
+            len(self.tiles) + 1,
+            frozenset((index(a), index(b)) for a, b in self.rules_horiz),
+            frozenset((index(a), index(b)) for a, b in self.rules_vert),
         )
 
 
@@ -108,12 +141,18 @@ class LevelGenerator:
 
     def generate(self, positions: Iterable[BlockPosition]) -> LevelUpdate:
         collapsed = self._wfc.collapse(self._tile_pos(pos) for pos in positions)
+        level_update = list[tuple[BlockPosition, "Block"]]()
         for tile_pos, tile_idx in collapsed:
-            tile = self._tileset.tiles[tile_idx]
+            tile = (
+                self._tileset.fallback
+                if tile_idx == 0
+                else self._tileset.tiles[tile_idx - 1]
+            )
             for block_pos, block in enumerate2d_vec(tile.blocks):
                 pos = tile_pos * self._tileset.blocks_per_tile + block_pos.mirror()
                 self.level[pos] = block
-                yield pos, block
+                level_update.append((pos, block))
+        return level_update
 
     def _tile_pos(self, block_pos: BlockPosition) -> wfc.TilePosition:
         return block_pos // self._tileset.blocks_per_tile
