@@ -3,10 +3,10 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import NoReturn, overload
 
-import keyboard
+# import keyboard
 from attr import define, field
 
-from roboarena.server.level_generation.tileset import str_tile_dict, tileset
+from roboarena.server.level_generation.tileset import tiles, tileset
 from roboarena.server.level_generation.wfc import (
     WFC,
     CollapsedAllEvent,
@@ -154,11 +154,12 @@ class WFCStepper:
             backup = c_all, c_one, p_one
             try:
                 print(f"q/e: c_all -/+, a/d: c_one -/+, y/c: p_one -/+, step: {step}")
-                evt = keyboard.read_event()
-                print(evt)
-                if evt.event_type != keyboard.KEY_DOWN:
-                    continue
-                match evt.name:
+                # evt = keyboard.read_event()
+                # print(evt)
+                # if evt.event_type != keyboard.KEY_DOWN:
+                #     continue
+                # match evt.name:
+                match input():
                     case "-":
                         step = max(step // 10, 1)
                     case "+":
@@ -228,5 +229,5 @@ class WFCStepper:
 
 if __name__ == "__main__":
     wfc = WFC(tileset.to_wfc())
-    tiles = {i: str_tile_dict.inv.get(t) for i, t in enumerate(tileset.tiles)}
+    tiles = {i + 1: tiles.inv.get(t) for i, t in enumerate(tileset.tiles)}
     WFCStepper(wfc, tiles).interactive()
