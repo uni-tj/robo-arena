@@ -2,20 +2,27 @@ import logging
 import random
 import traceback
 from collections import defaultdict, deque
-from copy import deepcopy
 from dataclasses import dataclass
 from enum import Enum
-from functools import cache, cached_property
-from itertools import chain
+from functools import cache
 from math import ceil, sqrt
-from random import choice
 from typing import Iterable, Sequence, SupportsIndex
 
 import numpy as np
 from attr import define, field
-from numpy.typing import NDArray
 
-from roboarena.shared.util import Color, EventTarget, color, square_space_around
+from roboarena.server.level_generation.utils import gen_square_space_wfc_fast
+from roboarena.shared.util import (
+    Color,
+    EventTarget,
+    color,
+    is_one_at,
+    nonzero,
+    nonzero_count,
+    nonzero_inv,
+    one_hot,
+    ones_except,
+)
 from roboarena.shared.utils.vector import Vector
 
 logger = logging.getLogger(__file__)
@@ -37,19 +44,11 @@ random.seed(seed)
 type ShapeLike = SupportsIndex | Sequence[SupportsIndex]
 
 
-def flatnonzero_inv(indices: Iterable[int], shape: ShapeLike) -> NDArray[np.bool_]:
-    arr = np.zeros(shape, dtype=np.bool_)
-    flat_view = arr.ravel()
-    for index in indices:
-        flat_view[index] = True
-    return arr
-
-
 # Wave Function Collapse implementation
 
 type Tile = int
 type TilePosition = Vector[int]
-type PossibleTiles = NDArray[np.bool_]
+type PossibleTiles = int
 type WFCMap = dict[TilePosition, PossibleTiles]
 type WFCUpdate = Iterable[tuple[TilePosition, int]]
 
@@ -72,6 +71,7 @@ class Tileset:
     tiles: int
     """Tiles. First element must be the fallback tile"""
     rules_horiz: frozenset[tuple[Tile, Tile]]
+
     """Possible horizontal patterns as (left, right)"""
     rules_vert: frozenset[tuple[Tile, Tile]]
     """Possible vertical patterns as (top, bottom)"""
@@ -90,14 +90,7 @@ class Tileset:
 type Ts = Tileset
 
 
-def one_hot(value: int, classes: int) -> NDArray[np.bool_]:
-    arr = np.zeros((classes,), np.bool_)
-    arr[value] = True
-    return arr
-
-
-def entropy(possible: PossibleTiles) -> int:
-    return possible.sum()
+entropy = nonzero_count
 
 
 @dataclass(frozen=True)
@@ -180,76 +173,77 @@ class WFC:
         positions = positions.difference(self._args)  # already handled before
         self._args = self._args.union(positions)
 
-        init_possible = np.ones(self.tileset.tiles, dtype=np.bool_)
-        init_possible[0] = False  # prevent propagation of fallback rules
+        init_possible = ones_except(self.tileset.tiles, 0)
         init_entropy = entropy(init_possible)
+
         alloc_apothem = 2 * self.tileset.tiles  # works empirically
         for pos in positions:
-            for sur in square_space_around(pos, alloc_apothem):
+            for sur in gen_square_space_wfc_fast(pos, alloc_apothem):
                 if sur in self.map:
                     continue
-                self.map[sur] = init_possible.copy()
+                self.map[sur] = init_possible
                 self._not_collapsed.add(sur)
                 self._entropy_store.add(sur, init_entropy)
 
         map_update: WFCUpdate = list()
         positions = positions.difference(self._collapsed)
+        c = 0
         while len(positions) > 0:
             # collapse tile with lowest entropy
             pos = self._entropy_store.pop_min()
             selected = self._select_possible(self.map[pos])
-            self.map[pos] = one_hot(selected, self.tileset.tiles)
+            self.map[pos] = one_hot(selected)
+
             if selected != 0:
-                self._propagate(pos)
+                c += self._propagate(pos)
 
             self._collapsed.add(pos)
             self._not_collapsed.remove(pos)
             positions.discard(pos)
             map_update.append((pos, selected))
+            self._collapsed.add(pos)
             self.events.dispatch(CollapsedOneEvent(pos))
         self.events.dispatch(CollapsedAllEvent(list(p for p, _ in map_update)))
         return map_update
 
-    def _lowest_entropy_position(self) -> TilePosition:
-        not_collapsed = deepcopy(self._not_collapsed)
-        min_entropy = min(map(lambda p: entropy(self.map[p]), not_collapsed))
-        min_poss = filter(lambda p: entropy(self.map[p]) == min_entropy, not_collapsed)
-        return choice(list(min_poss))
-
     def _select_possible(self, possible: PossibleTiles) -> Tile:
-        if np.sum(possible) == 0:
+        if possible == 0:
             return 0
-        return np.random.choice(np.flatnonzero(possible))
+        return random.choice(nonzero(possible))
 
-    def _propagate(self, start: TilePosition) -> None:
+    def _propagate(self, start: TilePosition) -> int:
         queue = deque([start])
+        c = 0
         while len(queue) > 0:
+            c += 1
             pos = queue.popleft()
-            if np.array_equal(self.zeros, self.map[pos]):
-                continue
+            if self.map[pos] == 0:
+                continue  # nothing possible
             for dir in Direction:
                 neigh = pos + dir.value
                 if neigh not in self.map:
                     continue
-                old = self.map[neigh].copy()
-                possible = frozenset(np.flatnonzero(self.map[pos]))
+                old = self.map[neigh]
                 ts = self.tileset
-                self.map[neigh] &= self._propagation_by_poss(possible, dir, ts)
+                self.map[neigh] &= self._propagation_by_poss(self.map[pos], dir, ts)
                 new = self.map[neigh]
 
-                no_change = np.array_equal(old, new)
-                if not no_change:
-                    assert neigh in self._not_collapsed
+                if old != new:
+                    if neigh not in self._not_collapsed:
+                        continue
                     self._entropy_store.update(neigh, entropy(old), entropy(new))
                     queue.append(neigh)
             self.events.dispatch(PropagatedOneEvent(pos))
+        return c
 
     @staticmethod
     @cache
-    def _propagation_by_poss(tiles: set[Tile], dir: Direction, ts: Ts) -> PossibleTiles:
+    def _propagation_by_poss(
+        tiles: PossibleTiles, dir: Direction, ts: Ts
+    ) -> PossibleTiles:
         """_propagate helper. Get possible neighbours for all possible tiles"""
-        prop = np.zeros((ts.tiles,), dtype=np.bool_)
-        for tile in tiles:
+        prop = 0
+        for tile in nonzero(tiles):
             prop |= WFC._propagation_by_tile(tile, dir, ts)
         return prop
 
@@ -259,14 +253,7 @@ class WFC:
         """_propagate helper. Get possible neighbours for one tile"""
         rules = ts.rules_horiz if dir.is_horizontal() else ts.rules_vert
         index = 0 if dir.is_bottom_right() else 1
-        return flatnonzero_inv(
-            chain([0], (rule[1 - index] for rule in rules if rule[index] == tile)),
-            (ts.tiles,),
-        )
-
-    @cached_property
-    def zeros(self) -> NDArray[np.bool_]:
-        return np.zeros((self.tileset.tiles,), dtype=np.bool_)
+        return nonzero_inv(rule[1 - index] for rule in rules if rule[index] == tile) | 1
 
 
 def print_wfc(
@@ -288,7 +275,7 @@ def print_wfc(
         for x in range(tile_size):
             for y in range(tile_size):
                 tile = y * tile_size + x
-                poss = tile < len(possible) and possible[tile]
+                poss = tile < wfc.tileset.tiles and is_one_at(possible, tile)
                 char_pos = char_tile_pos + Vector(x, y)
                 c = colors.get(tile_pos) or Color.NONE
                 str = (tiles.get(tile) or f"{tile}") if poss else " "
