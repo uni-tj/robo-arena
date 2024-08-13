@@ -3,16 +3,17 @@ import logging
 import os
 import string
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Iterator
+from collections.abc import Collection, Iterable, Iterator
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import cache
 from itertools import count
 from random import getrandbits
-from typing import Any, Callable, Collection, Generator, NoReturn
+from typing import Any, Callable, Generator, NoReturn
 
 import numpy as np
 import pygame
+from numpy.typing import NDArray
 
 from roboarena.shared.utils.vector import Vector
 
@@ -45,7 +46,7 @@ def safe_next[T](iterator: Iterator[T]) -> T | None:
 
 def gen_coord_space(
     xbounds: tuple[int, int], ybounds: tuple[int, int]
-) -> list[Vector[int]]:
+) -> Iterable[Vector[int]]:
     """Generates a list of coordinates in the rectangle given by xbounds and ybounds
 
     Args:
@@ -56,15 +57,15 @@ def gen_coord_space(
         list[Vector[int]]: list of Vector coordinates
             in the space defined by xbounds and ybounds
     """
-    lnx = np.linspace(xbounds[0], xbounds[1] - 1, xbounds[1] - xbounds[0])
-    lny = np.linspace(ybounds[0], ybounds[1] - 1, ybounds[1] - ybounds[0])
+    lnx = np.linspace(xbounds[0], xbounds[1], xbounds[1] - xbounds[0] + 1)
+    lny = np.linspace(ybounds[0], ybounds[1], ybounds[1] - ybounds[0] + 1)
     coords = np.array(np.meshgrid(lnx, lny)).ravel("F").reshape(-1, 2).astype(int)
 
     return [Vector.from_sequence(coord) for coord in coords]
 
 
 @cache
-def square_space(apothem: int) -> list[Vector[int]]:
+def square_space(apothem: int) -> Iterable[Vector[int]]:
     return gen_coord_space((-apothem, apothem), (-apothem, apothem))
 
 
@@ -266,3 +267,115 @@ class Color(Enum):
 
 def color(str: str, color: Color) -> str:
     return f"{color.value}{str}\033[0m"
+
+
+type Barr = NDArray[np.bool_]
+
+
+def nd_arr2int(arr: Barr) -> int:
+    return int("".join(map(str, arr.astype(int))), 2)
+
+
+def int2nd_arr(value: int, size: int) -> Barr:
+    binary_string = bin(value)[2:].zfill(size)
+    return np.array(list(map(int, binary_string)), dtype=np.bool_)
+
+
+def nonzero_inv(values: Iterable[int]) -> int:
+    """
+    Returns an int where all bits given by the indices in values are non-zero.
+
+    .. code-block:: python
+        nonzero_inv([0,3]) == 0b1001
+    """
+    result = 0
+    for value in values:
+        result |= 1 << value
+    return result
+
+
+def nonzero(value: int) -> list[int]:
+    """
+    Returns the list of non-zero bits.
+
+    .. code-block:: python
+        nonzero(0b1001) == [0,3]
+    """
+    result = list[int]()
+    i = 0
+    while value > 0:
+        if value & 1:
+            result.append(i)
+        value >>= 1
+        i += 1
+    return result
+
+
+def nonzerop(value: int) -> Iterable[int]:
+    """
+    Returns the list of non-zero bits.
+
+    .. code-block:: python
+        nonzero(0b1001) == [0,3]
+    """
+    i = 0
+    while value > 0:
+        if value & 1:
+            yield i
+        value >>= 1
+        i = i + 1
+
+
+def nonzero_count(value: int) -> int:
+    """
+    Returns the number of non-zero bits.
+
+    ..code-block:: python
+        nonzero_count(0b1001) == 2
+    """
+    count = 0
+    while value > 0:
+        count = (value & 1) + count
+        value >>= 1
+    return count
+
+
+def ones(n: int) -> int:
+    """
+    Returns an int where last n bits are 1.
+
+    ..code-block:: python
+        ones(4) == 0b1111
+    """
+    return (1 << n) - 1
+
+
+def one_hot(k: int) -> int:
+    """
+    Returns an int only bit k is 1.
+
+    ..code-block:: python
+        one_hot(4) == 0b1000
+    """
+    return 1 << k
+
+
+def ones_except(n: int, k: int) -> int:
+    """
+    Returns an int where last n bits are 1 except bit k.
+
+    ..code-block:: python
+        ones_except(4, 1) == 0b1101
+    """
+    return ((1 << n) - 1) ^ (1 << k)
+
+
+def is_one_at(value: int, k: int) -> bool:
+    """
+    Returns whether bit k of value is 1.
+
+    ..code-block:: python
+        is_one_at(0b1101, 2) == True
+        is_one_at(0b1101, 1) == False
+    """
+    return (value >> k) & 1 == 1
