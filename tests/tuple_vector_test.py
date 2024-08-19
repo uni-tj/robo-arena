@@ -2,8 +2,8 @@ import random
 
 import pytest
 
-from roboarena.shared.utils.tuple_vec import (
-    VectorFloat,
+from roboarena.shared.utils.tuple_vector import (
+    TupleVector,
     add_tuples,
     apply_transform_tuples,
     eq_tuples,
@@ -13,7 +13,7 @@ from roboarena.shared.utils.tuple_vec import (
     truediv_tuples,
 )
 
-type TVF = VectorFloat
+type TVF = TupleVector
 
 
 def ri(b: float = 1_000) -> float:
