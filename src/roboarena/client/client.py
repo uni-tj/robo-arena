@@ -101,6 +101,41 @@ class GameOverState:
             clock.tick(1 / CLIENT_TIMESTEP)
 
 
+class CameraPosStore:
+    _player_pos_queue: Deque[Vector[float]]
+    _cached_camera_on_player: bool
+    _cached_camera_pos: Vector[float]
+    _CAMERA_OFFSET: int = 7
+
+    def __init__(self, pos: Vector[float]) -> None:
+        self._player_pos_queue = deque([pos])
+        self._cached_camera_pos = Vector(0, 0)
+        self._cached_camera_on_player = True
+
+    def camera_on_player(self, player_pos: Vector[float]) -> bool:
+        return self._cached_camera_pos == player_pos
+
+    @property
+    def camera_position(self):
+        return self._cached_camera_pos
+
+    def handle_camera_movement(self, position: Vector[float]) -> Vector[float]:
+        cur_camera_pos = self._player_pos_queue.popleft()
+        self._cached_camera_pos = cur_camera_pos
+
+        player_starts_moving = (
+            self._cached_camera_on_player and not self.camera_on_player(position)
+        )
+        if player_starts_moving:
+            self._cached_camera_on_player = False
+            self._player_pos_queue.extend([position] * (self._CAMERA_OFFSET - 1))
+        else:
+            self._cached_camera_on_player = self.camera_on_player(position)
+
+        self._player_pos_queue.append(position)
+        return cur_camera_pos
+
+
 class GameState(SharedGameState):
     _logger = logging.getLogger(f"{__name__}.GameState")
     _client: "Client"
@@ -113,10 +148,7 @@ class GameState(SharedGameState):
     entities: dict[EntityId, ClientEntityType]
     level: "Level"
     events: EventTarget[QuitEvent]
-    _player_pos_queue: Deque[Vector[float]] = deque()
-    _cached_camera_on_player: bool = True
-    _cached_camera_pos: Vector[float] = Vector(0, 0)
-    CAMERA_OFFSET = 7
+    _camera_pos_store: CameraPosStore
 
     def __init__(
         self,
@@ -152,7 +184,7 @@ class GameState(SharedGameState):
 
         self.set_keys()
 
-        self._player_pos_queue.append(self._entity.position)
+        self._camera_pos_store = CameraPosStore(self._entity.position)
 
     def handle(self, t_msg: Time, msg: EventType):
         if not isinstance(msg, ServerGameEvent):
@@ -183,7 +215,9 @@ class GameState(SharedGameState):
         keys = pygame.key.get_pressed()
         (mouse_1, _, mouse_3) = pygame.mouse.get_pressed()
         mouse_pos_px = Vector.from_tuple(pygame.mouse.get_pos())
-        mouse_pos_gu = self._renderer.screen2gu(mouse_pos_px, self._cached_camera_pos)
+        mouse_pos_gu = self._renderer.screen2gu(
+            mouse_pos_px, self._camera_pos_store.camera_position
+        )
         # self._logger.debug(f"mouse_pos_gu: {mouse_pos_gu}")
         return Input(
             move_right=keys[self._keys["key_right"]],
@@ -194,27 +228,6 @@ class GameState(SharedGameState):
             secondary=mouse_3,
             mouse=mouse_pos_gu,
         )
-
-    def camera_on_player(self, camera_pos: Vector[float]) -> bool:
-        return camera_pos == self._entity.position
-
-    def handle_camera_movement(self) -> Vector[float]:
-        cur_camera_pos = self._player_pos_queue.popleft()
-        self._cached_camera_pos = cur_camera_pos
-        if not self._cached_camera_on_player:
-            self._cached_camera_on_player = self.camera_on_player(cur_camera_pos)
-            self._player_pos_queue.append(self._entity.position)
-            return cur_camera_pos
-
-        if self.camera_on_player(cur_camera_pos):
-            self._cached_camera_on_player = True
-            self._player_pos_queue.append(self._entity.position)
-            return cur_camera_pos
-
-        self._cached_camera_on_player = False
-        for _ in range(self.CAMERA_OFFSET):
-            self._player_pos_queue.append(self._entity.position)
-        return cur_camera_pos
 
     def loop(self) -> Stopped:
         self._logger.debug("Enterered loop")
@@ -248,7 +261,11 @@ class GameState(SharedGameState):
                         continue
 
             # rendering
-            self._renderer.render(camera_position=self.handle_camera_movement())
+            self._renderer.render(
+                camera_position=self._camera_pos_store.handle_camera_movement(
+                    self._entity.position
+                )
+            )
             # self._logger.debug("Rendered")
 
             # cleanup frame
