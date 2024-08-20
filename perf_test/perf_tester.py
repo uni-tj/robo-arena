@@ -1,10 +1,9 @@
 import time
 from collections import defaultdict
 from collections.abc import Iterable
-from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
-from roboarena.shared.utils.table_printer import print_table
+from roboarena.shared.utils.statistics import StatsCollection
 
 
 class ProgressBarConfig:
@@ -27,7 +26,7 @@ class ProgressBar:
         if pgc is None:
             self._pgc = ProgressBarConfig()
         else:
-            self._pgc: ProgressBarConfig = pgc
+            self._pgc = pgc
 
     def update(self, current: int):
         elapsed_time = time.time() - self.start_time
@@ -48,85 +47,13 @@ class ProgressBar:
             print(f"{progress_display}", end="\r")
 
 
-def mean(data: list[float]):
-    """Return the sample arithmetic mean of data."""
-    n = len(data)
-    if n < 1:
-        raise ValueError("mean requires at least one data point")
-    return sum(data) / n  # in Python 2 use sum(data)/float(n)
-
-
-def _ss(data: list[float]):
-    """Return sum of square deviations of sequence data."""
-    c = mean(data)
-    ss = sum((x - c) ** 2 for x in data)
-    return ss
-
-
-def stddev(data: list[float], ddof: int = 1):
-    """Calculates the population standard deviation
-    by default; specify ddof=1 to compute the sample
-    standard deviation."""
-    n = len(data)
-    if n < 2:
-        raise ValueError("variance requires at least two data points")
-    ss = _ss(data)
-    pvar = ss / (n - ddof)
-    return pvar**0.5
-
-
-# @dataclass
-# class ExecutionStats:
-#     stat_list: list["Stats"]
-#     @property
-#     def labels(self):
-#         return ["avg", "std"]
-#     def adjust_scale()
-
-
-@dataclass(frozen=True)
-class Stats:
-    avg: float
-    std: float
-    _scale: float
-
-    @staticmethod
-    def from_res(res: list[float]) -> "Stats":
-        avg = mean(res)
-        std = stddev(res)
-        _scale = 2
-        return Stats(avg, std, _scale)
-
-    @staticmethod
-    def adjust_scale(value: float) -> tuple[float, str]:
-        scales = [
-            (1e-9, "ns"),
-            (1e-6, "µs"),
-            (1e-3, "ms"),
-            (1, "s"),
-        ]
-        for factor, label in scales:
-            if value < factor * 1e3:
-                return value / factor, label
-        return value, "s"
-
-    def __str__(self) -> str:
-        return f"avg: {self.avg:.6f} , std: {self.std:.6f}"
-
-    def table_repr(self) -> list[str]:
-        return [
-            f"{self.avg*1000**self._scale:.6f}",
-            f"{self.std*1000**self._scale:.6f}",
-        ]
-
-
 class PerformanceTester[A]:
     def __init__(self, num_tests: int, gen_data: Callable[[], A]):
         self.num_tests = num_tests
         self.functions: list[tuple[str, Callable[[A], Any], Callable[[Any], Any]]] = []
         self.generate_data: Callable[[], A] = gen_data
         self.results: dict[str, list[float]] = defaultdict(list)
-        self.add_function("id", id, id)
+        self.stats_collection = StatsCollection()
 
     def add_function[
         T
@@ -139,7 +66,6 @@ class PerformanceTester[A]:
         prog_bar = ProgressBar(self.num_tests)
         for i in range(self.num_tests):
             prog_bar.update(i)
-            # print("update")
             data = self.generate_data()
             for name, data_func, func in self.functions:
                 special_data = data_func(data)
@@ -161,10 +87,10 @@ class PerformanceTester[A]:
 
     def compare_performance(self):
         self.run_tests()
-        config = [["Function", "Average (ms)", "Std Dev (ms)"], ["__sep"]]
 
+        # Create Stats objects for each function and store them in the stats_collection
         for name, res in self.results.items():
-            stats = Stats.from_res(res)
-            config.append([name] + stats.table_repr())
+            self.stats_collection.add_stats(name, res)
 
-        print_table(config)
+        # Print all stats in the stats_collection
+        self.stats_collection.print_all_stats()
