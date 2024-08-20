@@ -1,7 +1,7 @@
 import functools
 import logging
 from collections import deque
-from typing import TYPE_CHECKING, Any, Deque
+from typing import TYPE_CHECKING, Any
 
 import pygame
 from pygame import RESIZABLE, Surface, event
@@ -110,7 +110,7 @@ class GameOverState:
 
 
 class CameraPosStore:
-    _player_pos_queue: Deque[Vector[float]]
+    _player_pos_queue: deque[Vector[float]]
     _cached_camera_on_player: bool
     _cached_camera_pos: Vector[float]
     _CAMERA_OFFSET: int = 7
@@ -322,7 +322,11 @@ class Client(Stoppable):
 
     def loop(self) -> Stopped:
         pygame.init()
-        screen = pygame.display.set_mode((1000, 1000), flags=RESIZABLE)
+        screen = pygame.display.set_mode(
+            (1000, 1000),
+            flags=RESIZABLE,
+            vsync=1,
+        )
 
         menu_result = MainMenu(screen, self, self._master_mixer).loop()
         if isinstance(menu_result, Stopped):
