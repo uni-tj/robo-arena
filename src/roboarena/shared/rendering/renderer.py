@@ -14,6 +14,13 @@ from pygame import Surface, display
 
 from roboarena.shared.block import void
 from roboarena.shared.utils.rect import Rect
+from roboarena.shared.utils.tuple_vector import (
+    TupleVector,
+    add_tuples,
+    ceil_tuples,
+    mul_tuples,
+    sub_tuples,
+)
 from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
@@ -28,6 +35,7 @@ FOV_OVERLAP_GU = 1.0
 
 type FieldOfView = Rect
 """ In game units """
+type ScreenPosition = tuple[int, int]
 
 
 @cache
@@ -120,10 +128,19 @@ class RenderCtx:
         return self.screen.get_width() / GU_PER_SCREEN
 
     def gu2px(self, vector: Vector[float]) -> Vector[int]:
-        return (vector * self.px_per_gu).floor()
+        return (vector * self.px_per_gu).ceil()
+
+    def gu2px_tup(self, vector: TupleVector) -> TupleVector:
+        return ceil_tuples(mul_tuples(vector, self.px_per_gu))
 
     def gu2screen(self, vector: Vector[float]) -> Vector[int]:
         return self.screen_center_px + self.gu2px(vector - self.camera_position_gu)  # type: ignore (subtracting two ints is int not float)
+
+    def gu2screen_tup(self, vector: TupleVector) -> TupleVector:
+        return add_tuples(
+            self.screen_center_px.to_tuple(),
+            self.gu2px_tup(sub_tuples(vector, self.camera_position_gu.to_tuple())),
+        )
 
     def scale_gu(self, surface: Surface, size: Vector[float]) -> Surface:
         cache_key = (surface, size)
@@ -183,7 +200,6 @@ class GameRenderer(Renderer):
         super().__init__(screen)
         self._game = game
 
-    # @log_durations(logger.critical, "render: ", "ms")
     def render(self, camera_position: Vector[float]) -> None:
         self._fps_counter.tick()
 
@@ -195,16 +211,19 @@ class GameRenderer(Renderer):
         self._render_game_ui(ctx)
         display.flip()
 
-    # @log_durations(logger.debug, "_render_background: ", "ms")
     def _render_background(self, ctx: RenderCtx) -> None:
         self._screen.fill((0, 0, 0))
         for y in range(floor(ctx.fov.top_left.y), ceil(ctx.fov.bottom_right.y)):
+            blit_sequence: list[tuple[Surface, ScreenPosition]] = list()
             for x in range(floor(ctx.fov.top_left.x), ceil(ctx.fov.bottom_right.x)):
                 pos_gu = Vector(x, y)
                 block = self._game.level.get(pos_gu) or void
-                block.render(pos_gu * 1.0, ctx)
+                texture, texture_size = block.texture, block.texture_size
+                scaled_texture = ctx.scale_gu(texture, texture_size)
+                pos_screen = ctx.gu2screen_tup((x, y - texture_size.y + 1))
+                blit_sequence.append((scaled_texture, pos_screen))  # type: ignore
+            self._screen.blits(blit_sequence)
 
-    # @log_durations(logger.debug, "_render_entities: ", "ms")
     def _render_entities(self, ctx: RenderCtx) -> None:
         for entity in self._game.entities.values():
             entity.render(ctx)

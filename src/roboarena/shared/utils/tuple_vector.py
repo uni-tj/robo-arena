@@ -1,3 +1,4 @@
+from math import ceil, floor
 from typing import Callable, Tuple, Union, overload
 
 # Define the type for float-based tuples
@@ -58,6 +59,14 @@ def truediv_tuples(a: TupleVector, b: Union[TupleVector, float]) -> TupleVector:
 
 def round_tuples(a: TupleVector) -> Tuple[int, int]:
     return (round(a[0]), round(a[1]))
+
+
+def floor_tuples(a: TupleVector) -> Tuple[int, int]:
+    return (floor(a[0]), floor(a[1]))
+
+
+def ceil_tuples(a: TupleVector) -> Tuple[int, int]:
+    return (ceil(a[0]), ceil(a[1]))
 
 
 def apply_transform_tuples(
