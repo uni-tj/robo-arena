@@ -133,8 +133,9 @@ class RenderCtx:
     """
 
     @cached_property
-    def px_per_gu(self) -> float:
-        return self.screen.get_width() / GU_PER_SCREEN
+    def px_per_gu(self) -> int:
+        px_per_gu = floor(self.screen.get_width() / GU_PER_SCREEN)
+        return px_per_gu - (px_per_gu % 10)
 
     def gu2px(self, vector: Vector[float]) -> Vector[int]:
         return (vector * self.px_per_gu).ceil()
