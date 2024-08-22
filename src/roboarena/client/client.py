@@ -111,35 +111,24 @@ class CameraPosStore:
     _player_pos_queue: deque[Vector[float]]
     _cached_camera_on_player: bool
     _cached_camera_pos: Vector[float]
-    _CAMERA_OFFSET: int = 7
+    _RESPONSIVENESS_FACTOR: float = (
+        0.025  # regulates the responsiveness [0.01, 0.05] works with reasonable speeds
+    )
 
     def __init__(self, pos: Vector[float]) -> None:
-        self._player_pos_queue = deque([pos])
-        self._cached_camera_pos = Vector(0, 0)
-        self._cached_camera_on_player = True
-
-    def camera_on_player(self, player_pos: Vector[float]) -> bool:
-        return self._cached_camera_pos == player_pos
+        self._cached_camera_pos = pos
 
     @property
-    def camera_position(self):
+    def camera_position(self) -> Vector[float]:
         return self._cached_camera_pos
 
     def handle_camera_movement(self, position: Vector[float]) -> Vector[float]:
-        cur_camera_pos = self._player_pos_queue.popleft()
-        self._cached_camera_pos = cur_camera_pos
 
-        player_starts_moving = (
-            self._cached_camera_on_player and not self.camera_on_player(position)
-        )
-        if player_starts_moving:
-            self._cached_camera_on_player = False
-            self._player_pos_queue.extend([position] * (self._CAMERA_OFFSET - 1))
-        else:
-            self._cached_camera_on_player = self.camera_on_player(position)
+        self._cached_camera_pos += (
+            position - self._cached_camera_pos
+        ) * self._RESPONSIVENESS_FACTOR
 
-        self._player_pos_queue.append(position)
-        return cur_camera_pos
+        return self._cached_camera_pos
 
 
 class GameState(SharedGameState):

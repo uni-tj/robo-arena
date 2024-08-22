@@ -1,7 +1,7 @@
 import logging
 import time
 from abc import ABC
-from collections import deque
+from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from functools import cache, cached_property
 from math import ceil, floor, nan
@@ -13,6 +13,7 @@ import pygame.freetype
 from pygame import Surface, display
 
 from roboarena.shared.block import void
+from roboarena.shared.types import EntityId
 from roboarena.shared.utils.rect import Rect
 from roboarena.shared.utils.tuple_vector import (
     TupleVector,
@@ -196,9 +197,16 @@ class GameRenderer(Renderer):
 
     _game: "GameState"
 
+    # ! TODO Debbuging only:
+    _last_entity_pos: dict[EntityId, deque[Vector[float]]]
+    _last_camera_pos: deque[Vector[float]]
+
     def __init__(self, screen: Surface, game: "GameState") -> None:
         super().__init__(screen)
         self._game = game
+
+        self._last_camera_pos = deque(maxlen=60 * 10)
+        self._last_entity_pos = defaultdict(lambda: deque(maxlen=60 * 10))
 
     def render(self, camera_position: Vector[float]) -> None:
         self._fps_counter.tick()
@@ -209,6 +217,10 @@ class GameRenderer(Renderer):
         self._render_entities(ctx)
         self._fps_counter.render(self._screen)
         self._render_game_ui(ctx)
+
+        # ! Debugging only
+        self._last_camera_pos.append(camera_position)
+        self._render_debug_traces(ctx)
         display.flip()
 
     def _render_background(self, ctx: RenderCtx) -> None:
@@ -225,8 +237,9 @@ class GameRenderer(Renderer):
             self._screen.blits(blit_sequence)
 
     def _render_entities(self, ctx: RenderCtx) -> None:
-        for entity in self._game.entities.values():
+        for eid, entity in self._game.entities.items():
             entity.render(ctx)
+            self._last_entity_pos[eid].append(entity.position)
 
     def _render_game_ui(self, ctx: RenderCtx) -> None:
         self._game.game_ui.render(ctx)
@@ -240,6 +253,28 @@ class GameRenderer(Renderer):
                 ctx.gu2screen(marker.position).to_tuple(),
                 5,
             )
+
+    def _render_debug_traces(
+        self,
+        ctx: RenderCtx,
+    ) -> None:
+        surface = pygame.Surface(self._screen.get_size(), pygame.SRCALPHA)
+        for ci, poss in enumerate(self._last_entity_pos.values()):
+            for i, cpos in enumerate(poss):
+                # if i % 10 != 0:
+                # continue
+                col = (255, 0, ci, floor(255 * (i / len(poss))))
+                pygame.draw.circle(
+                    surface,
+                    col,
+                    ctx.gu2screen(cpos).to_tuple(),
+                    3,
+                )
+        for i, cpos in enumerate(self._last_camera_pos):
+            # if i % 10 != 0:
+            # continue
+            col = (0, 0, 255, floor(255 * (i / len(self._last_camera_pos))))
+            pygame.draw.circle(surface, col, ctx.gu2screen(cpos).to_tuple(), 3)
         self._screen.blit(surface, (0, 0))
 
 
