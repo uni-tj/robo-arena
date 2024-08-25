@@ -8,6 +8,7 @@ from pygame import RESIZABLE, Surface, event
 from pygame.font import Font
 from pygame.time import Clock
 
+from roboarena.client.ambience_sound import AmbienceSound
 from roboarena.client.entity import (
     ClientEnemyRobot,
     ClientEntityType,
@@ -16,7 +17,7 @@ from roboarena.client.entity import (
     ClientPlayerRobot,
 )
 from roboarena.client.keys import load_keys
-from roboarena.client.master_mixer import MasterMixer
+from roboarena.client.master_mixer import MUSIC_DONE, MasterMixer
 from roboarena.client.menu.main_menu import MainMenu
 from roboarena.shared.constants import CLIENT_TIMESTEP, SERVER_IP
 from roboarena.shared.custom_threading import Atom
@@ -150,6 +151,7 @@ class GameState(SharedGameState):
     _screen: Surface
     _renderer: GameRenderer
     _master_mixer: MasterMixer
+    _ambience_sound: AmbienceSound
     _ack: Counter
     _client_id: ClientId
     _entity_id: EntityId
@@ -260,6 +262,7 @@ class GameState(SharedGameState):
         self._logger.debug("Enterered loop")
         last_t = get_time()
         clock = Clock()
+        _ambience_sound = AmbienceSound(self._master_mixer)
 
         while True:
             if self._client.stopped.get():
@@ -281,11 +284,12 @@ class GameState(SharedGameState):
 
             # pygame event handling
             for e in event.get():
-                match e.type:
-                    case pygame.QUIT:
-                        self.events.dispatch(QuitEvent())
-                    case _:
-                        continue
+                if e.type == pygame.QUIT:
+                    self.events.dispatch(QuitEvent())
+                elif e.type == MUSIC_DONE:
+                    _ambience_sound.switch_music()
+                else:
+                    continue
 
             # rendering
             self._renderer.render(
@@ -293,11 +297,17 @@ class GameState(SharedGameState):
                     self._entity.position
                 )
             )
+
+            # ambience sound
+            _ambience_sound.tick()
+
             # self._logger.debug("Rendered")
 
             # cleanup frame
             last_t = t
             clock.tick(1 / CLIENT_TIMESTEP)
+
+        self._ambience_sound.stop()
 
 
 class Client(Stoppable):
