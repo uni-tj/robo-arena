@@ -71,5 +71,5 @@ class MainMenu(Menu):
 
     def loop(self) -> None:
         if not self._master_mixer.is_music_playing():
-            self._master_mixer.play_music(MENU_MUSIC_PATH)
+            self._master_mixer.play_music_loop(MENU_MUSIC_PATH)
         super().loop()
