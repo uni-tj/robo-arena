@@ -1,4 +1,5 @@
 import logging
+import math
 import random
 import traceback
 from collections import defaultdict, deque
@@ -176,7 +177,7 @@ class WFC:
         init_possible = ones_except(self.tileset.tiles, 0)
         init_entropy = entropy(init_possible)
 
-        alloc_apothem = 2 * self.tileset.tiles  # works empirically
+        alloc_apothem = ceil(4 * math.log(self.tileset.tiles, 2))  # works empirically
         for pos in positions:
             for sur in gen_square_space_wfc_fast(pos, alloc_apothem):
                 if sur in self.map:
