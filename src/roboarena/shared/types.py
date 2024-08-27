@@ -1,4 +1,4 @@
-from collections.abc import Iterable
+from collections.abc import Collection, Iterable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -25,6 +25,37 @@ type Color = pygame.Color
 type Entities = dict[EntityId, "Entity"]
 
 
+@dataclass(frozen=True)
+class PygameColor:
+    r: int
+    g: int
+    b: int
+    alpha: int = 255
+
+    def to_tuple(self) -> tuple[int, int, int, int]:
+        return (self.r, self.g, self.b, self.alpha)
+
+    @staticmethod
+    def light_grey() -> "PygameColor":
+        return PygameColor(211, 211, 211)
+
+    @staticmethod
+    def grey() -> "PygameColor":
+        return PygameColor(128, 128, 128)
+
+    @staticmethod
+    def red() -> "PygameColor":
+        return PygameColor(255, 0, 0)
+
+    @staticmethod
+    def green() -> "PygameColor":
+        return PygameColor(0, 255, 0)
+
+    @staticmethod
+    def blue() -> "PygameColor":
+        return PygameColor(0, 0, 255)
+
+
 """Communication protocol
 """
 
@@ -34,6 +65,7 @@ type ServerGameEventType = (
     | ServerDeleteEntityEvent
     | ServerEntityEvent
     | ServerLevelUpdateEvent
+    | ServerMarkerEvent
 )
 type ServerSpawnEventType = (ServerSpawnRobotEvent | ServerSpawnPlayerBulletEvent)
 type ServerEventType = (
@@ -103,6 +135,17 @@ class ServerSpawnRobotEvent:
 @dataclass(frozen=True)
 class ServerLevelUpdateEvent:
     update: "LevelUpdate"
+
+
+@dataclass(frozen=True)
+class Marker:
+    position: Vector[float]
+    color: PygameColor
+
+
+@dataclass(frozen=True)
+class ServerMarkerEvent:
+    markers: Collection[Marker]
 
 
 @dataclass(frozen=True)

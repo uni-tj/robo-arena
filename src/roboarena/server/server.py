@@ -1,6 +1,9 @@
 import logging
+from collections import deque
+from collections.abc import Collection
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Optional
+from uuid import uuid4
 
 from bidict import bidict
 from pygame import Color
@@ -30,6 +33,7 @@ from roboarena.shared.types import (
     ClientLobbyReadyEvent,
     EntityId,
     EventType,
+    Marker,
     ServerConnectionConfirmEvent,
     ServerDeleteEntityEvent,
     ServerEntityEvent,
@@ -37,6 +41,7 @@ from roboarena.shared.types import (
     ServerGameEventType,
     ServerGameStartEvent,
     ServerLevelUpdateEvent,
+    ServerMarkerEvent,
 )
 from roboarena.shared.util import (
     Stoppable,
@@ -106,6 +111,7 @@ class GameState(SharedGameState):
     _server: "Server"
     _clients: dict[ClientId, ClientInfo]
     entities: bidict[EntityId, ServerEntityType]
+    markers: deque[Marker]
     _deleted_entities: list[ServerEntityType]
     _created_entities: list[ServerEntityType]
 
@@ -128,6 +134,7 @@ class GameState(SharedGameState):
             self.dispatch_factory(None, enemy_id),
         )
         self.entities[enemy_id] = enemy
+        self.markers = deque(maxlen=1000)
 
         for client_id, ip in clients.items():
             entity_id, entity = self.gen_client_entity()
@@ -213,6 +220,11 @@ class GameState(SharedGameState):
             self.dispatch_factory(None, entity_id),
         )
         return (entity_id, entity)
+
+    def mark(self, markers: Marker | Collection[Marker]):
+        markers = markers if isinstance(markers, Collection) else [markers]
+        self.markers += markers
+        self._dispatch(None, f"marker/{uuid4()}", ServerMarkerEvent(markers))
 
     def loop(self) -> Stopped:
         last_t = get_time()

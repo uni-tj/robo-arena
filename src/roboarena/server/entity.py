@@ -18,7 +18,9 @@ from roboarena.shared.types import (
     Color,
     EntityId,
     Input,
+    Marker,
     Motion,
+    PygameColor,
     ServerSpawnPlayerBulletEvent,
     ServerSpawnRobotEvent,
 )
@@ -105,8 +107,8 @@ type ServerEntityType = ServerPlayerRobot | ServerEnemyRobot | ServerPlayerBulle
 
 class BasicWeapon:
     strength = 10
-    "In shots/second"
     speed = 5
+    "In shots/second"
     _game: "GameState"
     _entity: ServerEntityType
     _last_shot: Time

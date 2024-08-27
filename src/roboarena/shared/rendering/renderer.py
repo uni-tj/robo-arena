@@ -192,6 +192,7 @@ class GameRenderer(Renderer):
         self._render_entities(ctx)
         self._fps_counter.render(self._screen)
         self._render_game_ui(ctx)
+        self._render_markers(ctx)
         display.flip()
 
     # @log_durations(logger.debug, "_render_background: ", "ms")
@@ -210,6 +211,17 @@ class GameRenderer(Renderer):
 
     def _render_game_ui(self, ctx: RenderCtx) -> None:
         self._game.game_ui.render(ctx)
+
+    def _render_markers(self, ctx: RenderCtx) -> None:
+        surface = pygame.Surface(self._screen.get_size(), pygame.SRCALPHA)
+        for marker in self._game.markers:
+            pygame.draw.circle(
+                surface,
+                marker.color.to_tuple(),
+                ctx.gu2screen(marker.position).to_tuple(),
+                5,
+            )
+        self._screen.blit(surface, (0, 0))
 
 
 class MenuRenderer(Renderer):
