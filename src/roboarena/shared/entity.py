@@ -8,6 +8,7 @@ from roboarena.shared.constants import PlayerConstants
 from roboarena.shared.rendering.util import size_from_texture_width
 from roboarena.shared.time import Time
 from roboarena.shared.types import Color, Input, Motion, Position
+from roboarena.shared.util import load_graphic
 from roboarena.shared.utils.rect import Rect
 from roboarena.shared.utils.vector import Vector
 
@@ -84,8 +85,8 @@ def interpolateMotion(old: Motion, new: Motion, blend: float, ctx: None) -> Moti
     )
 
 
-playerRobotTexture = Surface((50, 50))
-playerRobotTexture.fill("green")
+player_robot_texture = Surface((50, 50))
+player_robot_texture.fill("green")
 
 
 class PlayerRobot(Entity):
@@ -93,8 +94,8 @@ class PlayerRobot(Entity):
     health: Value[int]
     motion: Value[Motion]
     color: Value[Color]
-    texture = playerRobotTexture
-    texture_size = size_from_texture_width(playerRobotTexture, width=1.0)
+    texture = player_robot_texture
+    texture_size = size_from_texture_width(player_robot_texture, width=1.0)
 
     def __init__(self, game: "GameState") -> None:
         super().__init__(game)
@@ -137,23 +138,24 @@ class PlayerRobot(Entity):
         return (new_position, new_orientation)
 
 
-playerBulletTexture = Surface((10, 10))
-playerBulletTexture.fill((50, 168, 82))  # dark green
+player_bullet_texture = load_graphic("bullets/bullet-laser.png")
+player_bullet_texture_size = Vector.one()  # * 9 / 50
 
 type PlayerBulletMoveCtx = tuple[Time]
 
 
 class PlayerBullet(Entity):
-    texture = playerBulletTexture
-    texture_size = Vector(0.2, 0.2)
+    texture = player_bullet_texture
+    texture_size = player_bullet_texture_size
     _position: Value[Vector[float]]
-    "In units/second"
     _velocity: Value[Vector[float]]
+    "In units/second"
 
     def __init__(self, game: "GameState") -> None:
         super().__init__(game)
         self.collision = CollideAroundCenter(
-            lambda: self._position.get(), Rect.from_width_height(Vector.one())
+            lambda: self._position.get(),
+            Rect.from_width_height(player_bullet_texture_size),
         )
 
     @property
@@ -166,16 +168,16 @@ class PlayerBullet(Entity):
 
 type EnemyRobotMoveCtx = tuple[Time]
 
-enemyRobotTexture = Surface((50, 50))
-enemyRobotTexture.fill("red")
+enemy_robot_texture = Surface((50, 50))
+enemy_robot_texture.fill("red")
 
 
 class EnemyRobot(Entity):
     health: Value[int]
     motion: Value[Motion]
     color: Value[Color]
-    texture = enemyRobotTexture
-    texture_size = size_from_texture_width(playerRobotTexture, width=1.0)
+    texture = enemy_robot_texture
+    texture_size = size_from_texture_width(player_robot_texture, width=1.0)
     initial_position: Position
 
     def __init__(self, game: "GameState", motion: Motion) -> None:
