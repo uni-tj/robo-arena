@@ -2,6 +2,7 @@ from collections import defaultdict
 from math import nan
 from typing import Callable, Optional
 
+from roboarena.shared.utils.system_utils import cls
 from roboarena.shared.utils.table_printer import print_table
 
 
@@ -106,11 +107,11 @@ class StatsCollection:
                 functions=[mean, stddev, min, max],
                 unitless=set(),
             )
-        self.groups: dict[str, list[str]] = defaultdict(list)
+        self.groups: dict[str, set[str]] = defaultdict(set)
 
     def clear(self):
         self._stats: dict[str, Stats] = {}
-        self.groups: dict[str, list[str]] = defaultdict(list)
+        self.groups: dict[str, set[str]] = defaultdict(set)
 
     def register_metrics(
         self,
@@ -134,9 +135,9 @@ class StatsCollection:
         )
         self._stats[label] = stats
         if group is not None:
-            self.groups[group].append(label)
+            self.groups[group].add(label)
         else:
-            self.groups["_"].append(label)
+            self.groups["_"].add(label)
 
     def print_all_stats(self) -> None:
         header = ["Label"] + self._columns
@@ -153,6 +154,7 @@ class StatsCollection:
             # Add a separator between groups if there are more groups to print
             if group_name != sorted_groups[-1][0]:
                 config.append(["__sep"])
+        cls()  # Clear the Console for all types of systems
         print_table(config)
 
 

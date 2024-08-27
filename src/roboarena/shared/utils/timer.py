@@ -1,3 +1,4 @@
+import random
 import time
 from collections import defaultdict, deque
 from math import nan
@@ -11,12 +12,24 @@ class Timer:
     last_started: deque[str]
     current: dict[str, float]
     stats_collection: StatsCollection
+    _periodic_timing: Optional[int]
+    _c: int
+    _label_to_group: dict[str, str]
 
-    def __init__(self):
+    def __init__(
+        self,
+        pereodic_printing: Optional[int] = None,
+        label_to_group: Optional[dict[str, str]] = None,
+        reset: bool = True,
+    ):
         self.timings = defaultdict(list)
         self.last_started = deque()
         self.current = {}
         self.stats_collection = StatsCollection()
+        self._periodic_timing = pereodic_printing
+        self._c = 0
+        self._label_to_group = label_to_group if label_to_group else {}
+        self._reset = reset
         # The sum of all keys excluding "total"
 
         def relative_time(data: list[float]) -> float:
@@ -51,11 +64,20 @@ class Timer:
         elapsed_time = time.time() - start_time
         self.timings[label].append(elapsed_time)
 
-    def print_timings(self, label_to_group: Optional[dict[str, str]] = None) -> None:
+    def end_run(self) -> None:
+        self._c += 1
+        while len(self.current) > 0:
+            self.tick_end()
+        if self._periodic_timing is None:
+            return
+        if self._c % self._periodic_timing == 0:
+            self.print_timings()
+            if self._reset:
+                self.clear()
+
+    def print_timings(self) -> None:
         """Print the timing statistics for all labels,
         optionally assigning them to groups."""
-        if label_to_group is None:
-            label_to_group = {}
 
         # Create Stats objects for each label and store them in the stats_collection
         for label, times in self.timings.items():
@@ -65,7 +87,11 @@ class Timer:
             self.stats_collection.add_stats(
                 label,
                 times,
-                group=label_to_group[label] if label in label_to_group else None,
+                group=(
+                    self._label_to_group[label]
+                    if label in self._label_to_group
+                    else None
+                ),
             )
         self.stats_collection.print_all_stats()
 
@@ -86,16 +112,21 @@ class Timer:
             self.last_started.remove(label)
 
 
-if __name__ == "__main__":
-    timer = Timer()
-
+def test_func(timer: Timer):
     timer.tick("operation_1")
-    time.sleep(0.5)
+    for _ in range(10000):
+        random.random()
     timer.tick_end("operation_1")
-
     for _ in range(10):
         timer.tick("operation_2")
-        time.sleep(0.3)
+        for _ in range(1000000):
+            _ = random.random() * random.random()
         timer.tick_end("operation_2")
+    timer.end_run()
 
-    timer.print_timings({"operation_1": "a"})
+
+if __name__ == "__main__":
+    timer = Timer(10, {"operation_1": "a"}, False)
+    for _ in range(100):
+        test_func(timer)
+        time.sleep(0.5)
