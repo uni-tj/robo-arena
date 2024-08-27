@@ -1,7 +1,11 @@
+import logging
+
 import pygame
 from pygame import mixer
 
 MUSIC_DONE = pygame.USEREVENT + 1
+
+logger = logging.getLogger(__file__)
 
 
 class MasterMixer:
@@ -44,13 +48,13 @@ class MasterMixer:
         mixer.music.unload()
 
     def stop_all(self):
-        mixer.stop()
-        mixer.music.unload()
+        mixer.stop()  # stop all sounds
+        self.stop_music()
 
     def set_music_volume(self, volume: float):
+        self._last_set_music_volume = volume
         if not self.muted:
             mixer.music.set_volume(volume)
-            self._last_set_music_volume = volume
 
     def set_sound_volume(self, sound: mixer.Sound, volume: float):
         sound.set_volume(volume)
@@ -60,9 +64,9 @@ class MasterMixer:
         self.muted = True
 
     def unmute(self):
-        self.muted = False
         self.set_music_volume(self._last_set_music_volume)
-        print(self._last_set_music_volume)
+        self.muted = False
+        logger.debug(f"restored music volume: {self._last_set_music_volume}")
 
     def is_music_playing(self) -> bool:
         return mixer.music.get_busy()
