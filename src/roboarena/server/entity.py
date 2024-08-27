@@ -107,7 +107,7 @@ type ServerEntityType = ServerPlayerRobot | ServerEnemyRobot | ServerPlayerBulle
 
 class BasicWeapon:
     strength = 10
-    speed = 5
+    speed = 1.5
     "In shots/second"
     _game: "GameState"
     _entity: ServerEntityType
@@ -123,7 +123,7 @@ class BasicWeapon:
         if (not input.primary) or (t - self._last_shot < cooldown):
             return
 
-        bullet_velicity = (input.mouse - self._entity.position).normalize() * 5
+        bullet_velicity = (input.mouse - self._entity.position).normalize() * 2
         bullet = ServerPlayerBullet(
             self._game, self._entity.position, bullet_velicity, self.strength
         )
@@ -200,10 +200,12 @@ class ServerPlayerBullet(PlayerBullet):
     def tick(self, dt: Time, t: Time):
         self._position.tick((dt,))
         if self._game.collidingWalls(self):
+            self._game.mark(Marker(self.position, PygameColor.light_grey()))
             return self._game.delete_entity(self)
 
         hit_this_tick = set[Entity]()
         for entity in self._game.collidingEntities(self):
+            self._game.mark(Marker(self.position, PygameColor.green()))
             if not isinstance(entity, ServerEnemyRobot):
                 continue
             hit_this_tick.add(entity)

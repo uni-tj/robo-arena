@@ -189,10 +189,10 @@ class GameRenderer(Renderer):
 
         ctx = self._genCtx(camera_position)
         self._render_background(ctx)
+        self._render_markers(ctx)
         self._render_entities(ctx)
         self._fps_counter.render(self._screen)
         self._render_game_ui(ctx)
-        self._render_markers(ctx)
         display.flip()
 
     # @log_durations(logger.debug, "_render_background: ", "ms")
