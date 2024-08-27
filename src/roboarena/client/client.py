@@ -8,7 +8,6 @@ from pygame import RESIZABLE, Surface, event
 from pygame.font import Font
 from pygame.time import Clock
 
-from roboarena.client.ambience_sound import AmbienceSound
 from roboarena.client.entity import (
     ClientEnemyRobot,
     ClientEntityType,
@@ -146,7 +145,6 @@ class GameState(SharedGameState):
     _screen: Surface
     _renderer: GameRenderer
     _master_mixer: MasterMixer
-    _ambience_sound: AmbienceSound
     _ack: Counter
     _client_id: ClientId
     _entity_id: EntityId
@@ -242,7 +240,7 @@ class GameState(SharedGameState):
         self._logger.debug("Enterered loop")
         last_t = get_time()
         clock = Clock()
-        _ambience_sound = AmbienceSound(self._master_mixer)
+        self._master_mixer.start_ambience_sound()
 
         while True:
             if self._client.stopped.get():
@@ -267,7 +265,7 @@ class GameState(SharedGameState):
                 if e.type == pygame.QUIT:
                     self.events.dispatch(QuitEvent())
                 elif e.type == MUSIC_DONE:
-                    _ambience_sound.switch_music()
+                    self._master_mixer.switch_amcience_music()
                 else:
                     continue
 
@@ -278,8 +276,8 @@ class GameState(SharedGameState):
                 )
             )
 
-            # ambience sound
-            _ambience_sound.tick()
+            # sound handling
+            self._master_mixer.handle_sounds()
 
             # self._logger.debug("Rendered")
 
