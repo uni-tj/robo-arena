@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from pygame import Rect, Surface
 
+from roboarena.shared.constants import PlayerConstants
 from roboarena.shared.rendering.util import size_from_texture_width
 from roboarena.shared.time import Time
 from roboarena.shared.types import Color, Input, Motion, Position
@@ -71,9 +72,6 @@ class PlayerRobot(Entity):
     color: Value[Color]
     texture = playerRobotTexture
     texture_size = size_from_texture_width(playerRobotTexture, width=1.0)
-    MAX_SPEED = 0.8
-    ACCELEARTE = 0.5
-    DECELERATE = 0.9
 
     @property
     def position(self) -> Position:
@@ -85,22 +83,22 @@ class PlayerRobot(Entity):
 
         new_orientation = Vector[float](0.0, 0.0)
         if input.move_right:
-            new_orientation += Vector(self.ACCELEARTE, 0.0)
+            new_orientation += Vector(PlayerConstants.ACCELEARTE, 0.0)
         if input.move_down:
-            new_orientation += Vector(0.0, self.ACCELEARTE)
+            new_orientation += Vector(0.0, PlayerConstants.ACCELEARTE)
         if input.move_left:
-            new_orientation += Vector(-self.ACCELEARTE, 0.0)
+            new_orientation += Vector(-PlayerConstants.ACCELEARTE, 0.0)
         if input.move_up:
-            new_orientation += Vector(0.0, -self.ACCELEARTE)
+            new_orientation += Vector(0.0, -PlayerConstants.ACCELEARTE)
         if new_orientation.length() != 0.0:
-            new_orientation.normalize()
+            new_orientation = new_orientation.normalize()
             new_orientation = new_orientation + cur_orientation
         else:
-            new_orientation = cur_orientation * self.DECELERATE
+            new_orientation = cur_orientation * PlayerConstants.DECELERATE
 
-        if new_orientation.length() > self.MAX_SPEED:
-            new_orientation.normalize()
-            new_orientation *= self.MAX_SPEED
+        if new_orientation.length() > PlayerConstants.MAX_SPEED:
+            new_orientation = new_orientation.normalize()
+            new_orientation *= PlayerConstants.MAX_SPEED
 
         if new_orientation.length() < 0.1:
             new_orientation = Vector(0.0, 0.0)
