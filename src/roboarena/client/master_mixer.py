@@ -131,3 +131,47 @@ class DoorSounds:
     @debounce(1)
     def door_moving(self):
         self._master_mixer.play_sound(self._door_sound)
+
+
+PLAYER_WALKING_SOUND_PATH = sound_path("player/player-moving.mp3")
+PLAYER_SHOOTING_SOUND_PATH = sound_path("player/laser-gun.mp3")
+PLAYER_HIT_SOUND_PATH = sound_path("player/player-hit.mp3")
+PLAYER_DYING_SOUND_PATH = sound_path("player/player-dying.mp3")
+
+
+class PlayerSounds:
+    _master_mixer: MasterMixer
+    _moving_sound: mixer.Sound
+    _shooting_sound: mixer.Sound
+    _hit_sound: mixer.Sound
+    _dying_sound: mixer.Sound
+    _player_moving_flag: bool
+
+    def __init__(self, master_mixer: MasterMixer) -> None:
+        self._master_mixer = master_mixer
+        self._moving_sound = self._master_mixer.load_sound(PLAYER_WALKING_SOUND_PATH)
+        self._shooting_sound = self._master_mixer.load_sound(PLAYER_SHOOTING_SOUND_PATH)
+        self._hit_sound = self._master_mixer.load_sound(PLAYER_HIT_SOUND_PATH)
+        self._dying_sound = self._master_mixer.load_sound(PLAYER_DYING_SOUND_PATH)
+        self._player_moving_flag = False
+
+    def player_moving(self) -> None:
+        self._player_moving_flag = True
+
+    def update(self) -> None:
+        if self._player_moving_flag:
+            self._master_mixer.play_sound_loop(self._moving_sound)
+        else:
+            self._master_mixer.stop_sound(self._moving_sound)
+
+        self._player_moving_flag = False
+
+    def player_shooting(self) -> None:
+        self._master_mixer.set_sound_volume(self._shooting_sound, 0.2)
+        self._master_mixer.play_sound(self._shooting_sound)
+
+    def player_hit(self) -> None:
+        self._master_mixer.play_sound(self._hit_sound)
+
+    def player_dying(self) -> None:
+        self._master_mixer.play_sound(self._dying_sound)

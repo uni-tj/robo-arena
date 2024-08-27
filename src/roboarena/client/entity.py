@@ -9,7 +9,7 @@ import pygame
 from attrs import define, field
 from pygame import Color
 
-from roboarena.client.master_mixer import DoorSounds, EnemySounds
+from roboarena.client.master_mixer import DoorSounds, EnemySounds, PlayerSounds
 from roboarena.server.events import EventName
 from roboarena.shared.constants import SERVER_TIMESTEP
 from roboarena.shared.entity import (
@@ -33,6 +33,7 @@ from roboarena.shared.types import (
     Motion,
     OpenEvent,
     Position,
+    StartFrameEvent,
     Weapon,
 )
 from roboarena.shared.util import EventTarget
@@ -291,6 +292,7 @@ class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
         self.weapon = ClientWeapon(game, self, weapon)
         self.aim = Vector(0, 0)
         self.events = EventTarget()
+        self._player_sounds = PlayerSounds(game.master_mixer)
 
         dispatch = self.events.dispatch
         self.health.events.add_listener(
@@ -306,6 +308,21 @@ class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
             lambda e: (dispatch(MovedEvent()) if e.old[0] != e.new[1] else None),  # type: ignore
         )
         self.weapon.events.add_listener(ShotEvent, dispatch)
+
+        self.events.add_listener(
+            MovedEvent,
+            lambda e: (self._player_sounds.player_moving()),
+        )
+        game.events.add_listener(
+            StartFrameEvent, lambda _: self._player_sounds.update()
+        )
+        self.events.add_listener(
+            ShotEvent, lambda _: self._player_sounds.player_shooting()
+        )
+        self.events.add_listener(HitEvent, lambda _: self._player_sounds.player_hit())
+        self.events.add_listener(
+            DeathEvent, lambda _: self._player_sounds.player_dying()
+        )
 
     def on_input(self, input: Input, dt: Time, ack: Acknoledgement, t: Time):
         self.motion.on_input((input, dt), ack)
