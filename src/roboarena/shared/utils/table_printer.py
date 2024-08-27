@@ -1,3 +1,4 @@
+import time
 from dataclasses import dataclass
 from functools import partial
 from typing import Any
@@ -72,7 +73,7 @@ def print_table(
     data: list[list[Any]], sep: Seperator = Seperator()  # noqa: B008
 ) -> None:
     lines = construct_table(data, sep, False)
-    print("\n".join(lines))
+    print("\n".join(lines), flush=True)
 
 
 if __name__ == "__main__":
@@ -85,4 +86,6 @@ if __name__ == "__main__":
         ["__sep"],
         ["XMR", 172.367 / 141.9, 172.367],
     ]
-    print_table(config)
+    for _ in range(10):
+        print_table(config)
+        time.sleep(1)
