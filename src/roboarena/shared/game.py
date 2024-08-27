@@ -28,7 +28,11 @@ class GameState(ABC):
     def collidingEntities(self, collider: Rect | Entity) -> Iterable[Entity]:
         rect = collider.collision.hitbox if isinstance(collider, Entity) else collider
         entities = self.entities.values()
-        return filter(lambda _: _.collision.hitbox.overlaps(rect), entities)
+        return (
+            _
+            for _ in entities
+            if _.collision.hitbox.overlaps(rect) and _ is not collider
+        )
 
     @overload
     def collidingWalls(self, collider: Entity) -> bool: ...
