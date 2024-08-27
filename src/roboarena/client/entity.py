@@ -141,12 +141,12 @@ class ExtrapolatedValue[T, Ctx](Value[T]):
 
     def tick(self, t: Time, ctx: Ctx) -> None:
         dt = t - self._last_snapshot[1]
-        self._value = self._extrapolate(self._value, dt, ctx)
+        self._value = self._extrapolate(self._last_snapshot[2], dt, ctx)
 
     def on_server(self, value: T, last_ack: Acknoledgement, t_ack: Time) -> None:
         if last_ack < self._last_snapshot[0]:
             return
-        self.last_snapshot = (last_ack, t_ack, value)
+        self._last_snapshot = (last_ack, t_ack, value)
 
     def get(self) -> T:
         return self._value
