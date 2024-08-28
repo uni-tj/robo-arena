@@ -4,6 +4,7 @@ from collections import deque
 from typing import TYPE_CHECKING, Any
 
 import pygame
+from attrs import define
 from pygame import RESIZABLE, Surface, event
 from pygame.font import Font
 from pygame.time import Clock
@@ -107,28 +108,21 @@ class GameOverState:
             clock.tick(1 / CLIENT_TIMESTEP)
 
 
-class CameraPosStore:
-    _player_pos_queue: deque[Vector[float]]
-    _cached_camera_on_player: bool
-    _cached_camera_pos: Vector[float]
-    _RESPONSIVENESS_FACTOR: float = (
-        0.025  # regulates the responsiveness [0.01, 0.05] works with reasonable speeds
-    )
+@define
+class CameraPosition:
+    _camera_pos: Vector[float]
+    _RESPONSIVENESS_FACTOR: float = 0.025
+    """Regulates the responsiveness. [0.01, 0.05] works with reasonable speeds"""
 
-    def __init__(self, pos: Vector[float]) -> None:
-        self._cached_camera_pos = pos
+    def get(self) -> Vector[float]:
+        return self._camera_pos
 
-    @property
-    def camera_position(self) -> Vector[float]:
-        return self._cached_camera_pos
-
-    def handle_camera_movement(self, position: Vector[float]) -> Vector[float]:
-
-        self._cached_camera_pos += (
-            position - self._cached_camera_pos
+    def update(self, player_pos: Vector[float]) -> Vector[float]:
+        self._camera_pos += (
+            player_pos - self._camera_pos
         ) * self._RESPONSIVENESS_FACTOR
 
-        return self._cached_camera_pos
+        return self._camera_pos
 
 
 class GameState(SharedGameState):
@@ -147,7 +141,7 @@ class GameState(SharedGameState):
     markers: deque[Marker]
     level: "Level"
     events: EventTarget[QuitEvent]
-    _camera_pos_store: CameraPosStore
+    _camera_pos: CameraPosition
 
     def __init__(
         self,
@@ -190,7 +184,7 @@ class GameState(SharedGameState):
 
         self.set_keys()
 
-        self._camera_pos_store = CameraPosStore(self._entity.position)
+        self._camera_pos = CameraPosition(self._entity.position)
 
     def handle(self, t_msg: Time, msg: EventType):
         if not isinstance(msg, ServerGameEvent):
@@ -230,9 +224,7 @@ class GameState(SharedGameState):
         keys = pygame.key.get_pressed()
         (mouse_1, _, mouse_3) = pygame.mouse.get_pressed()
         mouse_pos_px = Vector.from_tuple(pygame.mouse.get_pos())
-        mouse_pos_gu = self._renderer.screen2gu(
-            mouse_pos_px, self._camera_pos_store.camera_position
-        )
+        mouse_pos_gu = self._renderer.screen2gu(mouse_pos_px, self._camera_pos.get())
         # self._logger.debug(f"mouse_pos_gu: {mouse_pos_gu}")
         return Input(
             dt=dt,
@@ -279,16 +271,12 @@ class GameState(SharedGameState):
                     continue
 
             # rendering
-            self._renderer.render(
-                camera_position=self._camera_pos_store.handle_camera_movement(
-                    self._entity.position
-                )
-            )
+            camers_pos = self._camera_pos.update(self._entity.position)
+            self._renderer.render(camera_position=camers_pos)
+            # self._logger.debug("Rendered")
 
             # ambience sound
             _ambience_sound.tick()
-
-            # self._logger.debug("Rendered")
 
             # cleanup frame
             last_t = t
