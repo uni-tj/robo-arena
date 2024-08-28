@@ -2,9 +2,11 @@ import logging
 from abc import ABC, abstractmethod
 from bisect import insort_right
 from collections import deque
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Callable
 
 import pygame
+from attrs import define, field
 from pygame import Color
 
 from roboarena.server.events import EventName
@@ -20,6 +22,7 @@ from roboarena.shared.entity import (
 )
 from roboarena.shared.time import Time
 from roboarena.shared.types import Acknoledgement, Input, Motion, Position
+from roboarena.shared.util import EventTarget
 from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
@@ -27,35 +30,61 @@ if TYPE_CHECKING:
     from roboarena.shared.rendering.renderer import RenderCtx
 
 
-class PredictedValue[T, Ctx](Value[T]):
-    # queue of ack and ctx
-    predicted_inputs: deque[tuple[Acknoledgement, Ctx]] = deque()
-    # pars: current, dt, t, ctx
-    predict: Callable[[T, Ctx], T]
-    value: T
+@dataclass(frozen=True)
+class ChangedByInputEvent[T]:
+    old: T
+    new: T
 
-    def __init__(self, value: T, f: Callable[[T, Ctx], T]) -> None:
-        super().__init__()
-        self.value = value
-        self.predict = f
+
+@dataclass(frozen=True)
+class ChangedByServerEvent[T]:
+    old: T
+    new: T
+
+
+@dataclass(frozen=True)
+class ChangedEvent[T]:
+    old: T
+    new: T
+
+
+@define
+class PredictedValue[T, Ctx](Value[T]):
+
+    value: T
+    predict: Callable[[T, Ctx], T]
+    """Predict value using current and ctx"""
+    events: EventTarget[
+        ChangedByInputEvent[T] | ChangedByServerEvent[T] | ChangedEvent[T]
+    ] = field(factory=EventTarget)
+    _predicted_inputs: deque[tuple[Acknoledgement, Ctx]] = deque()
+    """Queue of ack and ctx"""
 
     def on_input(
         self,
         ctx: Ctx,
         ack: Acknoledgement,
     ) -> None:
-        self.predicted_inputs.append((ack, ctx))
+        old_value = self.value
+        self._predicted_inputs.append((ack, ctx))
         self.value = self.predict(self.value, ctx)
+        if self.value != old_value:
+            self.events.dispatch(ChangedByInputEvent(old_value, self.value))
+            self.events.dispatch(ChangedEvent(old_value, self.value))
 
     def on_server(self, value: T, last_ack: Acknoledgement) -> None:
+        old_value = self.value
         self.value = value
         while (
-            len(self.predicted_inputs) > 0 and self.predicted_inputs[0][0] <= last_ack
+            len(self._predicted_inputs) > 0 and self._predicted_inputs[0][0] <= last_ack
         ):
             # already respected by server snapshot, so remove
-            self.predicted_inputs.popleft()
-        for _, ctx in self.predicted_inputs:
+            self._predicted_inputs.popleft()
+        for _, ctx in self._predicted_inputs:
             self.value = self.predict(self.value, ctx)
+        if self.value != old_value:
+            self.events.dispatch(ChangedByServerEvent(old_value, self.value))
+            self.events.dispatch(ChangedEvent(old_value, self.value))
 
     def get(self) -> T:
         return self.value
@@ -186,11 +215,17 @@ class ClientEntity(Entity, ABC):
 type ClientEntityType = ClientPlayerRobot | ClientEnemyRobot | ClientPlayerBullet
 
 
+@dataclass(frozen=True)
+class MovedEvent:
+    pass
+
+
 class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
     health: PassiveRemoteValue[int]
     motion: PredictedValue[Motion, PlayerRobotMoveCtx]
     color: PassiveRemoteValue[Color]
     aim: Position
+    events: EventTarget[MovedEvent]
 
     def __init__(
         self, game: "GameState", health: int, motion: Motion, color: Color
@@ -200,6 +235,13 @@ class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
         self.motion = PredictedValue(motion, self.move)  # type: ignore
         self.color = PassiveRemoteValue(color)  # type: ignore
         self.aim = Vector(0, 0)
+        self.events = EventTarget()
+
+        dispatch = self.events.dispatch
+        self.motion.events.add_listener(
+            ChangedByInputEvent,
+            lambda e: (dispatch(MovedEvent()) if e.old[0] != e.new[1] else None),  # type: ignore
+        )
 
     def on_input(self, input: Input, dt: Time, ack: Acknoledgement):
         self.motion.on_input((input, dt), ack)
