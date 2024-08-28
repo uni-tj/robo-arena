@@ -5,8 +5,8 @@ from typing import Callable
 
 import numpy as np
 from numpy.typing import NDArray
-from perf_tester import PerformanceTester
 
+from roboarena.shared.utils.perf_tester import PerformanceTester
 from roboarena.shared.utils.vector import Vector
 
 
