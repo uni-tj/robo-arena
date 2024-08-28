@@ -36,7 +36,6 @@ class SettingsMenu(Menu):
         client: "Client",
         master_mixer: MasterMixer,
     ) -> None:
-
         close = super().close
 
         def switch_to_main_menu() -> None:

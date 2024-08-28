@@ -7,8 +7,9 @@ from pygame import Rect, Surface
 from roboarena.client.master_mixer import MasterMixer
 from roboarena.client.menu.button import Button
 from roboarena.client.menu.text import Text
+from roboarena.client.util import QuitEvent
 from roboarena.shared.rendering.renderer import MenuRenderer, RenderCtx
-from roboarena.shared.util import Stopped, gradientRect
+from roboarena.shared.util import EventTarget, Stopped, gradientRect
 from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
@@ -25,6 +26,7 @@ class Menu(ABC):
     closed: bool = False
     ctx: RenderCtx
     renderer: MenuRenderer
+    events: EventTarget[QuitEvent]
 
     def __init__(
         self,
@@ -43,6 +45,7 @@ class Menu(ABC):
         self.background_texture = self.create_background_texture(background_colors)
         self.renderer = MenuRenderer(screen)
         self._master_mixer = master_mixer
+        self.events = EventTarget()
 
     def add_button(self, key: str, button: Button) -> None:
         self.buttons[key] = button
@@ -78,8 +81,13 @@ class Menu(ABC):
             if self._client.stopped.get():
                 return Stopped()
             for ev in pygame.event.get():
-                if ev.type == pygame.MOUSEBUTTONDOWN:
-                    self.handle_mouse_click(pygame.mouse.get_pos())
+                match ev.type:
+                    case pygame.MOUSEBUTTONDOWN:
+                        self.handle_mouse_click(pygame.mouse.get_pos())
+                    case pygame.QUIT:
+                        self.events.dispatch(QuitEvent())
+                    case _:
+                        continue
             self.handle_mouse_pos(pygame.mouse.get_pos())
             self.renderer.render(self)
 

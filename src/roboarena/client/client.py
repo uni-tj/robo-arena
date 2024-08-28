@@ -19,6 +19,7 @@ from roboarena.client.entity import (
 from roboarena.client.keys import load_keys
 from roboarena.client.master_mixer import MUSIC_DONE, MasterMixer
 from roboarena.client.menu.main_menu import MainMenu
+from roboarena.client.util import QuitEvent
 from roboarena.shared.constants import CLIENT_TIMESTEP, SERVER_IP
 from roboarena.shared.custom_threading import Atom
 from roboarena.shared.game import GameState as SharedGameState
@@ -59,10 +60,6 @@ if TYPE_CHECKING:
 
 def unexpected_evt(expected: str, actual: Any) -> str:
     return f"Unexpected event. Expected {expected}, got {actual}"
-
-
-class QuitEvent:
-    pass
 
 
 @functools.lru_cache(typed=True)
@@ -338,8 +335,9 @@ class Client(Stoppable):
             vsync=1,
         )
 
-        menu_result = MainMenu(screen, self, self._master_mixer).loop()
-        if isinstance(menu_result, Stopped):
+        menu = MainMenu(screen, self, self._master_mixer)
+        menu.events.add_listener(QuitEvent, self.events.dispatch)
+        if isinstance(menu.loop(), Stopped):
             return Stopped()
 
         self.dispatch(ClientConnectionRequestEvent(self.ip))

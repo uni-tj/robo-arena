@@ -7,6 +7,7 @@ from roboarena.client.menu.button import Button
 from roboarena.client.menu.menu import Menu
 from roboarena.client.menu.settings_menu import SettingsMenu
 from roboarena.client.menu.text import Text
+from roboarena.client.util import QuitEvent
 from roboarena.shared.util import load_graphic, sound_path
 from roboarena.shared.utils.vector import Vector
 
@@ -26,7 +27,6 @@ class MainMenu(Menu):
     def __init__(
         self, screen: Surface, client: "Client", master_mixer: MasterMixer
     ) -> None:
-
         settings_menu = SettingsMenu(screen, self, client, master_mixer)
 
         close = super().close
@@ -68,6 +68,7 @@ class MainMenu(Menu):
             client,
             master_mixer,
         )
+        settings_menu.events.add_listener(QuitEvent, self.events.dispatch)
 
     def loop(self) -> None:
         if not self._master_mixer.is_music_playing():
