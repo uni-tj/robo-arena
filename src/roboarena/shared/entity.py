@@ -2,6 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Callable
 
+from attrs import define
 from pygame import Surface
 
 from roboarena.shared.constants import PlayerConstants
@@ -31,19 +32,19 @@ class Collidable(ABC):
     def hitbox(self) -> Rect: ...
 
 
+@define
 class CollideAroundCenter(Collidable):
-    "Hitbox is centered around the current center"
+    "Hitbox is centered around a dynamic center"
 
     _center: Callable[[], Vector[float]]
     _rect: Rect
 
-    def __init__(self, center: Callable[[], Vector[float]], rect: Rect) -> None:
-        self._center = center
-        self._rect = rect
-
     @property
     def hitbox(self) -> Rect:
         return self._rect.centerAround(self._center())
+
+    def hitbox_around(self, center: Vector[float]) -> Rect:
+        return self._rect.centerAround(center)
 
 
 class Entity(ABC):
@@ -91,6 +92,7 @@ player_robot_texture.fill("green")
 
 class PlayerRobot(Entity):
     _logger = logging.getLogger(f"{__name__}.PlayerRobot")
+    collision: CollideAroundCenter
     health: Value[int]
     motion: Value[Motion]
     color: Value[Color]
@@ -99,7 +101,7 @@ class PlayerRobot(Entity):
 
     def __init__(self, game: "GameState") -> None:
         super().__init__(game)
-        self.collision = CollideAroundCenter(
+        self.collision = CollideAroundCenter(  # type: ignore
             lambda: self.motion.get()[0], Rect.from_width_height(Vector.one())
         )
 
@@ -135,6 +137,8 @@ class PlayerRobot(Entity):
 
         new_position = cur_position + new_orientation * dt
 
+        if self._game.collidingWalls(self.collision.hitbox_around(new_position)):
+            return (cur_position, Vector.zero().to_float())
         return (new_position, new_orientation)
 
 

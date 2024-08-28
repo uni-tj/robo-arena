@@ -139,6 +139,12 @@ class Vector[T: (int, float)]:
     def mirror(self) -> "Vector[T]":
         return Vector(self.y, self.x)
 
+    def to_float(self) -> "Vector[float]":
+        return Vector(float(self.x), float(self.y))
+
+    def to_int(self) -> "Vector[int]":
+        return Vector(int(self.x), int(self.y))
+
     @staticmethod
     def zero() -> "Vector[float]":
         return Vector(0, 0)
