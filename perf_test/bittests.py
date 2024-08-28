@@ -1,7 +1,5 @@
 import random
 
-from perf_tester import PerformanceTester
-
 from roboarena.shared.util import (
     int2nd_arr,
     is_one_at,
@@ -14,6 +12,7 @@ from roboarena.shared.util import (
     ones,
     ones_except,
 )
+from roboarena.shared.utils.perf_tester import PerformanceTester
 
 
 # generates all data any tested function could need

@@ -1,4 +1,4 @@
-from perf_tester import PerformanceTester
+from roboarena.shared.utils.perf_tester import PerformanceTester
 
 if __name__ == "__main__":
 
