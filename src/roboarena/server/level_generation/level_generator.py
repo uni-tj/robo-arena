@@ -73,6 +73,9 @@ class Tileset:
     """The edge length of a tile in blocks"""
     tiles: list[Tile]
     fallback: Tile
+    """The tile placed when no other one is possible"""
+    init: Tile
+    """The tile placed at position 0,0"""
     rules_horiz: Iterable[tuple[Tile, Tile]]
     """Possible horizontal patterns as (left, right)"""
     rules_vert: Iterable[tuple[Tile, Tile]]
@@ -80,7 +83,7 @@ class Tileset:
 
     @staticmethod
     def from_example(
-        example: str, tiles: dict[str, Tile | None], fallback: Tile
+        example: str, tiles: dict[str, Tile | None], fallback: Tile, init: Tile
     ) -> "Tileset":
         """Generate the tileset rules from an string example and a mapping.
 
@@ -97,12 +100,13 @@ class Tileset:
             len(fallback.blocks),
             list(filter(is_tile, tiles.values())),
             fallback,
+            init,
             filter(both_tile, ((tiles[a], tiles[b]) for a, b in neighbours_horiz(mat))),
             filter(both_tile, ((tiles[a], tiles[b]) for a, b in neighbours_vert(mat))),
         )
 
     @staticmethod
-    def from_edges(tiles: Iterable[Tile], fallback: Tile):
+    def from_edges(tiles: Iterable[Tile], fallback: Tile, init: Tile):
         """
         Generate the tileset rules from the tile edges.
 
@@ -114,6 +118,7 @@ class Tileset:
             len(fallback.blocks),
             tiles,
             fallback,
+            init,
             ((a, b) for a in tiles for b in tiles if a.edges[1] is b.edges[3]),
             ((a, b) for a in tiles for b in tiles if a.edges[2] is b.edges[0]),
         )
@@ -136,7 +141,8 @@ class LevelGenerator:
 
     def __init__(self, tileset: Tileset) -> None:
         self._tileset = tileset
-        self._wfc = wfc.WFC(tileset.to_wfc())
+        collapsed = {Vector(0, 0): tileset.tiles.index(tileset.init) + 1}
+        self._wfc = wfc.WFC.from_map(tileset.to_wfc(), collapsed)
         self.level = {}
 
     def generate(self, positions: Iterable[BlockPosition]) -> LevelUpdate:

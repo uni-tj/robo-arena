@@ -168,6 +168,15 @@ class WFC:
     """Positions explicitly requested as arguments to `collapse`."""
     _entropy_store: MinEntropyStore = field(init=False, factory=MinEntropyStore)
 
+    @staticmethod
+    def from_map(tileset: Tileset, map: dict[TilePosition, Tile]) -> "WFC":
+        wfc = WFC(tileset)
+        for p, t in map.items():
+            wfc.map[p] = one_hot(t)
+            wfc._not_collapsed.add(p)
+            wfc._entropy_store.add(p, 1)
+        return wfc
+
     def collapse(self, positions: Iterable[TilePosition]) -> WFCUpdate:
         """Guarantee positions to be collapsed and return newly collapsed"""
         positions = set(positions)

@@ -215,7 +215,7 @@ class GameState(SharedGameState):
         entity = ServerPlayerRobot(
             self,
             100,
-            (Vector(10.0, 5.0), Vector(1.0, 0.0)),
+            (Vector(12.5, 12.5), Vector(1.0, 0.0)),
             Color(0, 255, 0),
             self.dispatch_factory(None, entity_id),
         )

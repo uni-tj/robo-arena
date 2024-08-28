@@ -298,7 +298,7 @@ cross = Tile(
     ),
     edges=(e_floor, e_floor, e_floor, e_floor),
 )
-cross_r = Tile(
+cross_room = Tile(
     (
         (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
         (v, v, v, v, v, v, v, v, v, v, w, f, f, f, w, v, v, v, v, v, v, v, v, v, v),
@@ -369,6 +369,8 @@ tiles = bidict(
         *zip("┏┓┛┗", rotations(corner_room)),
         *zip("┬┤┴├", rotations(tee)),
         *zip("┳┫┻┣", rotations(tee_room)),
+        *zip("┼", [cross]),
+        *zip("╋", [cross_room]),
         ("█", fallback),
         # (" ", None),
     )
@@ -390,5 +392,5 @@ tiles = bidict(
 # ███│█│███│██
 # ███├─┴─┬─┤██
 # """
-# tileset = Tileset.from_example(example, dict(str_tile_dict), fallback)
-tileset = Tileset.from_edges(tiles.values(), fallback)
+# tileset = Tileset.from_example(example, dict(tiles), fallback, tee)
+tileset = Tileset.from_edges(tiles.values(), fallback, cross)
