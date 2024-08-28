@@ -13,6 +13,7 @@ import pygame.freetype
 from pygame import Surface, display
 
 from roboarena.shared.block import void
+from roboarena.shared.util import sigmoid
 from roboarena.shared.utils.rect import Rect
 from roboarena.shared.utils.tuple_vector import (
     TupleVector,
@@ -207,6 +208,7 @@ class GameRenderer(Renderer):
         self._render_background(ctx)
         self._render_markers(ctx)
         self._render_entities(ctx)
+        self._render_light(ctx)
         self._fps_counter.render(self._screen)
         self._render_game_ui(ctx)
         display.flip()
@@ -227,6 +229,14 @@ class GameRenderer(Renderer):
     def _render_entities(self, ctx: RenderCtx) -> None:
         for entity in self._game.entities.values():
             entity.render(ctx)
+
+    def _render_light(self, ctx: RenderCtx) -> None:
+        light = create_radial_light_surface(
+            self._screen.get_size(),
+            ctx.gu2screen(ctx.camera_position_gu),
+            max(self._screen.get_size()),
+        )
+        self._screen.blit(light, (0, 0))
 
     def _render_game_ui(self, ctx: RenderCtx) -> None:
         self._game.game_ui.render(ctx)
@@ -259,3 +269,33 @@ class MenuRenderer(Renderer):
         for text_field in menu.text_fields.values():
             text_field.render(ctx)
         display.flip()
+
+
+@cache
+def create_radial_light_surface(
+    dims: tuple[int, int],
+    center: Vector[int],
+    radius: int,
+    color: tuple[int, int, int] = (0, 0, 0),
+) -> pygame.Surface:
+    """
+    Create a surface with a radial gradient alpha, used for the "simulation" of light
+
+    """
+    width, height = dims
+    surface = pygame.Surface((width, height), pygame.SRCALPHA)
+
+    num_circles = 255
+    for i in range(num_circles, 0, -1):
+        progress = i / num_circles
+        current_radius = radius * progress
+
+        alpha = int(255 * sigmoid(progress))
+        pygame.draw.circle(
+            surface,
+            color + (alpha,),
+            center.to_tuple(),
+            int(current_radius),
+        )
+
+    return surface

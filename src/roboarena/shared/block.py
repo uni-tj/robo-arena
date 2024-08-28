@@ -28,7 +28,7 @@ class Block(ABC):
 def load_void_texture() -> Surface:
     voidTexture = Surface((50, 50))
     voidTexture.fill((0, 0, 0))
-    pygame.draw.circle(voidTexture, "blue", (25, 25), 10)
+    # pygame.draw.circle(voidTexture, "blue", (25, 25), 10)
     return voidTexture
 
 

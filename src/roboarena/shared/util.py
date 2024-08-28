@@ -1,5 +1,6 @@
 import heapq
 import logging
+import math
 import os
 import string
 from abc import ABC, abstractmethod
@@ -42,6 +43,11 @@ def safe_next[T](iterator: Iterator[T]) -> T | None:
         return next(iterator)
     except StopIteration:
         return None
+
+
+@cache
+def sigmoid(x: float, sa: float = 13, ss: float = -0.1) -> float:
+    return 1 / (1 + math.e ** (-sa * (x + ss)))
 
 
 def gen_coord_space(
