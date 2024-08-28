@@ -36,14 +36,11 @@ class SettingsMenu(Menu):
         client: "Client",
         master_mixer: MasterMixer,
     ) -> None:
-        close = super().close
-
         def switch_to_main_menu() -> None:
-            close()
+            self.close()
             main_menu.loop()
 
         def toggle_sound() -> None:
-
             unmute_texture = SOUND_BUTTON_UNMUTE_TEXTURE
             mute_texture = SOUND_BUTTON_MUTE_TEXTURE
             mixer = master_mixer

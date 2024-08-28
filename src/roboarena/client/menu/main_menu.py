@@ -29,15 +29,13 @@ class MainMenu(Menu):
     ) -> None:
         settings_menu = SettingsMenu(screen, self, client, master_mixer)
 
-        close = super().close
-
         def switch_to_settings() -> None:
-            close()
+            self.close()
             settings_menu.loop()
 
         def play_game() -> None:
             self._master_mixer.stop_music()
-            close()
+            self.close()
 
         buttons: dict[str, Button] = {
             "start_button": Button(
