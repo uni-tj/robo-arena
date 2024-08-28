@@ -1,7 +1,7 @@
 import logging
 from abc import ABC
 from collections.abc import Iterable
-from typing import overload
+from typing import Literal, overload
 
 from roboarena.server.level_generation.level_generator import Level
 from roboarena.shared.block import wall
@@ -15,6 +15,7 @@ logger = logging.getLogger(f"{__name__}")
 
 
 class GameState(ABC):
+    env: Literal["server"] | Literal["client"]
     entities: dict[EntityId, Entity]
     level: Level
     game_ui: GameUI

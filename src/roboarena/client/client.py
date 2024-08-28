@@ -153,6 +153,7 @@ class GameState(SharedGameState):
     _client_id: ClientId
     _entity_id: EntityId
     _entity: ClientInputHandler
+    env = "client"
     entities: dict[EntityId, ClientEntityType]
     markers: deque[Marker]
     level: "Level"

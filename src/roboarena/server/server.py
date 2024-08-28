@@ -110,6 +110,7 @@ class GameState(SharedGameState):
     _logger = logging.getLogger(f"{__name__}.GameState")
     _server: "Server"
     _clients: dict[ClientId, ClientInfo]
+    env = "server"
     entities: bidict[EntityId, ServerEntityType]
     markers: deque[Marker]
     _deleted_entities: list[ServerEntityType]
