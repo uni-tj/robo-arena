@@ -7,7 +7,6 @@ import pygame
 from attrs import define
 from pygame import RESIZABLE, Surface, event
 from pygame.font import Font
-from pygame.time import Clock
 
 from roboarena.client.ambience_sound import AmbienceSound
 from roboarena.client.entity import (
@@ -27,7 +26,7 @@ from roboarena.shared.game import GameState as SharedGameState
 from roboarena.shared.game_ui import GameUI
 from roboarena.shared.network import Arrived, IpV4, Network, Receiver
 from roboarena.shared.rendering.renderer import GameRenderer
-from roboarena.shared.time import Time, get_time
+from roboarena.shared.time import PreciseClock, Time, get_time
 from roboarena.shared.types import (
     INITIAL_ACKNOLEDGEMENT,
     Acknoledgement,
@@ -92,10 +91,13 @@ class GameOverState:
 
     def loop(self) -> Stopped | None:
         self._logger.debug("Entered loop")
-        clock = Clock()
+        clock = PreciseClock(CLIENT_TIMESTEP)
         while True:
             if self._client.stopped.get():
                 return Stopped()
+
+            clock.tick()
+
             keys = pygame.key.get_pressed()
             if (
                 keys[pygame.K_RIGHT]
@@ -104,11 +106,10 @@ class GameOverState:
                 or keys[pygame.K_UP]
             ):
                 break
-
             pygame.event.pump()
+
             self.render()
             # self._logger.debug("Rendered")
-            clock.tick(1 / CLIENT_TIMESTEP)
 
 
 @define
@@ -248,8 +249,7 @@ class GameState(SharedGameState):
 
     def loop(self) -> Stopped:
         self._logger.debug("Enterered loop")
-        last_t = get_time()
-        clock = Clock()
+        clock = PreciseClock(CLIENT_TIMESTEP)
         _ambience_sound = AmbienceSound(self._master_mixer)
 
         while True:
@@ -258,7 +258,7 @@ class GameState(SharedGameState):
 
             # init frame
             t = get_time()
-            dt = t - last_t
+            dt = clock.tick()
 
             self.events.dispatch(StartFrameEvent())
 
@@ -288,10 +288,6 @@ class GameState(SharedGameState):
 
             # ambience sound
             _ambience_sound.tick()
-
-            # cleanup frame
-            last_t = t
-            clock.tick(1 / CLIENT_TIMESTEP)
 
         self._ambience_sound.stop()
 
