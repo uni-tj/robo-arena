@@ -273,7 +273,7 @@ class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
     color: PassiveRemoteValue[Color]
     weapon: ClientWeapon
     aim: Position
-    events: EventTarget[MovedEvent | HitEvent | DeathEvent]
+    events: EventTarget[HitEvent | DeathEvent | MovedEvent | ShotEvent]
 
     def __init__(
         self,
@@ -304,6 +304,7 @@ class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
             ChangedByInputEvent,
             lambda e: (dispatch(MovedEvent()) if e.old[0] != e.new[1] else None),  # type: ignore
         )
+        self.health.events.add_listener(ShotEvent, dispatch)
 
     def on_input(self, input: Input, dt: Time, ack: Acknoledgement, t: Time):
         self.motion.on_input((input, dt), ack)
@@ -385,7 +386,7 @@ class ClientEnemyRobot(EnemyRobot, ClientEntity):
     motion: InterpolatedValue[Motion, None]
     color: PassiveRemoteValue[Color]
     weapon: ClientWeapon
-    events: EventTarget[HitEvent | DeathEvent]
+    events: EventTarget[HitEvent | DeathEvent | ShotEvent]
 
     def __init__(
         self,
@@ -413,6 +414,7 @@ class ClientEnemyRobot(EnemyRobot, ClientEntity):
             ChangedByServerEvent,
             lambda e: dispatch(DeathEvent()) if e.new <= 0 else None,  # type: ignore
         )
+        self.health.events.add_listener(ShotEvent, dispatch)
 
     def on_server(
         self,
