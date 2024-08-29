@@ -82,6 +82,17 @@ class Weapon:
 
 basic_weapon = Weapon(weapon_speed=1.5, bullet_speed=2, bullet_strength=10)
 
+
+@dataclass(frozen=True)
+class HitEvent:
+    """Fired after entity was hit"""
+
+
+@dataclass(frozen=True)
+class DeathEvent:
+    """Fired when entity dies"""
+
+
 """Communication protocol
 """
 

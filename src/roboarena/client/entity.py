@@ -21,7 +21,15 @@ from roboarena.shared.entity import (
     interpolateMotion,
 )
 from roboarena.shared.time import Time
-from roboarena.shared.types import Acknoledgement, Input, Motion, Position, Weapon
+from roboarena.shared.types import (
+    Acknoledgement,
+    DeathEvent,
+    HitEvent,
+    Input,
+    Motion,
+    Position,
+    Weapon,
+)
 from roboarena.shared.util import EventTarget
 from roboarena.shared.utils.vector import Vector
 
@@ -181,15 +189,19 @@ class ExtrapolatedValue[T, Ctx](Value[T]):
         return self._value
 
 
+@define
 class PassiveRemoteValue[T](Value[T]):
     value: T
-
-    def __init__(self, value: T) -> None:
-        super().__init__()
-        self.value = value
+    events: EventTarget[ChangedByServerEvent[T] | ChangedEvent[T]] = field(
+        factory=EventTarget, init=False
+    )
 
     def on_server(self, value: T) -> None:
+        old_value = self.value
         self.value = value
+        if self.value != old_value:
+            self.events.dispatch(ChangedByServerEvent(old_value, self.value))
+            self.events.dispatch(ChangedEvent(old_value, self.value))
 
     def get(self) -> T:
         return self.value
@@ -261,7 +273,7 @@ class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
     color: PassiveRemoteValue[Color]
     weapon: ClientWeapon
     aim: Position
-    events: EventTarget[MovedEvent]
+    events: EventTarget[MovedEvent | HitEvent | DeathEvent]
 
     def __init__(
         self,
@@ -280,6 +292,14 @@ class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
         self.events = EventTarget()
 
         dispatch = self.events.dispatch
+        self.health.events.add_listener(
+            ChangedByServerEvent,
+            lambda e: dispatch(HitEvent()) if e.old > e.new else None,  # type: ignore
+        )
+        self.health.events.add_listener(
+            ChangedByServerEvent,
+            lambda e: dispatch(DeathEvent()) if e.new <= 0 else None,  # type: ignore
+        )
         self.motion.events.add_listener(
             ChangedByInputEvent,
             lambda e: (dispatch(MovedEvent()) if e.old[0] != e.new[1] else None),  # type: ignore
@@ -365,6 +385,7 @@ class ClientEnemyRobot(EnemyRobot, ClientEntity):
     motion: InterpolatedValue[Motion, None]
     color: PassiveRemoteValue[Color]
     weapon: ClientWeapon
+    events: EventTarget[HitEvent | DeathEvent]
 
     def __init__(
         self,
@@ -381,6 +402,17 @@ class ClientEnemyRobot(EnemyRobot, ClientEntity):
         self.motion = InterpolatedValue(motion, last_ack, t_ack, interpolateMotion)  # type: ignore
         self.color = PassiveRemoteValue(color)  # type: ignore
         self.weapon = ClientWeapon(game, self, weapon)
+        self.events = EventTarget()
+
+        dispatch = self.events.dispatch
+        self.health.events.add_listener(
+            ChangedByServerEvent,
+            lambda e: dispatch(HitEvent()) if e.old > e.new else None,  # type: ignore
+        )
+        self.health.events.add_listener(
+            ChangedByServerEvent,
+            lambda e: dispatch(DeathEvent()) if e.new <= 0 else None,  # type: ignore
+        )
 
     def on_server(
         self,
