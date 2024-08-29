@@ -65,8 +65,6 @@ class Entity(ABC):
     def position(self) -> Position: ...
 
     def render(self, ctx: "RenderCtx") -> None:
-        if not ctx.fov.contains(self.position):
-            return
         scaled_texture = ctx.scale_gu(self.texture, self.texture_size)
         # Simulate physically square base surface by offsetting
         # by half width to bottom

@@ -5,7 +5,7 @@ from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from functools import cache, cached_property
 from math import ceil, floor, nan
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 import numpy as np
 import pygame
@@ -14,7 +14,7 @@ from pygame import Surface, display
 
 from roboarena.shared.block import void
 from roboarena.shared.game import OutOfLevelError
-from roboarena.shared.types import EntityId
+from roboarena.shared.types import BlockType, EntityId
 from roboarena.shared.util import throws
 from roboarena.shared.utils.rect import Rect
 from roboarena.shared.utils.tuple_vector import (
@@ -29,7 +29,7 @@ from roboarena.shared.utils.vector import Vector
 if TYPE_CHECKING:
     from roboarena.client.client import GameState
     from roboarena.client.menu.menu import Menu
-
+    from roboarena.shared.entity import Entity
 logger = logging.getLogger(f"{__name__}")
 
 
@@ -198,6 +198,12 @@ class Renderer(ABC):
 class GameRenderer(Renderer):
 
     _game: "GameState"
+    _floor_tiles: list[BlockType] = [
+        BlockType.FLOOR,
+        BlockType.FLOOR_ROOM_SPAWN,
+        BlockType.DOOR,
+    ]
+    _wall_tiles: list[BlockType] = [BlockType.WALL, BlockType.VOID]
 
     # ! TODO Debbuging only:
     _last_entity_pos: dict[EntityId, deque[Vector[float]]]
@@ -211,32 +217,21 @@ class GameRenderer(Renderer):
         self._last_entity_pos = defaultdict(lambda: deque(maxlen=60 * 10))
 
     def render(self, camera_position: Vector[float]) -> None:
+        self._screen.fill((0, 0, 0))
         self._fps_counter.tick()
 
         ctx = self._genCtx(camera_position)
-        self._render_background(ctx)
-        self._render_markers(ctx)
-        self._render_entities(ctx)
-        self._fps_counter.render(self._screen)
-        self._render_game_ui(ctx)
 
-        # ! Debugging only
-        self._last_camera_pos.append(camera_position)
-        self._render_debug_traces(ctx)
-        display.flip()
+        entities_to_render: list["Entity"] = list()
+        for eid, entity in self._game.entities.items():
+            if ctx.fov.contains(entity.position):
+                entities_to_render.append(entity)
+            self._last_entity_pos[eid].append(entity.position)
 
-    def _render_background(self, ctx: RenderCtx) -> None:
-        self._screen.fill((0, 0, 0))
         for y in range(floor(ctx.fov.top_left.y), ceil(ctx.fov.bottom_right.y)):
-            blit_sequence: list[tuple[Surface, ScreenPosition]] = list()
-            for x in range(floor(ctx.fov.top_left.x), ceil(ctx.fov.bottom_right.x)):
-                pos_gu = Vector(x, y)
-                block = self._game.level.get(pos_gu) or void
-                texture, texture_size = block.texture, block.texture_size
-                scaled_texture = ctx.scale_gu(texture, texture_size)
-                pos_screen = ctx.gu2screen_tup((x, y - texture_size.y + 1))
-                blit_sequence.append((scaled_texture, pos_screen))  # type: ignore
-            self._screen.blits(blit_sequence)
+            self._render_background_row(y + 1, self._floor_tiles, ctx)
+            self._render_entities(y, entities_to_render, ctx)
+            self._render_background_row(y, self._wall_tiles, ctx)
 
         # TODO: Remove rendering colliding blocks
         cb_texture = pygame.Surface(ctx.gu2px_tup((1, 1)), pygame.SRCALPHA)
@@ -254,10 +249,36 @@ class GameRenderer(Renderer):
         ]
         ctx.screen.blits(cb_ent)
 
-    def _render_entities(self, ctx: RenderCtx) -> None:
-        for eid, entity in self._game.entities.items():
-            entity.render(ctx)
-            self._last_entity_pos[eid].append(entity.position)
+        self._render_markers(ctx)
+        self._fps_counter.render(self._screen)
+        self._render_game_ui(ctx)
+
+        # ! Debugging only
+        self._last_camera_pos.append(camera_position)
+        self._render_debug_traces(ctx)
+        display.flip()
+
+    def _render_background_row(
+        self, row: int, block_types: List[BlockType], ctx: RenderCtx
+    ) -> None:
+        blit_sequence: list[tuple[Surface, ScreenPosition]] = list()
+        for x in range(floor(ctx.fov.top_left.x), ceil(ctx.fov.bottom_right.x)):
+            pos_gu = Vector(x, row)
+            block = self._game.level.get(pos_gu) or void
+            if block.type not in block_types:
+                continue
+            texture, texture_size = block.texture, block.texture_size
+            scaled_texture = ctx.scale_gu(texture, texture_size)
+            pos_screen = ctx.gu2screen_tup((x, row - texture_size.y + 1))
+            blit_sequence.append((scaled_texture, pos_screen))  # type: ignore
+        self._screen.blits(blit_sequence)
+
+    def _render_entities(
+        self, row: int, entities: List["Entity"], ctx: RenderCtx
+    ) -> None:
+        for entity in entities:
+            if entity.position.floor().y == row:
+                entity.render(ctx)
 
     def _render_game_ui(self, ctx: RenderCtx) -> None:
         self._game.game_ui.render(ctx)

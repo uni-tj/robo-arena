@@ -1,3 +1,4 @@
+import enum
 from collections.abc import Collection, Iterable
 from dataclasses import dataclass
 from functools import cached_property
@@ -240,3 +241,11 @@ class ClientGameEvent[Evt]:
 class ClientInputEvent:
     input: Input
     dt: Time
+
+
+class BlockType(enum.Enum):
+    FLOOR = enum.auto()
+    FLOOR_ROOM_SPAWN = enum.auto()
+    WALL = enum.auto()
+    VOID = enum.auto()
+    DOOR = enum.auto()
