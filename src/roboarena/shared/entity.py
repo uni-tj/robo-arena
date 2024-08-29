@@ -89,8 +89,11 @@ def interpolateMotion(old: Motion, new: Motion, blend: float, ctx: None) -> Moti
     )
 
 
-player_robot_texture = Surface((50, 50))
-player_robot_texture.fill("green")
+PLAYER_CENTRE_TEXTURE = load_graphic("player/player-centre.png")
+PLAYER_LEFT_TEXTURE = load_graphic("player/player-left.png")
+PLAYER_LEFT_HALF_TEXTURE = load_graphic("player/player-left-half.png")
+PLAYER_RIGHT_TEXTURE = load_graphic("player/player-right.png")
+PLAYER_RIGHT_HALF_TEXTURE = load_graphic("player/player-right-half.png")
 
 
 class PlayerRobot(Entity):
@@ -99,13 +102,16 @@ class PlayerRobot(Entity):
     health: Value[int]
     motion: Value[Motion]
     color: Value[Color]
-    texture = player_robot_texture
-    texture_size = size_from_texture_width(player_robot_texture, width=1.0)
+    texture = PLAYER_CENTRE_TEXTURE
+    texture_size = size_from_texture_width(PLAYER_CENTRE_TEXTURE, width=1.0)
+    _texture_queue: deque[Surface]
     blocks_robot = False
     blocks_bullet = False
 
     def __init__(self, game: "GameState") -> None:
         super().__init__(game)
+        self._texture_queue = deque()
+        self._texture_queue.extend([PLAYER_CENTRE_TEXTURE] * 7)
         self.collision = CollideAroundCenter(  # type: ignore
             lambda: self.motion.get()[0], Rect.from_size(Vector.from_scalar(0.95))
         )
@@ -146,6 +152,23 @@ class PlayerRobot(Entity):
         if not self._game.blocking(self.collision.hitbox_at(new_position_y), "robot"):
             return (new_position_y, new_velocity_y)
         return (cur_position, Vector(0.0, 0.0))
+
+    def prepare_render(self, ctx: "RenderCtx") -> "RenderInfo":
+        self.texture = self._texture_queue.popleft()
+        _, orientation = self.motion.get()
+        if len(self._texture_queue) == 0:
+            if orientation.x > 0.5 or orientation.y < -0.5:
+                self._texture_queue.extend([PLAYER_RIGHT_HALF_TEXTURE] * 7)
+                self._texture_queue.extend([PLAYER_RIGHT_TEXTURE] * 7)
+                self._texture_queue.extend([PLAYER_CENTRE_TEXTURE] * 7)
+            elif orientation.x < -0.5 or orientation.y > 0.5:
+                self._texture_queue.extend([PLAYER_LEFT_HALF_TEXTURE] * 7)
+                self._texture_queue.extend([PLAYER_LEFT_TEXTURE] * 7)
+                self._texture_queue.extend([PLAYER_CENTRE_TEXTURE] * 7)
+            else:
+                self._texture_queue.extend([PLAYER_CENTRE_TEXTURE] * 7)
+
+        return super().prepare_render(ctx)
 
 
 player_bullet_texture = load_graphic("bullets/bullet-laser.png")
