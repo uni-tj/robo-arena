@@ -9,7 +9,7 @@ from roboarena.shared.util import sound_path
 from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
-    from roboarena.shared.rendering.renderer import RenderCtx
+    from roboarena.shared.rendering.renderer import MenuRenderCtx
 
 BUTTON_HOVER_SOUND_PATH = sound_path("menu/button-hover.mp3")
 BUTTON_CLICK_SOUND_PATH = sound_path("menu/button-click.mp3")
@@ -52,7 +52,7 @@ class Button(Renderable):
             <= self.position_px.y + self.dimensions_px.y
         )
 
-    def render(self, ctx: "RenderCtx") -> None:
+    def render(self, ctx: "MenuRenderCtx") -> None:
         super().render(ctx)
 
     def handle_mouse_pos(self, mouse_pos_px: Tuple[int, int]) -> None:

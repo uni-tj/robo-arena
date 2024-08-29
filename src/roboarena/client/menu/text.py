@@ -8,7 +8,7 @@ from roboarena.shared.rendering.util import size_from_texture_width
 from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
-    from roboarena.shared.rendering.renderer import RenderCtx
+    from roboarena.shared.rendering.renderer import MenuRenderCtx
 
 
 @cache
@@ -28,5 +28,5 @@ class Text(Renderable):
         self.content = content
         self.size = size
 
-    def render(self, ctx: "RenderCtx") -> None:
+    def render(self, ctx: "MenuRenderCtx") -> None:
         super().render(ctx)

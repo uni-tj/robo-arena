@@ -27,7 +27,7 @@ from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
     from roboarena.client.client import GameState
-    from roboarena.shared.rendering.renderer import RenderCtx
+    from roboarena.shared.rendering.renderer import GameRenderCtx
 
 
 @dataclass(frozen=True)
@@ -270,12 +270,12 @@ class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
     def tick(self, dt: Time, t: Time):
         pass
 
-    def render(self, ctx: "RenderCtx") -> None:
+    def render(self, ctx: "GameRenderCtx") -> None:
         super().render(ctx)
         # render crosshair
         r = 10
         center = ctx.gu2screen(self.aim)
-        pygame.draw.circle(ctx.screen, "orange", center.to_tuple(), r)
+        pygame.draw.circle(ctx.px_screen, "orange", center.to_tuple(), r)
 
 
 class ClientPlayerBullet(PlayerBullet, ClientEntity):

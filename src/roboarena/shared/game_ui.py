@@ -8,7 +8,7 @@ from roboarena.shared.utils.vector import Vector
 from roboarena.shared.weapon import Weapon
 
 if TYPE_CHECKING:
-    from roboarena.shared.rendering.renderer import RenderCtx
+    from roboarena.shared.rendering.renderer import MenuRenderCtx
 
 
 HEART_FULL_TEXTURE = load_graphic("gameUI/healthbar/heart-full.png")
@@ -93,7 +93,7 @@ class GameUI:
         """In game units"""
         return size_from_texture_height(texture, height=1.5)
 
-    def render(self, ctx: "RenderCtx") -> None:
+    def render(self, ctx: "MenuRenderCtx") -> None:
         scaled_healthbar = ctx.scale_gu(
             self.healthbar.texture, self.texture_size(self.healthbar.texture)
         )

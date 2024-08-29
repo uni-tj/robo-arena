@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Callable
 
 from attrs import define
 from pygame import Surface
+from pygame.transform import scale_by
 
 from roboarena.shared.constants import PlayerConstants
 from roboarena.shared.rendering.util import size_from_texture_width
@@ -15,7 +16,7 @@ from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
     from roboarena.shared.game import GameState
-    from roboarena.shared.rendering.renderer import RenderCtx
+    from roboarena.shared.rendering.renderer import GameRenderCtx
 
 logger = logging.getLogger(f"{__name__}")
 
@@ -62,15 +63,17 @@ class Entity(ABC):
     @abstractmethod
     def position(self) -> Position: ...
 
-    def render(self, ctx: "RenderCtx") -> None:
+    def render(self, ctx: "GameRenderCtx") -> None:
         if not ctx.fov.contains(self.position):
             return
-        scaled_texture = ctx.scale_gu(self.texture, self.texture_size)
         # Simulate physically square base surface by offsetting
         # by half width to bottom
-        bottom_right_gu = self.position + (self.texture_size.x / 2)
-        top_left_gu = bottom_right_gu - self.texture_size
-        ctx.screen.blit(scaled_texture, ctx.gu2screen(top_left_gu).to_tuple())
+        pos_screen = (
+            ctx.gu2screen(self.position)
+            - Vector.from_tuple(self.texture.get_size())
+            + Vector.from_scalar(self.texture.get_width() // 2)
+        )
+        ctx.px_screen.blit(self.texture, pos_screen.to_tuple())
 
     @abstractmethod
     def tick(self, dt: Time, t: Time): ...
@@ -88,6 +91,8 @@ def interpolateMotion(old: Motion, new: Motion, blend: float, ctx: None) -> Moti
 
 player_robot_texture = Surface((50, 50))
 player_robot_texture.fill("green")
+
+# player_robot_texture = scale_by(load_graphic("robots/droid.PNG"), 0.1)
 
 
 class PlayerRobot(Entity):

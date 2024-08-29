@@ -8,7 +8,7 @@ from roboarena.client.master_mixer import MasterMixer
 from roboarena.client.menu.button import Button
 from roboarena.client.menu.text import Text
 from roboarena.client.util import QuitEvent
-from roboarena.shared.rendering.renderer import MenuRenderer, RenderCtx
+from roboarena.shared.rendering.renderer import MenuRenderCtx, MenuRenderer
 from roboarena.shared.util import EventTarget, Stopped, gradientRect
 from roboarena.shared.utils.vector import Vector
 
@@ -24,7 +24,7 @@ class Menu(ABC):
     buttons: dict[str, Button]
     text_fields: dict[str, Text]
     closed: bool = False
-    ctx: RenderCtx
+    ctx: MenuRenderCtx
     renderer: MenuRenderer
     events: EventTarget[QuitEvent]
 
@@ -41,7 +41,7 @@ class Menu(ABC):
         self.buttons = buttons
         self.text_fields = text_fields
         self._client = client
-        self.ctx = RenderCtx(screen, Vector(0, 0), {})
+        self.ctx = MenuRenderCtx(screen, Vector(0, 0), {})
         self.background_texture = self.create_background_texture(background_colors)
         self.renderer = MenuRenderer(screen)
         self._master_mixer = master_mixer

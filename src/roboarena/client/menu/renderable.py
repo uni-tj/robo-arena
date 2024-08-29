@@ -6,7 +6,7 @@ from pygame import Surface
 from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
-    from roboarena.shared.rendering.renderer import RenderCtx
+    from roboarena.shared.rendering.renderer import MenuRenderCtx
 
 
 class Renderable(ABC):
@@ -23,13 +23,13 @@ class Renderable(ABC):
         self.texture = texture
         self.texture_size = texture_size
 
-    def render(self, ctx: "RenderCtx") -> None:
+    def render(self, ctx: "MenuRenderCtx") -> None:
         scaled_texture = ctx.scale_gu(self.texture, self.texture_size)
         self.update_dimensions(scaled_texture)
         self.update_position(ctx)
         ctx.screen.blit(scaled_texture, self.position_px.to_tuple())
 
-    def update_position(self, ctx: "RenderCtx") -> None:
+    def update_position(self, ctx: "MenuRenderCtx") -> None:
         self.position_px = ctx.pct2px(self.position_pct) - self.dimensions_px / 2
 
     def update_dimensions(self, texture: Surface) -> None:

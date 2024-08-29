@@ -103,6 +103,10 @@ class Vector[T: (int, float)]:
     def from_sequence[U: (int, float)](x: Sequence[U]) -> "Vector[U]":
         return Vector(x[0], x[1])
 
+    @staticmethod
+    def from_scalar[U: (int, float)](x: U) -> "Vector[U]":
+        return Vector(x, x)
+
     def vector2_repr(self) -> Vector2:
         return Vector2(self.x, self.y)
 

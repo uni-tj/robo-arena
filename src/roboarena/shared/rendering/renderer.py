@@ -2,7 +2,7 @@ import logging
 import time
 from abc import ABC
 from collections import defaultdict, deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from functools import cache, cached_property
 from math import ceil, floor, nan
 from typing import TYPE_CHECKING
@@ -10,9 +10,12 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pygame
 import pygame.freetype
+from attrs import define, field
 from pygame import Surface, display
+from pygame.transform import smoothscale
 
 from roboarena.shared.block import void
+from roboarena.shared.constants import PX_PER_GU
 from roboarena.shared.types import EntityId
 from roboarena.shared.utils.rect import Rect
 from roboarena.shared.utils.tuple_vector import (
@@ -20,7 +23,9 @@ from roboarena.shared.utils.tuple_vector import (
     add_tuples,
     ceil_tuples,
     mul_tuples,
+    round_tuples,
     sub_tuples,
+    truediv_tuples,
 )
 from roboarena.shared.utils.vector import Vector
 
@@ -45,9 +50,9 @@ def get_default_font() -> pygame.freetype.Font:
     return pygame.freetype.SysFont(None, 24)
 
 
-@dataclass
+@define
 class FPSCounter:
-    _frame_times: deque[float] = field(default_factory=lambda: deque(maxlen=101))
+    _frame_times: deque[float] = field(factory=lambda: deque(maxlen=101))
     _font = get_default_font()
 
     @property
@@ -101,7 +106,59 @@ class FPSCounter:
 
 
 @dataclass(frozen=True)
-class RenderCtx:
+class GameRenderCtx:
+    px_screen: Surface
+    camera_position_gu: Vector[float]
+    _logger = logging.getLogger(f"{__name__}.RenderCtx")
+
+    @cached_property
+    def screen_size_px(self) -> Vector[int]:
+        return Vector.from_tuple(self.px_screen.get_size())
+
+    @cached_property
+    def screen_center_px(self) -> Vector[int]:
+        return self.screen_size_px // 2
+
+    @cached_property
+    def fov(self) -> FieldOfView:
+        top_left = self.screen2gu(Vector(0, 0))
+        width_height = self.px2gu(self.screen_size_px)
+        return Rect(top_left, width_height).expand(FOV_OVERLAP_GU)
+
+    """ Conversion functions
+    """
+
+    @cached_property
+    def px_per_gu(self) -> float:
+        return PX_PER_GU
+
+    def gu2px(self, vector: Vector[float]) -> Vector[int]:
+        return (vector * self.px_per_gu).round()
+
+    def gu2px_tup(self, vector: TupleVector) -> TupleVector:
+        return ceil_tuples(mul_tuples(vector, self.px_per_gu))
+
+    def gu2screen(self, vector: Vector[float]) -> Vector[int]:
+        return self.screen_center_px + self.gu2px(vector - self.camera_position_gu)  # type: ignore (subtracting two ints is int not float)
+
+    def gu2screen_tup(self, vector: TupleVector) -> TupleVector:
+        return add_tuples(
+            self.screen_center_px.to_tuple(),
+            self.gu2px_tup(sub_tuples(vector, self.camera_position_gu.to_tuple())),
+        )
+
+    def px2gu(self, vector_px: Vector[int]) -> Vector[float]:
+        return vector_px / self.px_per_gu
+
+    def screen2gu(self, vector: Vector[int]) -> Vector[float]:
+        return self.px2gu(vector - self.screen_center_px) + self.camera_position_gu  # type: ignore (subtracting two ints is int not float)
+
+    def pct2px(self, vector_pct: Vector[int]) -> Vector[float]:
+        return self.screen_size_px * vector_pct / 100
+
+
+@dataclass(frozen=True)
+class MenuRenderCtx:
     screen: Surface
     camera_position_gu: Vector[float]
     _scale_cache: dict[tuple[Surface, Vector[float]], Surface]
@@ -126,7 +183,7 @@ class RenderCtx:
 
     @cached_property
     def px_per_gu(self) -> float:
-        return self.screen.get_width() / GU_PER_SCREEN
+        return ceil(self.screen.get_width() / GU_PER_SCREEN)
 
     def gu2px(self, vector: Vector[float]) -> Vector[int]:
         return (vector * self.px_per_gu).ceil()
@@ -135,7 +192,9 @@ class RenderCtx:
         return ceil_tuples(mul_tuples(vector, self.px_per_gu))
 
     def gu2screen(self, vector: Vector[float]) -> Vector[int]:
-        return self.screen_center_px + self.gu2px(vector - self.camera_position_gu)  # type: ignore (subtracting two ints is int not float)
+        ra = self.screen_center_px + self.gu2px(vector - self.camera_position_gu)  # type: ignore (subtracting two ints is int not float)
+
+        return ra
 
     def gu2screen_tup(self, vector: TupleVector) -> TupleVector:
         return add_tuples(
@@ -162,89 +221,86 @@ class RenderCtx:
         return self.screen_size_px * vector_pct / 100
 
 
-class Renderer(ABC):
+@define
+class GameRenderer:
     _screen: Surface
     _game: "GameState"
-    _fps_counter: FPSCounter
-    _last_screen_size: Vector[int] | None
-    _scale_cache: dict[tuple[Surface, Vector[float]], Surface]
+    _fps_counter: FPSCounter = field(factory=FPSCounter)
 
-    def __init__(self, screen: Surface) -> None:
-        self._screen = screen
-        self._last_screen_size = None
-        self._scale_cache = {}
-        self._fps_counter = FPSCounter()
+    # ! TODO Debbuging only:
+    _last_entity_pos: dict[EntityId, deque[Vector[float]]] = field(
+        factory=lambda: defaultdict(lambda: deque(maxlen=60 * 10)), init=False
+    )
+    _last_camera_pos: deque[Vector[float]] = field(
+        factory=lambda: deque(maxlen=60 * 10), init=False
+    )
 
-    """ Helper functions
-    """
+    def _gen_ctx(self, camera_position: Vector[float]) -> GameRenderCtx:
+        screen_px = Surface(
+            (Vector.one() * GU_PER_SCREEN * PX_PER_GU).to_tuple(), pygame.SRCALPHA
+        )
+        return GameRenderCtx(screen_px, camera_position)
 
-    def _genCtx(self, camera_position: Vector[float]) -> RenderCtx:
-        screen_size = Vector.from_tuple(self._screen.get_size())
-        if self._last_screen_size != screen_size:
-            # reset scale cache
-            self._last_screen_size = screen_size
-            self._scale_cache = {}
-
-        return RenderCtx(self._screen, camera_position, self._scale_cache)
+    def _gen_menu_ctx(self, camera_position: Vector[float]) -> MenuRenderCtx:
+        _scale_cache = {}
+        return MenuRenderCtx(self._screen, camera_position, _scale_cache)
 
     def screen2gu(
         self, vector_px: Vector[int], camera_position: Vector[float]
     ) -> Vector[float]:
-        return self._genCtx(camera_position).screen2gu(vector_px)
-
-
-class GameRenderer(Renderer):
-
-    _game: "GameState"
-
-    # ! TODO Debbuging only:
-    _last_entity_pos: dict[EntityId, deque[Vector[float]]]
-    _last_camera_pos: deque[Vector[float]]
-
-    def __init__(self, screen: Surface, game: "GameState") -> None:
-        super().__init__(screen)
-        self._game = game
-
-        self._last_camera_pos = deque(maxlen=60 * 10)
-        self._last_entity_pos = defaultdict(lambda: deque(maxlen=60 * 10))
+        return self._gen_ctx(camera_position).screen2gu(vector_px)
 
     def render(self, camera_position: Vector[float]) -> None:
         self._fps_counter.tick()
 
-        ctx = self._genCtx(camera_position)
+        ctx = self._gen_ctx(camera_position)
+        mctx = self._gen_menu_ctx(camera_position)
         self._render_background(ctx)
         self._render_markers(ctx)
         self._render_entities(ctx)
         self._fps_counter.render(self._screen)
-        self._render_game_ui(ctx)
+        self._render_game_ui(mctx)
 
         # ! Debugging only
         self._last_camera_pos.append(camera_position)
         self._render_debug_traces(ctx)
+
+        scale_factor = max(
+            self._screen.get_width() / ctx.px_screen.get_width(),
+            self._screen.get_height() / ctx.px_screen.get_height(),
+        )
+        scaled_px_screen_size = mul_tuples(ctx.px_screen.get_size(), scale_factor)
+        self._screen.blit(
+            smoothscale(ctx.px_screen, scaled_px_screen_size),
+            truediv_tuples(
+                sub_tuples(scaled_px_screen_size, self._screen.get_size()), -2
+            ),
+        )
         display.flip()
 
-    def _render_background(self, ctx: RenderCtx) -> None:
+    def _render_background(self, ctx: GameRenderCtx) -> None:
         self._screen.fill((0, 0, 0))
         for y in range(floor(ctx.fov.top_left.y), ceil(ctx.fov.bottom_right.y)):
             blit_sequence: list[tuple[Surface, ScreenPosition]] = list()
             for x in range(floor(ctx.fov.top_left.x), ceil(ctx.fov.bottom_right.x)):
                 pos_gu = Vector(x, y)
                 block = self._game.level.get(pos_gu) or void
-                texture, texture_size = block.texture, block.texture_size
-                scaled_texture = ctx.scale_gu(texture, texture_size)
-                pos_screen = ctx.gu2screen_tup((x, y - texture_size.y + 1))
-                blit_sequence.append((scaled_texture, pos_screen))  # type: ignore
-            self._screen.blits(blit_sequence)
+                pos_screen = sub_tuples(
+                    ctx.gu2screen_tup((x, y)),
+                    (0, block.texture.get_height() - PX_PER_GU),
+                )
+                blit_sequence.append((block.texture, pos_screen))  # type: ignore
+            ctx.px_screen.blits(blit_sequence)
 
-    def _render_entities(self, ctx: RenderCtx) -> None:
+    def _render_entities(self, ctx: GameRenderCtx) -> None:
         for eid, entity in self._game.entities.items():
             entity.render(ctx)
             self._last_entity_pos[eid].append(entity.position)
 
-    def _render_game_ui(self, ctx: RenderCtx) -> None:
+    def _render_game_ui(self, ctx: "MenuRenderCtx") -> None:
         self._game.game_ui.render(ctx)
 
-    def _render_markers(self, ctx: RenderCtx) -> None:
+    def _render_markers(self, ctx: GameRenderCtx) -> None:
         surface = pygame.Surface(self._screen.get_size(), pygame.SRCALPHA)
         for marker in self._game.markers:
             pygame.draw.circle(
@@ -256,7 +312,7 @@ class GameRenderer(Renderer):
 
     def _render_debug_traces(
         self,
-        ctx: RenderCtx,
+        ctx: GameRenderCtx,
     ) -> None:
         surface = pygame.Surface(self._screen.get_size(), pygame.SRCALPHA)
         for ci, poss in enumerate(self._last_entity_pos.values()):
@@ -276,6 +332,37 @@ class GameRenderer(Renderer):
             col = (0, 0, 255, floor(255 * (i / len(self._last_camera_pos))))
             pygame.draw.circle(surface, col, ctx.gu2screen(cpos).to_tuple(), 3)
         self._screen.blit(surface, (0, 0))
+
+
+class Renderer(ABC):
+    _screen: Surface
+    _game: "GameState"
+    _fps_counter: FPSCounter
+    _last_screen_size: Vector[int] | None
+    _scale_cache: dict[tuple[Surface, Vector[float]], Surface]
+
+    def __init__(self, screen: Surface) -> None:
+        self._screen = screen
+        self._last_screen_size = None
+        self._scale_cache = {}
+        self._fps_counter = FPSCounter()
+
+    """ Helper functions
+    """
+
+    def _genCtx(self, camera_position: Vector[float]) -> MenuRenderCtx:
+        screen_size = Vector.from_tuple(self._screen.get_size())
+        if self._last_screen_size != screen_size:
+            # reset scale cache
+            self._last_screen_size = screen_size
+            self._scale_cache = {}
+
+        return MenuRenderCtx(self._screen, camera_position, self._scale_cache)
+
+    def screen2gu(
+        self, vector_px: Vector[int], camera_position: Vector[float]
+    ) -> Vector[float]:
+        return self._genCtx(camera_position).screen2gu(vector_px)
 
 
 class MenuRenderer(Renderer):
