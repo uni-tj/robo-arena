@@ -3,6 +3,8 @@ from functools import partial
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, Callable
 
+from attrs import define, field
+
 from roboarena.server.events import Dispatch, SimpleDispatch
 from roboarena.shared.entity import (
     EnemyRobot,
@@ -23,6 +25,8 @@ from roboarena.shared.types import (
     PygameColor,
     ServerSpawnPlayerBulletEvent,
     ServerSpawnRobotEvent,
+    Weapon,
+    basic_weapon,
 )
 from roboarena.shared.util import EventTarget
 from roboarena.shared.utils.vector import Vector
@@ -105,30 +109,39 @@ class HealthController(Value[int]):
 type ServerEntityType = ServerPlayerRobot | ServerEnemyRobot | ServerPlayerBullet
 
 
-class BasicWeapon:
-    strength = 10
-    speed = 1.5
-    "In shots/second"
+class ShotEvent:
+    """Fired after shooting"""
+
+
+@define
+class ServerWeapon:
     _game: "GameState"
     _entity: ServerEntityType
-    _last_shot: Time
+    events: EventTarget[ShotEvent] = field(factory=EventTarget, init=False)
 
-    def __init__(self, game: "GameState", entity: ServerEntityType) -> None:
-        self._last_shot = 0
-        self._game = game
-        self._entity = entity
+    _weapon: Weapon
+    _last_shot: float = field(default=0.0, init=False)
 
     def on_input(self, input: Input, t: Time):
-        cooldown = 1 / self.speed
-        if (not input.primary) or (t - self._last_shot < cooldown):
+        if not input.primary:
             return
+        if t - self._last_shot < self._weapon.wepaon_cooldown:
+            return
+        self._last_shot = t
+        self.shoot(input.mouse - self._entity.position)
 
-        bullet_velicity = (input.mouse - self._entity.position).normalize() * 2
+    def shoot(self, direction: Vector[float]):
         bullet = ServerPlayerBullet(
-            self._game, self._entity.position, bullet_velicity, self.strength
+            self._game,
+            self._entity.position,
+            direction.normalize() * self._weapon.bullet_speed,
+            self._weapon.bullet_strength,
         )
         self._game.create_entity(bullet)
-        self._last_shot = t
+        self.events.dispatch(ShotEvent())
+
+    def get(self) -> Weapon:
+        return self._weapon
 
 
 class ServerPlayerRobot(PlayerRobot, ServerInputHandler):
@@ -136,7 +149,7 @@ class ServerPlayerRobot(PlayerRobot, ServerInputHandler):
     health: HealthController
     motion: CalculatedValue[Motion, PlayerRobotMoveCtx]
     color: ActiveRemoteValue[Color]
-    weapon: BasicWeapon
+    weapon: ServerWeapon
 
     def __init__(
         self,
@@ -151,7 +164,7 @@ class ServerPlayerRobot(PlayerRobot, ServerInputHandler):
         self.health = HealthController(health, partial(dispatch, "health"))  # type: ignore
         self.motion = CalculatedValue(motion, self.move, partial(dispatch, "motion"))  # type: ignore
         self.color = ActiveRemoteValue(color, partial(dispatch, "color"))  # type: ignore
-        self.weapon = BasicWeapon(game, self)
+        self.weapon = ServerWeapon(game, self, basic_weapon)
 
     def on_input(self, input: Input, dt: Time, t: Time):
         self.motion.tick((input, dt))
@@ -166,6 +179,7 @@ class ServerPlayerRobot(PlayerRobot, ServerInputHandler):
             self.health.get(),
             self.motion.get(),
             self.color.get(),
+            self.weapon.get(),
         )
 
 
@@ -224,6 +238,7 @@ class ServerEnemyRobot(EnemyRobot):
     health: HealthController
     motion: CalculatedValue[Motion, EnemyRobotMoveCtx]
     color: ActiveRemoteValue[Color]
+    weapon: ServerWeapon
 
     def __init__(
         self,
@@ -231,6 +246,7 @@ class ServerEnemyRobot(EnemyRobot):
         health: int,
         motion: Motion,
         color: Color,
+        weapon: Weapon,
         dispatch: Dispatch[Motion | Color],
     ) -> None:
         super().__init__(game, motion)
@@ -240,6 +256,7 @@ class ServerEnemyRobot(EnemyRobot):
             motion, self.move, partial(dispatch, "motion")
         )
         self.color = ActiveRemoteValue(color, partial(dispatch, "color"))  # type: ignore
+        self.weapon = ServerWeapon(game, self, weapon)
 
         self.health.events.add_listener(
             self.health.DeathEvent, lambda e: self._game.delete_entity(self)
@@ -254,4 +271,5 @@ class ServerEnemyRobot(EnemyRobot):
             self.health.get(),
             self.motion.get(),
             self.color.get(),
+            self.weapon.get(),
         )

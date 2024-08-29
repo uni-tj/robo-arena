@@ -21,7 +21,7 @@ from roboarena.shared.entity import (
     interpolateMotion,
 )
 from roboarena.shared.time import Time
-from roboarena.shared.types import Acknoledgement, Input, Motion, Position
+from roboarena.shared.types import Acknoledgement, Input, Motion, Position, Weapon
 from roboarena.shared.util import EventTarget
 from roboarena.shared.utils.vector import Vector
 
@@ -197,7 +197,7 @@ class PassiveRemoteValue[T](Value[T]):
 
 class ClientInputHandler(Entity, ABC):
     @abstractmethod
-    def on_input(self, input: Input, dt: Time, ack: Acknoledgement): ...
+    def on_input(self, input: Input, dt: Time, ack: Acknoledgement, t: Time): ...
 
 
 class ClientEntity(Entity, ABC):
@@ -215,6 +215,41 @@ class ClientEntity(Entity, ABC):
 type ClientEntityType = ClientPlayerRobot | ClientEnemyRobot | ClientPlayerBullet
 
 
+class ShotEvent:
+    """Fired after shooting"""
+
+
+@define
+class ClientWeapon:
+    _game: "GameState"
+    _entity: ClientEntityType
+    events: EventTarget[ShotEvent] = field(factory=EventTarget, init=False)
+
+    _weapon: Weapon
+    _last_shot: float = field(default=0.0, init=False)
+    """
+    The time the last shot was fired.
+
+    Not kept in sync with the server, as it is reset reguarly, i.e. as soon as the
+    the player stops shooting longer than the weapon cooldown.
+    """
+
+    def on_input(self, input: Input, t: Time):
+        if not input.primary:
+            return
+        if t - self._last_shot < self._weapon.wepaon_cooldown:
+            return
+        self._last_shot = t
+        self.shoot()
+
+    def on_server(self, weapon: Weapon):
+        self._weapon = weapon
+        self._last_shot = 0.0
+
+    def shoot(self):
+        self.events.dispatch(ShotEvent())
+
+
 @dataclass(frozen=True)
 class MovedEvent:
     pass
@@ -224,16 +259,23 @@ class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
     health: PassiveRemoteValue[int]
     motion: PredictedValue[Motion, PlayerRobotMoveCtx]
     color: PassiveRemoteValue[Color]
+    weapon: ClientWeapon
     aim: Position
     events: EventTarget[MovedEvent]
 
     def __init__(
-        self, game: "GameState", health: int, motion: Motion, color: Color
+        self,
+        game: "GameState",
+        health: int,
+        motion: Motion,
+        color: Color,
+        weapon: Weapon,
     ) -> None:
         super().__init__(game)
         self.health = PassiveRemoteValue(health)  # type: ignore
         self.motion = PredictedValue(motion, self.move)  # type: ignore
         self.color = PassiveRemoteValue(color)  # type: ignore
+        self.weapon = ClientWeapon(game, self, weapon)
         self.aim = Vector(0, 0)
         self.events = EventTarget()
 
@@ -243,8 +285,9 @@ class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
             lambda e: (dispatch(MovedEvent()) if e.old[0] != e.new[1] else None),  # type: ignore
         )
 
-    def on_input(self, input: Input, dt: Time, ack: Acknoledgement):
+    def on_input(self, input: Input, dt: Time, ack: Acknoledgement, t: Time):
         self.motion.on_input((input, dt), ack)
+        self.weapon.on_input(input, t)
         self.aim = input.mouse
         pass
 
@@ -264,6 +307,8 @@ class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
                 self.color.on_server(event)
             case "health", int():
                 self.health.on_server(event)
+            case "weapon", Weapon():
+                self.weapon.on_server(event)
             case n, e:
                 raise ValueError(f"entity: invalid event {n}={e}")
 
@@ -319,6 +364,7 @@ class ClientEnemyRobot(EnemyRobot, ClientEntity):
     health: PassiveRemoteValue[int]
     motion: InterpolatedValue[Motion, None]
     color: PassiveRemoteValue[Color]
+    weapon: ClientWeapon
 
     def __init__(
         self,
@@ -326,6 +372,7 @@ class ClientEnemyRobot(EnemyRobot, ClientEntity):
         health: int,
         motion: Motion,
         color: Color,
+        weapon: Weapon,
         last_ack: Acknoledgement,
         t_ack: Time,
     ) -> None:
@@ -333,6 +380,7 @@ class ClientEnemyRobot(EnemyRobot, ClientEntity):
         self.health = PassiveRemoteValue(health)  # type: ignore
         self.motion = InterpolatedValue(motion, last_ack, t_ack, interpolateMotion)  # type: ignore
         self.color = PassiveRemoteValue(color)  # type: ignore
+        self.weapon = ClientWeapon(game, self, weapon)
 
     def on_server(
         self,
@@ -350,6 +398,8 @@ class ClientEnemyRobot(EnemyRobot, ClientEntity):
                 self.color.on_server(event)
             case "health", int():
                 self.health.on_server(event)
+            case "weapon", Weapon():
+                self.weapon.on_server(event)
             case n, e:
                 raise ValueError(f"entity: invalid event {n}={e}")
 

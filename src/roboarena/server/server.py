@@ -43,6 +43,7 @@ from roboarena.shared.types import (
     ServerLevelUpdateEvent,
     ServerMarkerEvent,
     StartFrameEvent,
+    basic_weapon,
 )
 from roboarena.shared.util import (
     EventTarget,
@@ -134,6 +135,7 @@ class GameState(SharedGameState):
             100,
             (Vector(10.0, 1.0), Vector(1.0, 0.0)),
             Color(255, 0, 0),
+            basic_weapon,
             self.dispatch_factory(None, enemy_id),
         )
         self.entities[enemy_id] = enemy

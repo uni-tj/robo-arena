@@ -1,5 +1,6 @@
 from collections.abc import Collection, Iterable
 from dataclasses import dataclass
+from functools import cached_property
 from typing import TYPE_CHECKING
 
 import pygame
@@ -65,6 +66,21 @@ class StartFrameEvent:
 class QuitEvent:
     """Fired when then user requests to quit the program"""
 
+
+@dataclass(frozen=True)
+class Weapon:
+    weapon_speed: float
+    """In shots per second"""
+    bullet_speed: float
+    """In gu per second"""
+    bullet_strength: int
+
+    @cached_property
+    def wepaon_cooldown(self):
+        return 1 / self.weapon_speed
+
+
+basic_weapon = Weapon(weapon_speed=1.5, bullet_speed=2, bullet_strength=10)
 
 """Communication protocol
 """
@@ -140,6 +156,7 @@ class ServerSpawnRobotEvent:
     health: int
     motion: Motion
     color: Color
+    weapon: Weapon
 
 
 @dataclass(frozen=True)

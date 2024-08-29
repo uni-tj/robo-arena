@@ -176,7 +176,9 @@ class GameState(SharedGameState):
             if not isinstance(spawn, ServerSpawnRobotEvent):
                 self._logger.critical("client entity no robot")
                 raise Exception("client entity no robot")
-            entity = ClientPlayerRobot(self, spawn.health, spawn.motion, spawn.color)
+            entity = ClientPlayerRobot(
+                self, spawn.health, spawn.motion, spawn.color, spawn.weapon
+            )
             self.entities[spawn.id] = entity
             self._entity = entity
             self._logger.debug(f"intialized client entity: {self._entity}")
@@ -195,8 +197,10 @@ class GameState(SharedGameState):
         match event:
             case ServerEntityEvent(id, name, payload):
                 self.entities[id].on_server(name, payload, msg.last_ack, t_msg)
-            case ServerSpawnRobotEvent(id, health, motion, color):
-                entity = ClientEnemyRobot(self, health, motion, color, last_ack, t_msg)
+            case ServerSpawnRobotEvent(id, health, motion, color, weapon):
+                entity = ClientEnemyRobot(
+                    self, health, motion, color, weapon, last_ack, t_msg
+                )
                 self.entities[id] = entity
             case ServerSpawnPlayerBulletEvent(id, position, velocity):
                 entity = ClientPlayerBullet(
@@ -258,7 +262,7 @@ class GameState(SharedGameState):
 
             input = self.get_input(dt)
             ack = self.dispatch(ClientInputEvent(input, dt))
-            self._entity.on_input(input, dt, ack)
+            self._entity.on_input(input, dt, ack, t)
 
             for _, entity in self.entities.items():
                 entity.tick(dt, t)
