@@ -42,7 +42,7 @@ type ScreenPosition = tuple[int, int]
 @cache
 def get_default_font() -> pygame.freetype.Font:
     pygame.freetype.init()
-    return pygame.freetype.SysFont(None, 24)
+    return pygame.freetype.SysFont(None, 24)  # type: ignore (wrong pygame types)
 
 
 @dataclass
@@ -235,6 +235,17 @@ class GameRenderer(Renderer):
                 pos_screen = ctx.gu2screen_tup((x, y - texture_size.y + 1))
                 blit_sequence.append((scaled_texture, pos_screen))  # type: ignore
             self._screen.blits(blit_sequence)
+
+        # TODO: Remove rendering colliding blocks
+        cb_texture = pygame.Surface(ctx.gu2px_tup((1, 1)), pygame.SRCALPHA)
+        cb_texture.fill((0, 0, 0, 128))
+        ctx.screen.blits(
+            [
+                (cb_texture, ctx.gu2screen(block_pos.to_float()).to_tuple())
+                for entity in self._game.entities.values()
+                for block_pos in self._game.colliding_blocks(entity).keys()
+            ]
+        )
 
     def _render_entities(self, ctx: RenderCtx) -> None:
         for eid, entity in self._game.entities.items():
