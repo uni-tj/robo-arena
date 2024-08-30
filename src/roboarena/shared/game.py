@@ -1,15 +1,18 @@
 import logging
 from abc import ABC
 from collections.abc import Iterable
-from typing import Literal, overload
+from typing import TYPE_CHECKING, Literal, overload
 
-from roboarena.server.level_generation.level_generator import Level
 from roboarena.shared.block import wall
 from roboarena.shared.entity import Entity
 from roboarena.shared.game_ui import GameUI
-from roboarena.shared.types import EntityId
+from roboarena.shared.types import EntityId, QuitEvent, StartFrameEvent
+from roboarena.shared.util import EventTarget
 from roboarena.shared.utils.rect import Rect
 from roboarena.shared.utils.vector import Vector
+
+if TYPE_CHECKING:
+    from roboarena.server.level_generation.level_generator import Level
 
 logger = logging.getLogger(f"{__name__}")
 
@@ -17,7 +20,8 @@ logger = logging.getLogger(f"{__name__}")
 class GameState(ABC):
     env: Literal["server"] | Literal["client"]
     entities: dict[EntityId, Entity]
-    level: Level
+    level: "Level"
+    events: EventTarget[QuitEvent | StartFrameEvent]
     game_ui: GameUI
 
     @overload

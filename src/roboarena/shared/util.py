@@ -6,16 +6,20 @@ from abc import ABC, abstractmethod
 from collections.abc import Collection, Iterable, Iterator
 from dataclasses import dataclass, field
 from enum import Enum
-from functools import cache
+from functools import cache, wraps
 from itertools import count
 from random import getrandbits
-from typing import Any, Callable, Generator, NoReturn
+from typing import TYPE_CHECKING, Any, Callable, Generator, NoReturn, Optional
 
 import numpy as np
 import pygame
 from numpy.typing import NDArray
 
+from roboarena.shared.types import StartFrameEvent
 from roboarena.shared.utils.vector import Vector
+
+if TYPE_CHECKING:
+    from roboarena.shared.game import GameState
 
 
 def gen_id(ids: Iterable[int]) -> int:
@@ -188,6 +192,45 @@ def sound_path(path: str) -> str:
 
 def load_graphic(path: str) -> pygame.Surface:
     return pygame.image.load(graphic_path(path))
+
+
+def frame_cache(game: "GameState"):
+    """
+    Like functools.cache, but resets cache every frame.
+
+    Can be used on instance methods, as `self` references are cleared reguarly.
+    """
+
+    def decorator[**P, R](f: Callable[P, R]) -> Callable[P, R]:  # noqa: F821
+        cached_f = cache(f)
+
+        def reset_cached_f():
+            nonlocal cached_f
+            cached_f = cache(f)
+
+        game.events.add_listener(StartFrameEvent, lambda e: reset_cached_f())
+
+        @wraps(f)
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:  # noqa: F821
+            return cached_f(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def frame_cache_method[**P, R](f: Callable[P, R]) -> Callable[P, R]:  # noqa: F821
+    """Like frame_cache for instance methods with `self._game: GameState` present"""
+    cached_f: Optional[Callable[P, R]] = None  # noqa: F821
+
+    @wraps(f)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:  # noqa: F821
+        nonlocal cached_f
+        if cached_f is None:
+            cached_f = frame_cache(args[0]._game)(f)  # type: ignore
+        return cached_f(*args, **kwargs)
+
+    return wrapper
 
 
 class EventTarget[Evt]:

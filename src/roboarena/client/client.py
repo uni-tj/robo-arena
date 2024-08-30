@@ -20,7 +20,6 @@ from roboarena.client.entity import (
 from roboarena.client.keys import load_keys
 from roboarena.client.master_mixer import MUSIC_DONE, MasterMixer
 from roboarena.client.menu.main_menu import MainMenu
-from roboarena.client.util import QuitEvent
 from roboarena.shared.constants import CLIENT_TIMESTEP, SERVER_IP
 from roboarena.shared.custom_threading import Atom
 from roboarena.shared.game import GameState as SharedGameState
@@ -41,6 +40,7 @@ from roboarena.shared.types import (
     EventType,
     Input,
     Marker,
+    QuitEvent,
     ServerConnectionConfirmEvent,
     ServerDeleteEntityEvent,
     ServerEntityEvent,
@@ -50,6 +50,7 @@ from roboarena.shared.types import (
     ServerMarkerEvent,
     ServerSpawnPlayerBulletEvent,
     ServerSpawnRobotEvent,
+    StartFrameEvent,
 )
 from roboarena.shared.util import Counter, EventTarget, Stoppable, Stopped, counter
 from roboarena.shared.utils.vector import Vector
@@ -140,7 +141,6 @@ class GameState(SharedGameState):
     entities: dict[EntityId, ClientEntityType]
     markers: deque[Marker]
     level: "Level"
-    events: EventTarget[QuitEvent]
     _camera_pos: CameraPosition
 
     def __init__(
@@ -250,6 +250,8 @@ class GameState(SharedGameState):
             # init frame
             t = get_time()
             dt = t - last_t
+
+            self.events.dispatch(StartFrameEvent())
 
             for t_msg, msg in self._client.receiver.receive():
                 self.handle(t_msg, msg)

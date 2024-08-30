@@ -7,8 +7,8 @@ from pygame import Rect, Surface
 from roboarena.client.master_mixer import MasterMixer
 from roboarena.client.menu.button import Button
 from roboarena.client.menu.text import Text
-from roboarena.client.util import QuitEvent
 from roboarena.shared.rendering.renderer import MenuRenderer, RenderCtx
+from roboarena.shared.types import QuitEvent
 from roboarena.shared.util import EventTarget, Stopped, gradientRect
 from roboarena.shared.utils.vector import Vector
 
