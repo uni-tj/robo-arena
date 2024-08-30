@@ -56,6 +56,16 @@ class PygameColor:
         return PygameColor(0, 0, 255)
 
 
+@dataclass(frozen=True)
+class StartFrameEvent:
+    """Fired when a new frame begins."""
+
+
+@dataclass(frozen=True)
+class QuitEvent:
+    """Fired when then user requests to quit the program"""
+
+
 """Communication protocol
 """
 

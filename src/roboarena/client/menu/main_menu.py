@@ -7,7 +7,7 @@ from roboarena.client.menu.button import Button
 from roboarena.client.menu.menu import Menu
 from roboarena.client.menu.settings_menu import SettingsMenu
 from roboarena.client.menu.text import Text
-from roboarena.client.util import QuitEvent
+from roboarena.shared.types import QuitEvent
 from roboarena.shared.util import load_graphic, sound_path
 from roboarena.shared.utils.vector import Vector
 

@@ -42,8 +42,10 @@ from roboarena.shared.types import (
     ServerGameStartEvent,
     ServerLevelUpdateEvent,
     ServerMarkerEvent,
+    StartFrameEvent,
 )
 from roboarena.shared.util import (
+    EventTarget,
     Stoppable,
     Stopped,
     flatten,
@@ -136,6 +138,7 @@ class GameState(SharedGameState):
         )
         self.entities[enemy_id] = enemy
         self.markers = deque(maxlen=1000)
+        self.events = EventTarget()
 
         for client_id, ip in clients.items():
             entity_id, entity = self.gen_client_entity()
@@ -239,6 +242,8 @@ class GameState(SharedGameState):
             t_update = get_time()
             dt_update = t_update - last_t
             dt_frame = dt_update / SERVER_FRAMES_PER_TIMESTEP
+
+            self.events.dispatch(StartFrameEvent())
 
             # Each update is split into 3 frames to get more precise results
             for i in range(SERVER_FRAMES_PER_TIMESTEP):
