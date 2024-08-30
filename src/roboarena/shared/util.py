@@ -48,21 +48,19 @@ def safe_next[T](iterator: Iterator[T]) -> T | None:
         return None
 
 
-def gen_coord_space(
-    xbounds: tuple[int, int], ybounds: tuple[int, int]
-) -> Iterable[Vector[int]]:
+def rect_space(l_bounds: Vector[int], u_bounds: Vector[int]) -> Iterable[Vector[int]]:
     """Generates a list of coordinates in the rectangle given by xbounds and ybounds
 
     Args:
-        xbounds (tuple[int, int]): (min x val, max x val)
-        ybounds (tuple[int, int]): (min y val, may y val)
+        l_bounds Vector[int]: Minimum x and y values
+        u_bounds Vector[int]: Maxmimum x and y values (inclusive)
 
     Returns:
-        list[Vector[int]]: list of Vector coordinates
-            in the space defined by xbounds and ybounds
+        list[Vector[int]]: list of coordinates in the space
+            defined by l_bounds and u_bounds
     """
-    lnx = np.linspace(xbounds[0], xbounds[1], xbounds[1] - xbounds[0] + 1)
-    lny = np.linspace(ybounds[0], ybounds[1], ybounds[1] - ybounds[0] + 1)
+    lnx = np.linspace(l_bounds.x, u_bounds.x, u_bounds.x - l_bounds.x + 1)
+    lny = np.linspace(l_bounds.y, u_bounds.y, u_bounds.y - l_bounds.y + 1)
     coords = np.array(np.meshgrid(lnx, lny)).ravel("F").reshape(-1, 2).astype(int)
 
     return [Vector.from_sequence(coord) for coord in coords]
@@ -70,7 +68,7 @@ def gen_coord_space(
 
 @cache
 def square_space(apothem: int) -> Iterable[Vector[int]]:
-    return gen_coord_space((-apothem, apothem), (-apothem, apothem))
+    return rect_space(Vector.from_scalar(-apothem), Vector.from_scalar(apothem))
 
 
 @cache
