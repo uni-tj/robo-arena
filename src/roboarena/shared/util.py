@@ -3,13 +3,14 @@ import logging
 import os
 import string
 from abc import ABC, abstractmethod
+from collections import deque
 from collections.abc import Collection, Iterable, Iterator
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import cache, wraps
 from itertools import count
 from random import getrandbits
-from typing import TYPE_CHECKING, Any, Callable, Generator, NoReturn, Optional
+from typing import TYPE_CHECKING, Any, Callable, Generator, Mapping, NoReturn, Optional
 
 import numpy as np
 import pygame
@@ -135,6 +136,17 @@ def neighbours_vert[T](matrix: Iterable[Iterable[T]]) -> Iterable[tuple[T, T]]:
         top_row = bottom_row
 
 
+class Neighbours4(Enum):
+    TOP = Vector(0, -1)
+    RIGHT = Vector(1, 0)
+    BOTTOM = Vector(0, 1)
+    LEFT = Vector(-1, 0)
+
+
+def neighbours_4(position: Vector[int]) -> Iterable[Vector[int]]:
+    return (position + neigh.value for neigh in Neighbours4)
+
+
 def flatten[T](xss: Iterable[Iterable[T]]) -> Iterable[T]:
     return (x for xs in xss for x in xs)
 
@@ -151,6 +163,30 @@ def dedupe[T](xs: Iterable[T]) -> Iterable[T]:
             continue
         yield x
         seen.add(x)
+
+
+def search_connected[
+    P, D, L
+](
+    start: P,
+    data: dict[P, D],
+    label: Callable[[D], Optional[L]],
+    neighbours: Callable[[P], Iterable[P]],
+) -> Mapping[P, L]:
+    queue = deque[P]([start])
+    found = dict[P, L]()
+    while len(queue) > 0:
+        p = queue.pop()
+        if p in found:
+            continue
+        if p not in data:
+            continue
+        l = label(data[p])
+        if l is None:
+            continue
+        found[p] = l
+        queue += neighbours(p)
+    return found
 
 
 def print_points(points: Iterable[Vector[int]]):
