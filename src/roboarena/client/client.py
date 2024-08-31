@@ -20,7 +20,7 @@ from roboarena.client.entity import (
 from roboarena.client.keys import load_keys
 from roboarena.client.master_mixer import MUSIC_DONE, MasterMixer
 from roboarena.client.menu.main_menu import MainMenu
-from roboarena.shared.constants import CLIENT_TIMESTEP, SERVER_IP
+from roboarena.shared.constants import CLIENT_TIMESTEP, SERVER_IP, VSYNC
 from roboarena.shared.custom_threading import Atom
 from roboarena.shared.game import GameState as SharedGameState
 from roboarena.shared.game_ui import GameUI
@@ -317,7 +317,7 @@ class Client(Stoppable):
         screen = pygame.display.set_mode(
             (1000, 1000),
             flags=RESIZABLE,
-            vsync=1,
+            vsync=int(VSYNC),
         )
 
         menu = MainMenu(screen, self, self._master_mixer)

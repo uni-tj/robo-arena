@@ -5,16 +5,16 @@ from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from functools import cache, cached_property
 from math import ceil, floor, nan
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pygame
 import pygame.freetype
 from pygame import Surface, display
 
-from roboarena.shared.block import void
+from roboarena.shared.block import Block, floor_blocks, non_floor_blocks, void
 from roboarena.shared.game import OutOfLevelError
-from roboarena.shared.types import BlockType, EntityId
+from roboarena.shared.types import BlitInfo, EntityId
 from roboarena.shared.util import throws
 from roboarena.shared.utils.rect import Rect
 from roboarena.shared.utils.tuple_vector import (
@@ -39,6 +39,7 @@ FOV_OVERLAP_GU = 1.0
 type FieldOfView = Rect
 """ In game units """
 type ScreenPosition = tuple[int, int]
+type BlitSequence = list[BlitInfo]
 
 
 @cache
@@ -198,40 +199,47 @@ class Renderer(ABC):
 class GameRenderer(Renderer):
 
     _game: "GameState"
-    _floor_tiles: list[BlockType] = [
-        BlockType.FLOOR,
-        BlockType.FLOOR_ROOM_SPAWN,
-        BlockType.DOOR,
-    ]
-    _wall_tiles: list[BlockType] = [BlockType.WALL, BlockType.VOID]
 
     # ! TODO Debbuging only:
     _last_entity_pos: dict[EntityId, deque[Vector[float]]]
     _last_camera_pos: deque[Vector[float]]
+    _marker_surface: Surface
 
     def __init__(self, screen: Surface, game: "GameState") -> None:
         super().__init__(screen)
         self._game = game
 
-        self._last_camera_pos = deque(maxlen=60 * 10)
-        self._last_entity_pos = defaultdict(lambda: deque(maxlen=60 * 10))
+        self._last_camera_pos = deque(maxlen=20)
+        self._last_entity_pos = defaultdict(lambda: deque(maxlen=20))
+        self._marker_surface = pygame.Surface(self._screen.get_size(), pygame.SRCALPHA)
 
     def render(self, camera_position: Vector[float]) -> None:
-        self._screen.fill((0, 0, 0))
+
         self._fps_counter.tick()
+        if self._marker_surface.get_size() != self._screen.get_size():
+            self._marker_surface = pygame.Surface(
+                self._screen.get_size(), pygame.SRCALPHA
+            )
+        self._marker_surface.fill((0, 0, 0, 0))
+        self._screen.fill((0, 0, 0))
 
         ctx = self._genCtx(camera_position)
 
-        entities_to_render: list["Entity"] = list()
+        entities_to_render: dict[int, list["Entity"]] = defaultdict(list)
         for eid, entity in self._game.entities.items():
             if ctx.fov.contains(entity.position):
-                entities_to_render.append(entity)
+                entities_to_render[entity.position.y.__floor__()].append(entity)
             self._last_entity_pos[eid].append(entity.position)
 
+        blts_all: BlitSequence = []
         for y in range(floor(ctx.fov.top_left.y), ceil(ctx.fov.bottom_right.y)):
-            self._render_background_row(y + 1, self._floor_tiles, ctx)
-            self._render_entities(y, entities_to_render, ctx)
-            self._render_background_row(y, self._wall_tiles, ctx)
+
+            blts_bg = self._background_blitsq(y + 1, floor_blocks, ctx)
+            blts_ent = self._entity_blitsq(entities_to_render[y], ctx)
+            blts_fg = self._background_blitsq(y, non_floor_blocks, ctx)
+            blts_all = blts_all + blts_bg + blts_ent + blts_fg
+
+        self._screen.blits(blts_all)
 
         # TODO: Remove rendering colliding blocks
         cb_texture = pygame.Surface(ctx.gu2px_tup((1, 1)), pygame.SRCALPHA)
@@ -256,35 +264,32 @@ class GameRenderer(Renderer):
         # ! Debugging only
         self._last_camera_pos.append(camera_position)
         self._render_debug_traces(ctx)
+        self._screen.blit(self._marker_surface, (0, 0))
         display.flip()
 
-    def _render_background_row(
-        self, row: int, block_types: List[BlockType], ctx: RenderCtx
-    ) -> None:
+    def _background_blitsq(
+        self, row: int, exclude: set[Block], ctx: RenderCtx
+    ) -> BlitSequence:
         blit_sequence: list[tuple[Surface, ScreenPosition]] = list()
         for x in range(floor(ctx.fov.top_left.x), ceil(ctx.fov.bottom_right.x)):
             pos_gu = Vector(x, row)
             block = self._game.level.get(pos_gu) or void
-            if block.type not in block_types:
+            if block not in exclude:
                 continue
             texture, texture_size = block.texture, block.texture_size
             scaled_texture = ctx.scale_gu(texture, texture_size)
             pos_screen = ctx.gu2screen_tup((x, row - texture_size.y + 1))
             blit_sequence.append((scaled_texture, pos_screen))  # type: ignore
-        self._screen.blits(blit_sequence)
+        return blit_sequence
 
-    def _render_entities(
-        self, row: int, entities: List["Entity"], ctx: RenderCtx
-    ) -> None:
-        for entity in entities:
-            if entity.position.floor().y == row:
-                entity.render(ctx)
+    def _entity_blitsq(self, entities: list["Entity"], ctx: RenderCtx) -> BlitSequence:
+        return [entity.blit_info(ctx) for entity in entities]
 
     def _render_game_ui(self, ctx: RenderCtx) -> None:
         self._game.game_ui.render(ctx)
 
     def _render_markers(self, ctx: RenderCtx) -> None:
-        surface = pygame.Surface(self._screen.get_size(), pygame.SRCALPHA)
+        surface = self._marker_surface
         for marker in self._game.markers:
             pygame.draw.circle(
                 surface,
@@ -297,11 +302,9 @@ class GameRenderer(Renderer):
         self,
         ctx: RenderCtx,
     ) -> None:
-        surface = pygame.Surface(self._screen.get_size(), pygame.SRCALPHA)
+        surface = self._marker_surface
         for ci, poss in enumerate(self._last_entity_pos.values()):
             for i, cpos in enumerate(poss):
-                # if i % 10 != 0:
-                # continue
                 col = (255, 0, ci, floor(255 * (i / len(poss))))
                 pygame.draw.circle(
                     surface,
@@ -310,11 +313,8 @@ class GameRenderer(Renderer):
                     3,
                 )
         for i, cpos in enumerate(self._last_camera_pos):
-            # if i % 10 != 0:
-            # continue
             col = (0, 0, 255, floor(255 * (i / len(self._last_camera_pos))))
             pygame.draw.circle(surface, col, ctx.gu2screen(cpos).to_tuple(), 3)
-        self._screen.blit(surface, (0, 0))
 
 
 class MenuRenderer(Renderer):

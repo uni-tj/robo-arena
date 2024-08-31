@@ -1,4 +1,3 @@
-import enum
 from collections.abc import Collection, Iterable
 from dataclasses import dataclass
 from functools import cached_property
@@ -25,6 +24,8 @@ type Motion = tuple[Position, Orientation]
 type Color = pygame.Color
 
 type Entities = dict[EntityId, "Entity"]
+
+type BlitInfo = tuple[pygame.Surface, tuple[int, int]]
 
 
 @dataclass(frozen=True)
@@ -241,11 +242,3 @@ class ClientGameEvent[Evt]:
 class ClientInputEvent:
     input: Input
     dt: Time
-
-
-class BlockType(enum.Enum):
-    FLOOR = enum.auto()
-    FLOOR_ROOM_SPAWN = enum.auto()
-    WALL = enum.auto()
-    VOID = enum.auto()
-    DOOR = enum.auto()

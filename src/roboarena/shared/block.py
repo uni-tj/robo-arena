@@ -7,7 +7,6 @@ import pygame
 from pygame import Surface
 
 from roboarena.shared.rendering.util import size_from_texture_width
-from roboarena.shared.types import BlockType
 from roboarena.shared.util import load_graphic
 from roboarena.shared.utils.vector import Vector
 
@@ -18,7 +17,6 @@ STANDARD_BLOCK_SIZE_PX = 50
 @dataclass(frozen=True)
 class Block(ABC):
     texture: Surface
-    type: BlockType
 
     @cached_property
     def texture_size(self) -> Vector[float]:
@@ -34,11 +32,14 @@ def load_void_texture() -> Surface:
     return voidTexture
 
 
-floor = Block(load_graphic("floor/floor2.PNG"), BlockType.FLOOR)
-floor_room = Block(load_graphic("floor/floor2.PNG"), BlockType.FLOOR)
-floor_room_spawn = Block(load_graphic("floor/floor2.PNG"), BlockType.FLOOR_ROOM_SPAWN)
-floor_door = Block(load_graphic("floor/floor2.PNG"), BlockType.DOOR)
-wall = Block(load_graphic("walls/wall-top.PNG"), BlockType.WALL)
-void = Block(load_void_texture(), BlockType.VOID)
+floor = Block(load_graphic("floor/floor2.PNG"))
+floor_room = Block(load_graphic("floor/floor2.PNG"))
+floor_room_spawn = Block(load_graphic("floor/floor2.PNG"))
+floor_door = Block(load_graphic("floor/floor2.PNG"))
+wall = Block(load_graphic("walls/wall-top.PNG"))
+void = Block(load_void_texture())
 
+
+floor_blocks = set([floor, floor_room_spawn, floor_door])
+non_floor_blocks = set([wall, void])
 room_blocks = set([floor_room, floor_room_spawn, floor_door])
