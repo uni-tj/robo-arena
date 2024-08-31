@@ -304,7 +304,7 @@ class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
             ChangedByInputEvent,
             lambda e: (dispatch(MovedEvent()) if e.old[0] != e.new[1] else None),  # type: ignore
         )
-        self.health.events.add_listener(ShotEvent, dispatch)
+        self.weapon.events.add_listener(ShotEvent, dispatch)
 
     def on_input(self, input: Input, dt: Time, ack: Acknoledgement, t: Time):
         self.motion.on_input((input, dt), ack)
