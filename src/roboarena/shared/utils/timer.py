@@ -65,6 +65,7 @@ class Timer:
         self.timings[label].append(elapsed_time)
 
     def end_run(self) -> None:
+        self._c += 1
         while len(self.current) > 0:
             self.tick_end()
         if self._periodic_timing is None:
