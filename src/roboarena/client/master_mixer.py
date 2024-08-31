@@ -29,6 +29,8 @@ class MasterMixer:
         sound.play()
 
     def fade_in_sound(self, sound: mixer.Sound, time: int):
+        if self.muted:
+            return
         sound.play(fade_ms=time)
 
     def play_music(self, song_path: str):
