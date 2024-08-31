@@ -16,8 +16,13 @@ from roboarena.server.entity import (
     ServerPlayerRobot,
 )
 from roboarena.server.events import Dispatch, EventBuffer, EventName
-from roboarena.server.level_generation.level_generator import LevelGenerator
+from roboarena.server.level_generation.level_generator import (
+    LevelGenerator,
+    LevelUpdate,
+)
 from roboarena.server.level_generation.tileset import tileset
+from roboarena.server.room import Room
+from roboarena.shared.block import floor_door, floor_room_spawn, room_blocks
 from roboarena.shared.constants import SERVER_FRAMES_PER_TIMESTEP, SERVER_TIMESTEP
 from roboarena.shared.custom_threading import Atom
 from roboarena.shared.game import GameState as SharedGameState
@@ -51,6 +56,8 @@ from roboarena.shared.util import (
     Stopped,
     flatten,
     gen_id,
+    neighbours_4,
+    search_connected,
     square_space_around,
 )
 from roboarena.shared.utils.vector import Vector
@@ -115,6 +122,7 @@ class GameState(SharedGameState):
     _clients: dict[ClientId, ClientInfo]
     env = "server"
     entities: bidict[EntityId, ServerEntityType]
+    _rooms: list[Room]
     markers: deque[Marker]
     _deleted_entities: list[ServerEntityType]
     _created_entities: list[ServerEntityType]
@@ -125,6 +133,7 @@ class GameState(SharedGameState):
         self._server = server
         self._clients = {}
         self.entities = bidict()  # type: ignore
+        self._rooms = list()
 
         self._logger.debug(f"initialize with clients: {clients}")
 
@@ -176,6 +185,20 @@ class GameState(SharedGameState):
         del self.entities[entity_id]
         event = ServerDeleteEntityEvent(entity_id)
         self._dispatch(None, f"delete-entity/{entity_id}", event)
+
+    def create_rooms(self, update: LevelUpdate) -> None:
+        for pos, block in update:
+            if block is not floor_room_spawn:
+                continue
+            room = search_connected(
+                pos,
+                self._level_gen.level,
+                lambda b: b if b in room_blocks else None,
+                neighbours_4,
+            )
+            floors = {p for p, b in room.items() if b is not floor_door}
+            doors = {p for p, b in room.items() if b is floor_door}
+            self._rooms.append(Room(self, floors, doors))
 
     def dispatch_factory(
         self, client: Optional[ClientId], entity: EntityId
@@ -250,22 +273,26 @@ class GameState(SharedGameState):
             for i in range(SERVER_FRAMES_PER_TIMESTEP):
                 t_frame = last_t + i * dt_frame
 
+                # TODO: create/delete_entitiy into loop function using a TickCtx
+                self._created_entities = list()
+                self._deleted_entities = list()
+
                 # generate level
                 players = (c.entity.position for c in self._clients.values())
                 near_players = flatten(square_space_around(p, 10) for p in players)
                 level_update = self._level_gen.generate(near_players)
                 level_update_evt = ServerLevelUpdateEvent(level_update)
                 self._dispatch(None, f"level-update/{t_frame}", level_update_evt)
-
-                # TODO: create/delete_entitiy into loop function using a TickCtx
-                self._created_entities = list()
-                self._deleted_entities = list()
+                self.create_rooms(level_update)
 
                 for t_msg, msg in self._server.receiver.receive(until=t_frame):
                     self.handle(t_msg, msg)
 
                 for entity in self.entities.values():
                     entity.tick(dt_frame, t_frame)
+
+                for room in self._rooms:
+                    room.tick()
 
                 # TODO: create/delete_entitiy into loop function using a TickCtx
                 for entity in self._created_entities:

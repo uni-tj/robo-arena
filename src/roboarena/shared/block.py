@@ -33,7 +33,10 @@ def load_void_texture() -> Surface:
 
 
 floor = Block(load_graphic("floor/floor2.PNG"))
+floor_room = Block(load_graphic("floor/floor2.PNG"))
 floor_room_spawn = Block(load_graphic("floor/floor2.PNG"))
 floor_door = Block(load_graphic("floor/floor2.PNG"))
 wall = Block(load_graphic("walls/wall-top.PNG"))
 void = Block(load_void_texture())
+
+room_blocks = set([floor_room, floor_room_spawn, floor_door])

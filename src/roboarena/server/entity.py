@@ -75,6 +75,10 @@ class CalculatedValue[T, Ctx](Value[T]):
         if old_value != self.value:
             self.events.dispatch(ChangedEvent(old_value, self.value))
 
+    def set(self, value: T):
+        self.value = value
+        self.dispatch(self.value)
+
     def get(self) -> T:
         return self.value
 
