@@ -17,6 +17,7 @@ STANDARD_BLOCK_SIZE_PX = 50
 @dataclass(frozen=True)
 class Block(ABC):
     texture: Surface
+    render_above_entities: bool
 
     @cached_property
     def texture_size(self) -> Vector[float]:
@@ -32,14 +33,11 @@ def load_void_texture() -> Surface:
     return voidTexture
 
 
-floor = Block(load_graphic("floor/floor2.PNG"))
-floor_room = Block(load_graphic("floor/floor2.PNG"))
-floor_room_spawn = Block(load_graphic("floor/floor2.PNG"))
-floor_door = Block(load_graphic("floor/floor2.PNG"))
-wall = Block(load_graphic("walls/wall-top.PNG"))
-void = Block(load_void_texture())
+floor = Block(load_graphic("floor/floor2.PNG"), render_above_entities=False)
+floor_room = Block(load_graphic("floor/floor2.PNG"), render_above_entities=False)
+floor_room_spawn = Block(load_graphic("floor/floor2.PNG"), render_above_entities=False)
+floor_door = Block(load_graphic("floor/floor2.PNG"), render_above_entities=False)
+wall = Block(load_graphic("walls/wall-top.PNG"), render_above_entities=True)
+void = Block(load_void_texture(), render_above_entities=True)
 
-
-floor_blocks = set([floor, floor_room_spawn, floor_door])
-non_floor_blocks = set([wall, void])
 room_blocks = set([floor_room, floor_room_spawn, floor_door])

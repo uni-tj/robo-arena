@@ -10,14 +10,14 @@ from pygame import Surface
 from roboarena.shared.constants import PlayerConstants
 from roboarena.shared.rendering.util import size_from_texture_width
 from roboarena.shared.time import Time
-from roboarena.shared.types import BlitInfo, Color, Input, Motion, Position
+from roboarena.shared.types import Color, Input, Motion, Position
 from roboarena.shared.util import load_graphic
 from roboarena.shared.utils.rect import Rect
 from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
     from roboarena.shared.game import GameState
-    from roboarena.shared.rendering.renderer import RenderCtx
+    from roboarena.shared.rendering.renderer import RenderCtx, RenderInfo
 
 logger = logging.getLogger(f"{__name__}")
 
@@ -64,13 +64,13 @@ class Entity(ABC):
     @abstractmethod
     def position(self) -> Position: ...
 
-    def blit_info(self, ctx: "RenderCtx") -> BlitInfo:
+    def prepare_render(self, ctx: "RenderCtx") -> "RenderInfo":
         scaled_texture = ctx.scale_gu(self.texture, self.texture_size)
         # Simulate physically square base surface by offsetting
         # by half width to bottom
         bottom_right_gu = self.position + (self.texture_size.x / 2)
         top_left_gu = bottom_right_gu - self.texture_size
-        return (scaled_texture, ctx.gu2screen(top_left_gu).to_tuple())
+        return scaled_texture, ctx.gu2screen(top_left_gu).to_tuple()
 
     @abstractmethod
     def tick(self, dt: Time, t: Time): ...

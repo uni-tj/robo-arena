@@ -25,8 +25,6 @@ type Color = pygame.Color
 
 type Entities = dict[EntityId, "Entity"]
 
-type BlitInfo = tuple[pygame.Surface, tuple[int, int]]
-
 
 @dataclass(frozen=True)
 class PygameColor:
