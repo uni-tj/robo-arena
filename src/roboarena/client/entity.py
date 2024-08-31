@@ -9,6 +9,7 @@ import pygame
 from attrs import define, field
 from pygame import Color
 
+from roboarena.client.master_mixer import EnemySounds
 from roboarena.server.events import EventName
 from roboarena.shared.constants import SERVER_TIMESTEP
 from roboarena.shared.entity import (
@@ -387,6 +388,7 @@ class ClientEnemyRobot(EnemyRobot, ClientEntity):
     color: PassiveRemoteValue[Color]
     weapon: ClientWeapon
     events: EventTarget[HitEvent | DeathEvent | ShotEvent]
+    _enemy_sounds: EnemySounds
 
     def __init__(
         self,
@@ -404,6 +406,7 @@ class ClientEnemyRobot(EnemyRobot, ClientEntity):
         self.color = PassiveRemoteValue(color)  # type: ignore
         self.weapon = ClientWeapon(game, self, weapon)
         self.events = EventTarget()
+        self._enemy_sounds = EnemySounds(game.master_mixer)
 
         dispatch = self.events.dispatch
         self.health.events.add_listener(
@@ -415,6 +418,12 @@ class ClientEnemyRobot(EnemyRobot, ClientEntity):
             lambda e: dispatch(DeathEvent()) if e.new <= 0 else None,  # type: ignore
         )
         self.health.events.add_listener(ShotEvent, dispatch)
+        self._enemy_sounds.enemy_hovering()
+        self.events.add_listener(
+            ShotEvent, lambda _: self._enemy_sounds.enemy_shooting()
+        )
+        self.events.add_listener(HitEvent, lambda _: self._enemy_sounds.enemy_hit())
+        self.events.add_listener(DeathEvent, lambda _: self._enemy_sounds.enemy_dying())
 
     def on_server(
         self,
