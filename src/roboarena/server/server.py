@@ -136,7 +136,6 @@ class GameState(SharedGameState):
             (Vector(10.0, 1.0), Vector(1.0, 0.0)),
             Color(255, 0, 0),
             basic_weapon,
-            self.dispatch_factory(None, enemy_id),
         )
         self.entities[enemy_id] = enemy
         self.markers = deque(maxlen=1000)

@@ -21,6 +21,7 @@ from roboarena.shared.time import Time
 from roboarena.shared.types import (
     ChangedEvent,
     Color,
+    DeathEvent,
     EntityId,
     Input,
     Marker,
@@ -84,8 +85,6 @@ class ServerInputHandler(Entity, ABC):
 
 
 class HealthController(Value[int]):
-    class DeathEvent:
-        pass
 
     _health: int
     _dispatch: SimpleDispatch[int]
@@ -99,7 +98,7 @@ class HealthController(Value[int]):
     def hit(self, strength: int):
         self._health -= strength
         if self._health <= 0:
-            self.events.dispatch(self.DeathEvent())
+            self.events.dispatch(DeathEvent())
         self._dispatch(self._health)
 
     def get(self) -> int:
@@ -250,6 +249,7 @@ class ServerEnemyRobot(EnemyRobot):
     motion: CalculatedValue[Motion, EnemyRobotMoveCtx]
     color: ActiveRemoteValue[Color]
     weapon: ServerWeapon
+    events: EventTarget[DeathEvent]
 
     def __init__(
         self,
@@ -258,20 +258,19 @@ class ServerEnemyRobot(EnemyRobot):
         motion: Motion,
         color: Color,
         weapon: Weapon,
-        dispatch: Dispatch[Motion | Color],
     ) -> None:
         super().__init__(game, motion)
         self._game = game  # type: ignore
-        self.health = HealthController(health, partial(dispatch, "health"))  # type: ignore
+        self.health = HealthController(health, partial(game.dispatch, self, "health"))  # type: ignore
         self.motion = CalculatedValue(  # type: ignore
-            motion, self.move, partial(dispatch, "motion")
+            motion, self.move, partial(game.dispatch, self, "motion")
         )
-        self.color = ActiveRemoteValue(color, partial(dispatch, "color"))  # type: ignore
+        self.color = ActiveRemoteValue(color, partial(game.dispatch, self, "color"))  # type: ignore
         self.weapon = ServerWeapon(game, self, weapon)
+        self.events = EventTarget()
 
-        self.health.events.add_listener(
-            self.health.DeathEvent, lambda e: self._game.delete_entity(self)
-        )
+        self.health.events.add_listener(DeathEvent, self.events.dispatch)
+        self.health.events.add_listener(DeathEvent, lambda e: game.delete_entity(self))
 
     def tick(self, dt: Time, t: Time):
         self.motion.tick((dt,))
