@@ -15,8 +15,10 @@ from roboarena.shared.entity import (
     PlayerRobotMoveCtx,
     Value,
 )
+from roboarena.shared.game import OutOfLevelError
 from roboarena.shared.time import Time
 from roboarena.shared.types import (
+    ChangedEvent,
     Color,
     EntityId,
     Input,
@@ -28,7 +30,7 @@ from roboarena.shared.types import (
     Weapon,
     basic_weapon,
 )
-from roboarena.shared.util import EventTarget
+from roboarena.shared.util import EventTarget, throws
 from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
@@ -55,24 +57,19 @@ class ActiveRemoteValue[T](Value[T]):
         return self.value
 
 
+@define
 class CalculatedValue[T, Ctx](Value[T]):
     value: T
     calculate: Callable[[T, Ctx], T]
     dispatch: SimpleDispatch[T]
-
-    def __init__(
-        self,
-        value: T,
-        calculate: Callable[[T, Ctx], T],
-        dispatch: SimpleDispatch[T],
-    ) -> None:
-        self.value = value
-        self.calculate = calculate
-        self.dispatch = dispatch
+    events: EventTarget[ChangedEvent[T]] = field(factory=EventTarget, init=False)
 
     def tick(self, ctx: Ctx) -> None:
+        old_value = self.value
         self.value = self.calculate(self.value, ctx)
         self.dispatch(self.value)
+        if old_value != self.value:
+            self.events.dispatch(ChangedEvent(old_value, self.value))
 
     def get(self) -> T:
         return self.value
@@ -210,6 +207,15 @@ class ServerPlayerBullet(PlayerBullet):
             partial(self._game.dispatch, self, "velocity"),
         )
         self._strength = strength
+
+        self._position.events.add_listener(
+            ChangedEvent,
+            lambda e: (
+                self._game.delete_entity(self)
+                if throws(OutOfLevelError, lambda: self._game.colliding_blocks(self))
+                else None
+            ),
+        )
 
     def tick(self, dt: Time, t: Time):
         self._position.tick((dt,))

@@ -261,6 +261,14 @@ class EventTarget[Evt]:
             listener(event)
 
 
+def throws(exception: type[Exception], f: Callable[[], Any]):
+    try:
+        f()
+        return False
+    except exception:
+        return True
+
+
 class Stoppable(ABC):
     """Interface for objects supporting being stopped from another thread"""
 

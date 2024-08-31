@@ -13,7 +13,9 @@ import pygame.freetype
 from pygame import Surface, display
 
 from roboarena.shared.block import void
+from roboarena.shared.game import OutOfLevelError
 from roboarena.shared.types import EntityId
+from roboarena.shared.util import throws
 from roboarena.shared.utils.rect import Rect
 from roboarena.shared.utils.tuple_vector import (
     TupleVector,
@@ -243,6 +245,10 @@ class GameRenderer(Renderer):
             [
                 (cb_texture, ctx.gu2screen(block_pos.to_float()).to_tuple())
                 for entity in self._game.entities.values()
+                if not throws(
+                    OutOfLevelError,
+                    lambda: self._game.colliding_blocks(entity),  # noqa B023
+                )
                 for block_pos in self._game.colliding_blocks(entity).keys()
             ]
         )

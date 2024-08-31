@@ -68,6 +68,14 @@ class QuitEvent:
 
 
 @dataclass(frozen=True)
+class ChangedEvent[T]:
+    """Fired after a value changed"""
+
+    old: T
+    new: T
+
+
+@dataclass(frozen=True)
 class Weapon:
     weapon_speed: float
     """In shots per second"""

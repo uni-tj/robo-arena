@@ -23,6 +23,7 @@ from roboarena.shared.entity import (
 from roboarena.shared.time import Time
 from roboarena.shared.types import (
     Acknoledgement,
+    ChangedEvent,
     DeathEvent,
     HitEvent,
     Input,
@@ -46,12 +47,6 @@ class ChangedByInputEvent[T]:
 
 @dataclass(frozen=True)
 class ChangedByServerEvent[T]:
-    old: T
-    new: T
-
-
-@dataclass(frozen=True)
-class ChangedEvent[T]:
     old: T
     new: T
 

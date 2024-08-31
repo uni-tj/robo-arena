@@ -19,6 +19,10 @@ if TYPE_CHECKING:
 logger = logging.getLogger(f"{__name__}")
 
 
+class OutOfLevelError(Exception):
+    """Thrown when an entity collides with blocks that are not yet generated"""
+
+
 class GameState(ABC):
     env: Literal["server"] | Literal["client"]
     entities: dict[EntityId, Entity]
@@ -66,7 +70,10 @@ class GameState(ABC):
         self, collider: Rect | Entity
     ) -> dict["BlockPosition", "Block"]:
         rect = collider.collision.hitbox if isinstance(collider, Entity) else collider
-        return {
-            p: self.level[p]
-            for p in rect_space(rect.top_left.floor(), rect.bottom_right.floor())
-        }
+        try:
+            return {
+                p: self.level[p]
+                for p in rect_space(rect.top_left.floor(), rect.bottom_right.floor())
+            }
+        except KeyError:
+            raise OutOfLevelError()
