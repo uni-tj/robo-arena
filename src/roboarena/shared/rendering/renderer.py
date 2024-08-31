@@ -241,17 +241,18 @@ class GameRenderer(Renderer):
         # TODO: Remove rendering colliding blocks
         cb_texture = pygame.Surface(ctx.gu2px_tup((1, 1)), pygame.SRCALPHA)
         cb_texture.fill((0, 0, 0, 128))
-        ctx.screen.blits(
-            [
-                (cb_texture, ctx.gu2screen(block_pos.to_float()).to_tuple())
-                for entity in self._game.entities.values()
-                if not throws(
-                    OutOfLevelError,
-                    lambda: self._game.colliding_blocks(entity),  # noqa B023
-                )
-                for block_pos in self._game.colliding_blocks(entity).keys()
-            ]
-        )
+        cb_ent = [
+            (cb_texture, ctx.gu2screen(block_pos.to_float()).to_tuple())
+            for entity in self._game.entities.values()
+            if ctx.fov.contains(entity.position)
+            if not throws(
+                OutOfLevelError,
+                lambda: self._game.colliding_blocks(entity),  # noqa B023
+            )
+            for block_pos in self._game.colliding_blocks(entity).keys()
+            if ctx.fov.contains(block_pos)  # type: ignore
+        ]
+        ctx.screen.blits(cb_ent)
 
     def _render_entities(self, ctx: RenderCtx) -> None:
         for eid, entity in self._game.entities.items():

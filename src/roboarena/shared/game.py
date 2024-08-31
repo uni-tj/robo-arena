@@ -8,7 +8,7 @@ from roboarena.shared.block import wall
 from roboarena.shared.entity import Entity
 from roboarena.shared.game_ui import GameUI
 from roboarena.shared.types import EntityId, QuitEvent, StartFrameEvent
-from roboarena.shared.util import EventTarget, frame_cache_method, rect_space
+from roboarena.shared.util import EventTarget, frame_cache_method, rect_space_at
 from roboarena.shared.utils.rect import Rect
 from roboarena.shared.utils.vector import Vector
 
@@ -73,7 +73,7 @@ class GameState(ABC):
         try:
             return {
                 p: self.level[p]
-                for p in rect_space(rect.top_left.floor(), rect.bottom_right.floor())
+                for p in rect_space_at(rect.top_left.floor(), rect.bottom_right.floor())
             }
         except KeyError:
             raise OutOfLevelError()

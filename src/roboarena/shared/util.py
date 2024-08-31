@@ -49,27 +49,32 @@ def safe_next[T](iterator: Iterator[T]) -> T | None:
         return None
 
 
-def rect_space(l_bounds: Vector[int], u_bounds: Vector[int]) -> Iterable[Vector[int]]:
+@cache
+def rect_space(bottom_right: Vector[int]) -> Iterable[Vector[int]]:
     """Generates a list of coordinates in the rectangle given by xbounds and ybounds
 
     Args:
-        l_bounds Vector[int]: Minimum x and y values
-        u_bounds Vector[int]: Maxmimum x and y values (inclusive)
+        size: Vector[int]  the Rectangle size starting at 0,0
 
     Returns:
         list[Vector[int]]: list of coordinates in the space
             defined by l_bounds and u_bounds
     """
-    lnx = np.linspace(l_bounds.x, u_bounds.x, u_bounds.x - l_bounds.x + 1)
-    lny = np.linspace(l_bounds.y, u_bounds.y, u_bounds.y - l_bounds.y + 1)
+    lnx = np.linspace(0, bottom_right.x, bottom_right.x + 1)
+    lny = np.linspace(0, bottom_right.y, bottom_right.y + 1)
     coords = np.array(np.meshgrid(lnx, lny)).ravel("F").reshape(-1, 2).astype(int)
 
     return [Vector.from_sequence(coord) for coord in coords]
 
 
-@cache
+def rect_space_at(
+    top_left: Vector[int], bottom_right: Vector[int]
+) -> Iterable[Vector[int]]:
+    return (top_left + pos for pos in rect_space(bottom_right - top_left))
+
+
 def square_space(apothem: int) -> Iterable[Vector[int]]:
-    return rect_space(Vector.from_scalar(-apothem), Vector.from_scalar(apothem))
+    return rect_space_at(Vector.from_scalar(-apothem), Vector.from_scalar(apothem))
 
 
 @cache
