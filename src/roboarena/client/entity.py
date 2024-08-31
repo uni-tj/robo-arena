@@ -12,6 +12,7 @@ from pygame import Color
 from roboarena.server.events import EventName
 from roboarena.shared.constants import SERVER_TIMESTEP
 from roboarena.shared.entity import (
+    DoorEntity,
     EnemyRobot,
     Entity,
     PlayerBullet,
@@ -219,7 +220,9 @@ class ClientEntity(Entity, ABC):
     ): ...
 
 
-type ClientEntityType = ClientPlayerRobot | ClientEnemyRobot | ClientPlayerBullet
+type ClientEntityType = (
+    ClientPlayerRobot | ClientEnemyRobot | ClientPlayerBullet | ClientDoorEntity
+)
 
 
 class ShotEvent:
@@ -434,3 +437,28 @@ class ClientEnemyRobot(EnemyRobot, ClientEntity):
 
     def tick(self, dt: Time, t: Time):
         self.motion.tick(t, None)
+
+
+class ClientDoorEntity(DoorEntity):
+    open: PassiveRemoteValue[bool]
+
+    def __init__(self, game: "GameState", position: Position, open: bool):
+        super().__init__(game)
+        self._position = position
+        self.open = PassiveRemoteValue(open)  # type: ignore
+
+    def tick(self, dt: Time, t: Time):
+        pass
+
+    def on_server(
+        self,
+        event_name: EventName,
+        event: object,
+        last_ack: Acknoledgement,
+        t_ack: Time,
+    ):
+        match event_name, event:
+            case "open", bool():
+                self.open.on_server(event)
+            case _:
+                raise ValueError("entity: invalid event")

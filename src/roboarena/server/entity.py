@@ -7,6 +7,7 @@ from attrs import define, field
 
 from roboarena.server.events import Dispatch, SimpleDispatch
 from roboarena.shared.entity import (
+    DoorEntity,
     EnemyRobot,
     EnemyRobotMoveCtx,
     Entity,
@@ -24,7 +25,9 @@ from roboarena.shared.types import (
     Input,
     Marker,
     Motion,
+    Position,
     PygameColor,
+    ServerSpawnDoorEvent,
     ServerSpawnPlayerBulletEvent,
     ServerSpawnRobotEvent,
     Weapon,
@@ -103,7 +106,9 @@ class HealthController(Value[int]):
         return self._health
 
 
-type ServerEntityType = ServerPlayerRobot | ServerEnemyRobot | ServerPlayerBullet
+type ServerEntityType = (
+    ServerPlayerRobot | ServerEnemyRobot | ServerPlayerBullet | ServerDoorEntity
+)
 
 
 class ShotEvent:
@@ -279,3 +284,19 @@ class ServerEnemyRobot(EnemyRobot):
             self.color.get(),
             self.weapon.get(),
         )
+
+
+class ServerDoorEntity(DoorEntity):
+    _position: Position
+    open: ActiveRemoteValue[bool]
+
+    def __init__(self, game: "GameState", position: Position, open: bool):
+        super().__init__(game)
+        self._position = position
+        self.open = ActiveRemoteValue(open, partial(game.dispatch, self, "open"))  # type: ignore
+
+    def tick(self, dt: Time, t: Time):
+        pass
+
+    def to_event(self, entity_id: EntityId) -> ServerSpawnDoorEvent:
+        return ServerSpawnDoorEvent(entity_id, self._position, self.open.get())

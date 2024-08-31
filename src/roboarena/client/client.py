@@ -11,6 +11,7 @@ from pygame.time import Clock
 
 from roboarena.client.ambience_sound import AmbienceSound
 from roboarena.client.entity import (
+    ClientDoorEntity,
     ClientEnemyRobot,
     ClientEntityType,
     ClientInputHandler,
@@ -48,6 +49,7 @@ from roboarena.shared.types import (
     ServerGameStartEvent,
     ServerLevelUpdateEvent,
     ServerMarkerEvent,
+    ServerSpawnDoorEvent,
     ServerSpawnPlayerBulletEvent,
     ServerSpawnRobotEvent,
     StartFrameEvent,
@@ -201,6 +203,9 @@ class GameState(SharedGameState):
                 entity = ClientEnemyRobot(
                     self, health, motion, color, weapon, last_ack, t_msg
                 )
+                self.entities[id] = entity
+            case ServerSpawnDoorEvent(id, position, open):
+                entity = ClientDoorEntity(self, position, open)
                 self.entities[id] = entity
             case ServerSpawnPlayerBulletEvent(id, position, velocity):
                 entity = ClientPlayerBullet(

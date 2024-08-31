@@ -1,7 +1,9 @@
 import logging
 from abc import ABC, abstractmethod
+from functools import cache
 from typing import TYPE_CHECKING, Callable
 
+import pygame
 from attrs import define
 from pygame import Surface
 
@@ -201,3 +203,42 @@ class EnemyRobot(Entity):
         new_ori = ori * -1 if pos.distance_to(self.initial_position) > 3 else ori
         new_pos = pos + new_ori * dt
         return (new_pos, new_ori)
+
+
+@cache
+def load_door_texture_open() -> Surface:
+    texture = Surface((50, 50))
+    pygame.draw.rect(texture, (128, 128, 128), pygame.Rect((0, 20), (50, 10)))
+    return texture
+
+
+@cache
+def load_door_texture_close() -> Surface:
+    texture = Surface((50, 50))
+    pygame.draw.rect(texture, (0, 0, 0), pygame.Rect((0, 20), (50, 10)))
+    return texture
+
+
+class DoorEntity(Entity):
+    @property
+    def texture(self) -> Surface:  # type: ignore
+        if self.open.get():
+            return load_door_texture_open()
+        return load_door_texture_close()
+
+    texture_size: Vector[float] = size_from_texture_width(
+        load_door_texture_open(), width=1.0
+    )
+
+    _position: Position
+    open: Value[bool]
+
+    def __init__(self, game: "GameState"):
+        super().__init__(game)
+        self.collision = CollideAroundCenter(
+            lambda: self.position, Rect.from_size(Vector.one())
+        )
+
+    @property
+    def position(self) -> Position:
+        return self._position

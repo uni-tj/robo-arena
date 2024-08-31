@@ -107,12 +107,15 @@ class DeathEvent:
 type ServerGameEventType = (
     ServerSpawnRobotEvent
     | ServerSpawnPlayerBulletEvent
+    | ServerSpawnDoorEvent
     | ServerDeleteEntityEvent
     | ServerEntityEvent
     | ServerLevelUpdateEvent
     | ServerMarkerEvent
 )
-type ServerSpawnEventType = (ServerSpawnRobotEvent | ServerSpawnPlayerBulletEvent)
+type ServerSpawnEventType = (
+    ServerSpawnRobotEvent | ServerSpawnDoorEvent | ServerSpawnPlayerBulletEvent
+)
 type ServerEventType = (
     ServerConnectionConfirmEvent
     | ServerGameStartEvent
@@ -176,6 +179,13 @@ class ServerSpawnRobotEvent:
     motion: Motion
     color: Color
     weapon: Weapon
+
+
+@dataclass(frozen=True)
+class ServerSpawnDoorEvent:
+    id: EntityId
+    position: Position
+    open: bool
 
 
 @dataclass(frozen=True)

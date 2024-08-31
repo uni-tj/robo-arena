@@ -58,3 +58,7 @@ class Rect:
     @staticmethod
     def from_width_height(width_height: Vector[float]):
         return Rect(Vector.zero(), width_height)
+
+    @staticmethod
+    def from_size(size: Vector[float]):
+        return Rect(Vector.zero(), size)
