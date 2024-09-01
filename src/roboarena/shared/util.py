@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any, Callable, Generator, Mapping, NoReturn, O
 
 import numpy as np
 import pygame
+from attrs import define
 from numpy.typing import NDArray
 
 from roboarena.shared.types import StartFrameEvent
@@ -361,6 +362,28 @@ class Heap[T](Collection[T]):
 
     def nsmallest(self, n: int) -> list[T]:
         return heapq.nsmallest(n, self.heap)
+
+
+@define
+class change_exception:
+    """
+    Replace a certain exception type by another in a code block.
+
+    .. code-block:: python
+        # Will throw ValueError:
+        with change_exception(KeyError, ValueError):
+            {1: True}[0]
+    """
+
+    from_exc: type[Exception]
+    to_exc: Callable[[], Exception]
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type: type | None, exc_value: Any, traceback: Any):
+        if exc_type == self.from_exc:
+            raise self.to_exc()
 
 
 class Color(Enum):

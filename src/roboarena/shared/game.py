@@ -8,7 +8,12 @@ from roboarena.shared.block import wall
 from roboarena.shared.entity import Entity
 from roboarena.shared.game_ui import GameUI
 from roboarena.shared.types import EntityId, QuitEvent, StartFrameEvent
-from roboarena.shared.util import EventTarget, frame_cache_method, rect_space_at
+from roboarena.shared.util import (
+    EventTarget,
+    change_exception,
+    frame_cache_method,
+    rect_space_at,
+)
 from roboarena.shared.utils.rect import Rect
 from roboarena.shared.utils.vector import Vector
 
@@ -70,10 +75,8 @@ class GameState(ABC):
         self, collider: Rect | Entity
     ) -> dict["BlockPosition", "Block"]:
         rect = collider.collision.hitbox if isinstance(collider, Entity) else collider
-        try:
+        with change_exception(KeyError, OutOfLevelError):
             return {
                 p: self.level[p]
                 for p in rect_space_at(rect.top_left.floor(), rect.bottom_right.floor())
             }
-        except KeyError:
-            raise OutOfLevelError()
