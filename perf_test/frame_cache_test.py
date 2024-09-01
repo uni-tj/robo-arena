@@ -103,7 +103,7 @@ class GameState:
         self.events.listeners("test")
 
 
-class Test:
+class Target:
     _game: GameState
 
     def __init__(self) -> None:
@@ -125,7 +125,7 @@ class Test:
 
 
 if __name__ == "__main__":
-    game_state = Test()
+    game_state = Target()
 
     def gen_data():
         return (random.randint(0, 200), random.randint(0, 200))
