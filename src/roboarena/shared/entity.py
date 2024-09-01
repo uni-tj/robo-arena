@@ -55,6 +55,8 @@ class Entity(ABC):
     texture: Surface
     """In gu"""
     texture_size: Vector[float]
+    blocks_robot: bool
+    blocks_bullet: bool
 
     def __init__(self, game: "GameState") -> None:
         super().__init__()
@@ -98,6 +100,8 @@ class PlayerRobot(Entity):
     color: Value[Color]
     texture = player_robot_texture
     texture_size = size_from_texture_width(player_robot_texture, width=1.0)
+    blocks_robot = False
+    blocks_bullet = False
 
     def __init__(self, game: "GameState") -> None:
         super().__init__(game)
@@ -136,8 +140,11 @@ class PlayerRobot(Entity):
             new_orientation = Vector(0.0, 0.0)
 
         new_position = cur_position + new_orientation * dt
-
-        if self._game.collidingWalls(self.collision.hitbox_around(new_position)):
+        new_hitbox = self.collision.hitbox_around(new_position)
+        blocked = any(
+            b.blocks_robot for b in self._game.colliding_blocks(new_hitbox).values()
+        ) or any(e.blocks_robot for e in self._game.collidingEntities(new_hitbox))
+        if blocked:
             return (cur_position, Vector.zero().to_float())
         return (new_position, new_orientation)
 
@@ -151,6 +158,8 @@ type PlayerBulletMoveCtx = tuple[Time]
 class PlayerBullet(Entity):
     texture = player_bullet_texture
     texture_size = player_bullet_texture_size
+    blocks_robot = False
+    blocks_bullet = False
     _position: Value[Vector[float]]
     _velocity: Value[Vector[float]]
     "In units/second"
@@ -182,6 +191,8 @@ class EnemyRobot(Entity):
     color: Value[Color]
     texture = enemy_robot_texture
     texture_size = size_from_texture_width(player_robot_texture, width=1.0)
+    blocks_robot = False
+    blocks_bullet = False
     initial_position: Position
 
     def __init__(self, game: "GameState", motion: Motion) -> None:
@@ -227,6 +238,12 @@ class DoorEntity(Entity):
     texture_size: Vector[float] = size_from_texture_width(
         load_door_texture_open(), width=1.0
     )
+
+    @property
+    def blocks_robot(self) -> bool:  # type: ignore
+        return not self.open.get()
+
+    blocks_bullet = True
 
     _position: Position
     open: Value[bool]

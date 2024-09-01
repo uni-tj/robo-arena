@@ -386,6 +386,33 @@ class change_exception:
             raise self.to_exc()
 
 
+@define
+class exceqt:
+    """
+    Catch an exception and perform an action.
+
+    .. code-block:: python
+        with _except(ValueError, lambda: print("catched")):
+            ...
+        # is equivalent to
+        try:
+            ...
+        except ValueError:
+            print("catched")
+    """
+
+    exc_type: type[Exception]
+    on_exc: Callable[[], Any]
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type: type | None, exc_value: Any, traceback: Any):
+        if exc_type == self.exc_type:
+            self.on_exc()
+            return True
+
+
 class Color(Enum):
     RED = "\033[31m"
     RED_BG = "\033[41m"

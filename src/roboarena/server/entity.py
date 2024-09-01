@@ -34,7 +34,7 @@ from roboarena.shared.types import (
     Weapon,
     basic_weapon,
 )
-from roboarena.shared.util import EventTarget, throws
+from roboarena.shared.util import EventTarget, exceqt
 from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
@@ -216,20 +216,15 @@ class ServerPlayerBullet(PlayerBullet):
         )
         self._strength = strength
 
-        self._position.events.add_listener(
-            ChangedEvent,
-            lambda e: (
-                self._game.delete_entity(self)
-                if throws(OutOfLevelError, lambda: self._game.colliding_blocks(self))
-                else None
-            ),
-        )
-
     def tick(self, dt: Time, t: Time):
         self._position.tick((dt,))
-        if self._game.collidingWalls(self):
-            self._game.mark(Marker(self.position, PygameColor.light_grey()))
-            return self._game.delete_entity(self)
+        with exceqt(OutOfLevelError, lambda: self._game.delete_entity(self)):
+            blocked = any(
+                b.blocks_bullet for b in self._game.colliding_blocks(self).values()
+            ) or any(e.blocks_bullet for e in self._game.collidingEntities(self))
+            if blocked:
+                self._game.mark(Marker(self.position, PygameColor.light_grey()))
+                return self._game.delete_entity(self)
 
         hit_this_tick = set[Entity]()
         for entity in self._game.collidingEntities(self):

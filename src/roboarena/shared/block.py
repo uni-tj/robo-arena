@@ -18,6 +18,8 @@ STANDARD_BLOCK_SIZE_PX = 50
 class Block(ABC):
     texture: Surface
     render_above_entities: bool
+    blocks_robot: bool
+    blocks_bullet: bool
 
     @cached_property
     def texture_size(self) -> Vector[float]:
@@ -33,11 +35,41 @@ def load_void_debug_texture() -> Surface:
     return voidTexture
 
 
-floor = Block(load_graphic("floor/floor2.PNG"), render_above_entities=False)
-floor_room = Block(load_graphic("floor/floor2.PNG"), render_above_entities=False)
-floor_room_spawn = Block(load_graphic("floor/floor2.PNG"), render_above_entities=False)
-floor_door = Block(load_graphic("floor/floor2.PNG"), render_above_entities=False)
-wall = Block(load_graphic("walls/wall-top.PNG"), render_above_entities=True)
-void = Block(load_graphic("void/void.PNG"), render_above_entities=True)
+floor = Block(
+    load_graphic("floor/floor2.PNG"),
+    render_above_entities=False,
+    blocks_robot=False,
+    blocks_bullet=False,
+)
+floor_room = Block(
+    load_graphic("floor/floor2.PNG"),
+    render_above_entities=False,
+    blocks_robot=False,
+    blocks_bullet=False,
+)
+floor_room_spawn = Block(
+    load_graphic("floor/floor2.PNG"),
+    render_above_entities=False,
+    blocks_robot=False,
+    blocks_bullet=False,
+)
+floor_door = Block(
+    load_graphic("floor/floor2.PNG"),
+    render_above_entities=False,
+    blocks_robot=False,
+    blocks_bullet=False,
+)
+wall = Block(
+    load_graphic("walls/wall-top.PNG"),
+    render_above_entities=True,
+    blocks_robot=True,
+    blocks_bullet=True,
+)
+void = Block(
+    load_graphic("void/void.PNG"),
+    render_above_entities=True,
+    blocks_robot=True,
+    blocks_bullet=True,
+)
 
 room_blocks = set([floor_room, floor_room_spawn, floor_door])
