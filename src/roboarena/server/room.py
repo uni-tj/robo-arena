@@ -1,3 +1,4 @@
+import logging
 import random
 from typing import TYPE_CHECKING, Any, TypeGuard
 
@@ -10,13 +11,21 @@ from roboarena.server.entity import (
     ServerPlayerRobot,
 )
 from roboarena.server.level_generation.level_generator import BlockPosition
-from roboarena.shared.types import DeathEvent, basic_weapon
-from roboarena.shared.util import frame_cache_method
+from roboarena.shared.types import (
+    DeathEvent,
+    DoorsCloseEvent,
+    DoorsOpenEvent,
+    basic_weapon,
+)
+from roboarena.shared.util import EventTarget, frame_cache_method
 from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
     from roboarena.server.server import GameState
     from roboarena.shared.entity import Entity
+
+logger = logging.getLogger(__name__)
+
 type PlayerPosition = Vector[float]
 
 
@@ -34,6 +43,9 @@ class Room:
     _floors: set[BlockPosition]
     _doors: set[BlockPosition]
     _door_entities: list[ServerDoorEntity] = field(init=False)
+    events: EventTarget[DoorsCloseEvent | DoorsOpenEvent] = field(
+        factory=EventTarget, init=False
+    )
 
     _started: bool = field(default=False, init=False)
     _enemies_alive: int = field(init=False)
@@ -53,9 +65,10 @@ class Room:
             self.on_start()
 
     def on_start(self) -> None:
-        print("on_start")
+        logger.info("starting room")
         self._started = True
         # close doors
+        self.events.dispatch(DoorsCloseEvent())
         for door in self._door_entities:
             door.open.set(False)
 
@@ -92,8 +105,9 @@ class Room:
             self.on_end()
 
     def on_end(self) -> None:
-        print("on_end")
+        logger.info("ending room")
         # open doors
+        self.events.dispatch(DoorsOpenEvent())
         for door in self._door_entities:
             door.open.set(True)
 

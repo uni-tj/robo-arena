@@ -86,6 +86,16 @@ class DeathEvent:
 
 
 @dataclass(frozen=True)
+class DoorsCloseEvent:
+    """Fired when the doors of an room close"""
+
+
+@dataclass(frozen=True)
+class DoorsOpenEvent:
+    """Fired when the doors of an room open"""
+
+
+@dataclass(frozen=True)
 class Weapon:
     weapon_speed: float
     """In shots per second"""
