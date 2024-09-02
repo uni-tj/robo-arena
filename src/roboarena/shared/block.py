@@ -26,7 +26,7 @@ class Block(ABC):
 
 
 @cache
-def load_void_texture() -> Surface:
+def load_void_debug_texture() -> Surface:
     voidTexture = Surface((50, 50))
     voidTexture.fill((0, 0, 0))
     pygame.draw.circle(voidTexture, "blue", (25, 25), 10)
@@ -38,6 +38,6 @@ floor_room = Block(load_graphic("floor/floor2.PNG"), render_above_entities=False
 floor_room_spawn = Block(load_graphic("floor/floor2.PNG"), render_above_entities=False)
 floor_door = Block(load_graphic("floor/floor2.PNG"), render_above_entities=False)
 wall = Block(load_graphic("walls/wall-top.PNG"), render_above_entities=True)
-void = Block(load_void_texture(), render_above_entities=True)
+void = Block(load_graphic("void/void.PNG"), render_above_entities=True)
 
 room_blocks = set([floor_room, floor_room_spawn, floor_door])
