@@ -1,5 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
+from collections import deque
 from functools import cache
 from typing import TYPE_CHECKING, Callable
 
@@ -183,12 +184,18 @@ enemy_robot_texture = Surface((50, 50))
 enemy_robot_texture.fill("red")
 
 
+ENEMY_TEXTURE_1 = load_graphic("enemy/enemy-1.png")
+ENEMY_TEXTURE_2 = load_graphic("enemy/enemy-2.png")
+ENEMY_TEXTURE_3 = load_graphic("enemy/enemy-3.png")
+
+
 class EnemyRobot(Entity):
     health: Value[int]
     motion: Value[Motion]
     color: Value[Color]
-    texture = enemy_robot_texture
-    texture_size = size_from_texture_width(player_robot_texture, width=1.0)
+    texture = ENEMY_TEXTURE_1
+    texture_size = size_from_texture_width(ENEMY_TEXTURE_1, width=1.5)
+    _texture_queue: deque[Surface]
     blocks_robot = False
     blocks_bullet = False
     initial_position: Position
@@ -199,6 +206,8 @@ class EnemyRobot(Entity):
             lambda: self.motion.get()[0], Rect.from_size(Vector.from_scalar(0.95))
         )
         self.initial_position = motion[0]
+        self._texture_queue = deque()
+        self._texture_queue.extend([ENEMY_TEXTURE_1] * 14)
 
     @property
     def position(self) -> Position:
@@ -210,6 +219,17 @@ class EnemyRobot(Entity):
         new_ori = ori * -1 if pos.distance_to(self.initial_position) > 3 else ori
         new_pos = pos + new_ori * dt
         return (new_pos, new_ori)
+
+    def prepare_render(self, ctx: "RenderCtx") -> "RenderInfo":
+        self.texture = self._texture_queue.popleft()
+        if len(self._texture_queue) == 0:
+            if self.texture == ENEMY_TEXTURE_1:
+                self._texture_queue.extend([ENEMY_TEXTURE_2] * 14)
+                self._texture_queue.extend([ENEMY_TEXTURE_3] * 14)
+            elif self.texture == ENEMY_TEXTURE_3:
+                self._texture_queue.extend([ENEMY_TEXTURE_2] * 14)
+                self._texture_queue.extend([ENEMY_TEXTURE_1] * 14)
+        return super().prepare_render(ctx)
 
 
 @cache
