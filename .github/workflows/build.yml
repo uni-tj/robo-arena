@@ -1,0 +1,68 @@
+name: Build
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  build_wheels:
+    name: Build and Upload Wheels
+    runs-on: ubuntu-latest # You can use any platform, but Linux is common
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install pipenv
+          pipenv install -d
+
+      - name: Build wheel
+        run: |
+          pip wheel . -w dist/
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-wheels
+          path: ./dist/*.whl # The .whl file will be stored in the dist/ directory
+  build_executable:
+    name: Build Windows executable
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pipenv
+          pip install toml
+          pipenv install toml
+          pipenv install -d
+          pipenv install cx_Freeze
+          pipenv shell
+
+      - name: Build executable
+        run: |
+          pipenv run python setup_whl.py build
+
+      - name: Upload executable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: exe-windows-latest
+          path: ./build/exe.win-amd64-3.12/*
+
+  # Very useful script for platform dependent ci wheels
+  # https://cibuildwheel.pypa.io/en/stable/setup/#macos-windows-builds
