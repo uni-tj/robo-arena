@@ -40,6 +40,19 @@ class GameState(ABC):
         """Required for `frame_cache_method`"""
         return self
 
+    def blocking(
+        self, collider: Rect | Entity, mode: Literal["robot"] | Literal["bullet"]
+    ) -> bool:
+        return any(
+            (mode == "robot" and e.blocks_robot)
+            or (mode == "bullet" and e.blocks_bullet)
+            for e in self.collidingEntities(collider)
+        ) or any(
+            (mode == "robot" and b.blocks_robot)
+            or (mode == "bullet" and b.blocks_bullet)
+            for b in self.colliding_blocks(collider).values()
+        )
+
     @overload
     def collidingEntities(self, collider: Entity) -> Iterable[Entity]: ...
 
