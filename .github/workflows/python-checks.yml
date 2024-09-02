@@ -24,7 +24,6 @@ jobs:
           pipenv install pytest
           pipenv install flake8
           pipenv install black
-          pipenv install -e .
       - name: Check formatting with black
         run: |
           # fails the tests when the code is not formatted according to black

@@ -27,7 +27,7 @@ package-dir = {"" = "src"}
 version = {attr = "roboarena.__version__"}
 
 [build-system]
-requires = ["setuptools>=61.0",  "wheel", "cx_Freeze"]
+requires = ["setuptools>=61.0",  "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.cx_freeze]
