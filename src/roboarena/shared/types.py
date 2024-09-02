@@ -116,7 +116,7 @@ basic_weapon = Weapon(weapon_speed=1.5, bullet_speed=2, bullet_strength=10)
 
 type ServerGameEventType = (
     ServerSpawnRobotEvent
-    | ServerSpawnPlayerBulletEvent
+    | ServerSpawnBulletEvent
     | ServerSpawnDoorEvent
     | ServerDeleteEntityEvent
     | ServerEntityEvent
@@ -124,7 +124,7 @@ type ServerGameEventType = (
     | ServerMarkerEvent
 )
 type ServerSpawnEventType = (
-    ServerSpawnRobotEvent | ServerSpawnDoorEvent | ServerSpawnPlayerBulletEvent
+    ServerSpawnRobotEvent | ServerSpawnDoorEvent | ServerSpawnBulletEvent
 )
 type ServerEventType = (
     ServerConnectionConfirmEvent
@@ -215,8 +215,9 @@ class ServerMarkerEvent:
 
 
 @dataclass(frozen=True)
-class ServerSpawnPlayerBulletEvent:
+class ServerSpawnBulletEvent:
     id: EntityId
+    friendly: bool
     position: Vector[float]
     velocity: Vector[float]
 

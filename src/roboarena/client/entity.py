@@ -13,10 +13,10 @@ from roboarena.client.master_mixer import DoorSounds, EnemySounds, PlayerSounds
 from roboarena.server.events import EventName
 from roboarena.shared.constants import SERVER_TIMESTEP
 from roboarena.shared.entity import (
+    Bullet,
     DoorEntity,
     EnemyRobot,
     Entity,
-    PlayerBullet,
     PlayerRobot,
     PlayerRobotMoveCtx,
     SharedWeapon,
@@ -226,7 +226,7 @@ class ClientEntity(Entity, ABC):
 
 
 type ClientEntityType = (
-    ClientPlayerRobot | ClientEnemyRobot | ClientPlayerBullet | ClientDoorEntity
+    ClientPlayerRobot | ClientEnemyRobot | ClientBullet | ClientDoorEntity
 )
 
 
@@ -263,6 +263,44 @@ class ClientWeapon(SharedWeapon):
 
     def shoot(self):
         self.events.dispatch(ShotEvent())
+
+
+class ClientBullet(Bullet, ClientEntity):
+    _position: ExtrapolatedValue[Vector[float], None]
+    _velocity: PassiveRemoteValue[Vector[float]]
+
+    def __init__(
+        self,
+        game: "GameState",
+        friendly: bool,
+        position: Vector[float],
+        velocity: Vector[float],
+        last_ack: Acknoledgement,
+        t_ack: Time,
+    ) -> None:
+        super().__init__(game, friendly)
+        self._position = ExtrapolatedValue(position, last_ack, t_ack, self.move)  # type: ignore
+        self._velocity = PassiveRemoteValue(velocity)  # type: ignore
+
+    def on_server(
+        self,
+        event_name: EventName,
+        event: object,
+        last_ack: Acknoledgement,
+        t_ack: Time,
+    ):
+        match event_name, event:
+            case "position", Vector(float(), float()):
+                _event: Vector[float] = event
+                self._position.on_server(_event, last_ack, t_ack)
+            case "velocity", Vector(float(), float()):
+                _event: Vector[float] = event
+                self._velocity.on_server(_event)
+            case _:
+                raise ValueError("entity: invalid event")
+
+    def tick(self, dt: Time, t: Time):
+        self._position.tick(t, None)
 
 
 @dataclass(frozen=True)
@@ -364,43 +402,6 @@ class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
         r = 10
         center = ctx.gu2screen(self.aim)
         pygame.draw.circle(ctx.screen, "orange", center.to_tuple(), r)
-
-
-class ClientPlayerBullet(PlayerBullet, ClientEntity):
-    _position: ExtrapolatedValue[Vector[float], None]
-    _velocity: PassiveRemoteValue[Vector[float]]
-
-    def __init__(
-        self,
-        game: "GameState",
-        position: Vector[float],
-        velocity: Vector[float],
-        last_ack: Acknoledgement,
-        t_ack: Time,
-    ) -> None:
-        super().__init__(game)
-        self._position = ExtrapolatedValue(position, last_ack, t_ack, self.move)  # type: ignore
-        self._velocity = PassiveRemoteValue(velocity)  # type: ignore
-
-    def on_server(
-        self,
-        event_name: EventName,
-        event: object,
-        last_ack: Acknoledgement,
-        t_ack: Time,
-    ):
-        match event_name, event:
-            case "position", Vector(float(), float()):
-                _event: Vector[float] = event
-                self._position.on_server(_event, last_ack, t_ack)
-            case "velocity", Vector(float(), float()):
-                _event: Vector[float] = event
-                self._velocity.on_server(_event)
-            case _:
-                raise ValueError("entity: invalid event")
-
-    def tick(self, dt: Time, t: Time):
-        self._position.tick(t, None)
 
 
 class ClientEnemyRobot(EnemyRobot, ClientEntity):

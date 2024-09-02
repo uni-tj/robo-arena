@@ -81,6 +81,41 @@ class Entity(ABC):
     def tick(self, dt: Time, t: Time): ...
 
 
+bullet_texture_friendly = load_graphic("bullets/bullet-player.png")
+bullet_texture_unfriendly = load_graphic("bullets/bullet-enemy.png")
+bullet_texture_size = Vector.one()  # * 9 / 50
+
+type BulletMoveCtx = tuple[Time]
+
+
+class Bullet(Entity):
+    texture_size = bullet_texture_size
+    friendly: bool
+    blocks_robot = False
+    blocks_bullet = False
+    _position: Value[Vector[float]]
+    _velocity: Value[Vector[float]]
+    "In units/second"
+
+    def __init__(self, game: "GameState", friendly: bool) -> None:
+        super().__init__(game)
+        self.collision = CollideAroundCenter(
+            lambda: self._position.get(),
+            Rect.from_width_height(bullet_texture_size),
+        )
+        self.texture = (
+            bullet_texture_friendly if friendly else bullet_texture_unfriendly
+        )
+        self.friendly = friendly
+
+    @property
+    def position(self) -> Position:
+        return self._position.get()
+
+    def move(self, position: Vector[float], dt: Time, ctx: None) -> Vector[float]:
+        return position + self._velocity.get() * dt
+
+
 @define
 class SharedWeapon:
     texture: Surface = field(default=load_graphic("weapons/laser-gun.PNG"), init=False)
@@ -206,36 +241,6 @@ class PlayerRobot(Entity):
                 self._texture_queue.extend([PLAYER_CENTRE_TEXTURE] * 7)
 
         return chain(super().prepare_render(ctx), self.weapon.prepare_render(ctx))
-
-
-player_bullet_texture = load_graphic("bullets/bullet-player.png")
-player_bullet_texture_size = Vector.one()  # * 9 / 50
-
-type PlayerBulletMoveCtx = tuple[Time]
-
-
-class PlayerBullet(Entity):
-    texture = player_bullet_texture
-    texture_size = player_bullet_texture_size
-    blocks_robot = False
-    blocks_bullet = False
-    _position: Value[Vector[float]]
-    _velocity: Value[Vector[float]]
-    "In units/second"
-
-    def __init__(self, game: "GameState") -> None:
-        super().__init__(game)
-        self.collision = CollideAroundCenter(
-            lambda: self._position.get(),
-            Rect.from_width_height(player_bullet_texture_size),
-        )
-
-    @property
-    def position(self) -> Position:
-        return self._position.get()
-
-    def move(self, position: Vector[float], dt: Time, ctx: None) -> Vector[float]:
-        return position + self._velocity.get() * dt
 
 
 type EnemyRobotMoveCtx = tuple[Time]

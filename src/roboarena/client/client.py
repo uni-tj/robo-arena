@@ -10,11 +10,11 @@ from pygame.font import Font
 
 from roboarena.client.ambience_sound import AmbienceSound
 from roboarena.client.entity import (
+    ClientBullet,
     ClientDoorEntity,
     ClientEnemyRobot,
     ClientEntityType,
     ClientInputHandler,
-    ClientPlayerBullet,
     ClientPlayerRobot,
 )
 from roboarena.client.keys import load_keys
@@ -48,8 +48,8 @@ from roboarena.shared.types import (
     ServerGameStartEvent,
     ServerLevelUpdateEvent,
     ServerMarkerEvent,
+    ServerSpawnBulletEvent,
     ServerSpawnDoorEvent,
-    ServerSpawnPlayerBulletEvent,
     ServerSpawnRobotEvent,
     StartFrameEvent,
 )
@@ -209,9 +209,9 @@ class GameState(SharedGameState):
             case ServerSpawnDoorEvent(id, position, open):
                 entity = ClientDoorEntity(self, position, open)
                 self.entities[id] = entity
-            case ServerSpawnPlayerBulletEvent(id, position, velocity):
-                entity = ClientPlayerBullet(
-                    self, position, velocity, msg.last_ack, t_msg
+            case ServerSpawnBulletEvent(id, friendly, position, velocity):
+                entity = ClientBullet(
+                    self, friendly, position, velocity, msg.last_ack, t_msg
                 )
                 self.entities[id] = entity
             case ServerDeleteEntityEvent(id):

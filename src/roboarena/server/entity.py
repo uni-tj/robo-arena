@@ -7,11 +7,11 @@ from attrs import define, field
 
 from roboarena.server.events import Dispatch, SimpleDispatch
 from roboarena.shared.entity import (
+    Bullet,
     DoorEntity,
     EnemyRobot,
     EnemyRobotMoveCtx,
     Entity,
-    PlayerBullet,
     PlayerRobot,
     PlayerRobotMoveCtx,
     SharedWeapon,
@@ -29,8 +29,8 @@ from roboarena.shared.types import (
     Motion,
     Position,
     PygameColor,
+    ServerSpawnBulletEvent,
     ServerSpawnDoorEvent,
-    ServerSpawnPlayerBulletEvent,
     ServerSpawnRobotEvent,
     Weapon,
     basic_weapon,
@@ -111,7 +111,7 @@ class HealthController(Value[int]):
 
 
 type ServerEntityType = (
-    ServerPlayerRobot | ServerEnemyRobot | ServerPlayerBullet | ServerDoorEntity
+    ServerPlayerRobot | ServerEnemyRobot | ServerBullet | ServerDoorEntity
 )
 
 
@@ -124,6 +124,7 @@ class ServerWeapon(SharedWeapon):
     if TYPE_CHECKING:
         _game: "GameState"  # type: ignore
         _entity: ServerEntityType  # type: ignore
+    friendly: bool
     events: EventTarget[ShotEvent] = field(factory=EventTarget, init=False)
 
     _last_shot: float = field(default=0.0, init=False)
@@ -137,8 +138,9 @@ class ServerWeapon(SharedWeapon):
         self.shoot(input.mouse - self._entity.position)
 
     def shoot(self, direction: Vector[float]):
-        bullet = ServerPlayerBullet(
+        bullet = ServerBullet(
             self._game,
+            self.friendly,
             self._entity.position,
             direction.normalize() * self._weapon.bullet_speed,
             self._weapon.bullet_strength,
@@ -148,6 +150,62 @@ class ServerWeapon(SharedWeapon):
 
     def get(self) -> Weapon:
         return self._weapon
+
+
+class ServerBullet(Bullet):
+    ServerPlayerBulletPositionCtx = tuple[Time]
+    _game: "GameState"
+    _position: CalculatedValue[Vector[float], ServerPlayerBulletPositionCtx]
+    _velocity: ActiveRemoteValue[Vector[float]]
+    _strength: int
+    _hit_last_tick: set[Entity]
+
+    def __init__(
+        self,
+        game: "GameState",
+        friendly: bool,
+        position: Vector[float],
+        velocity: Vector[float],
+        strength: int,
+    ) -> None:
+        super().__init__(game, friendly)
+        self._game = game  # type: ignore
+        self._position = CalculatedValue(  # type: ignore
+            position,
+            lambda pos, ctx: self.move(pos, ctx[0], None),
+            partial(self._game.dispatch, self, "position"),
+        )
+        self._velocity = ActiveRemoteValue(  # type: ignore
+            velocity,
+            partial(self._game.dispatch, self, "velocity"),
+        )
+        self._strength = strength
+
+    def tick(self, dt: Time, t: Time):
+        self._position.tick((dt,))
+        with exceqt(OutOfLevelError, lambda: self._game.delete_entity(self)):
+            blocked = any(
+                b.blocks_bullet for b in self._game.colliding_blocks(self).values()
+            ) or any(e.blocks_bullet for e in self._game.collidingEntities(self))
+            if blocked:
+                self._game.mark(Marker(self.position, PygameColor.light_grey()))
+                return self._game.delete_entity(self)
+
+        target_type = ServerEnemyRobot if self.friendly else ServerPlayerRobot
+        hit_this_tick = set[Entity]()
+        for entity in self._game.collidingEntities(self):
+            self._game.mark(Marker(self.position, PygameColor.green()))
+            if not isinstance(entity, target_type):
+                continue
+            hit_this_tick.add(entity)
+            if entity not in self._hit_last_tick:
+                entity.health.hit(self._strength)
+        self._hit_last_tick = hit_this_tick
+
+    def to_event(self, entity_id: EntityId) -> ServerSpawnBulletEvent:
+        return ServerSpawnBulletEvent(
+            entity_id, self.friendly, self._position.get(), self._velocity.get()
+        )
 
 
 class ServerPlayerRobot(PlayerRobot, ServerInputHandler):
@@ -171,7 +229,7 @@ class ServerPlayerRobot(PlayerRobot, ServerInputHandler):
         self.health = HealthController(health, partial(dispatch, "health"))  # type: ignore
         self.motion = CalculatedValue(motion, self.move, partial(dispatch, "motion"))  # type: ignore
         self.color = ActiveRemoteValue(color, partial(dispatch, "color"))  # type: ignore
-        self.weapon = ServerWeapon(game, self, basic_weapon, lambda: self.aim)  # type: ignore
+        self.weapon = ServerWeapon(game, self, basic_weapon, lambda: self.aim, True)  # type: ignore
 
     def on_input(self, input: Input, dt: Time, t: Time):
         self.motion.tick((input, dt))
@@ -188,60 +246,6 @@ class ServerPlayerRobot(PlayerRobot, ServerInputHandler):
             self.motion.get(),
             self.color.get(),
             self.weapon.get(),
-        )
-
-
-class ServerPlayerBullet(PlayerBullet):
-    ServerPlayerBulletPositionCtx = tuple[Time]
-    _game: "GameState"
-    _position: CalculatedValue[Vector[float], ServerPlayerBulletPositionCtx]
-    _velocity: ActiveRemoteValue[Vector[float]]
-    _strength: int
-    _hit_last_tick: set[Entity]
-
-    def __init__(
-        self,
-        game: "GameState",
-        position: Vector[float],
-        velocity: Vector[float],
-        strength: int,
-    ) -> None:
-        super().__init__(game)
-        self._game = game  # type: ignore
-        self._position = CalculatedValue(  # type: ignore
-            position,
-            lambda pos, ctx: self.move(pos, ctx[0], None),
-            partial(self._game.dispatch, self, "position"),
-        )
-        self._velocity = ActiveRemoteValue(  # type: ignore
-            velocity,
-            partial(self._game.dispatch, self, "velocity"),
-        )
-        self._strength = strength
-
-    def tick(self, dt: Time, t: Time):
-        self._position.tick((dt,))
-        with exceqt(OutOfLevelError, lambda: self._game.delete_entity(self)):
-            blocked = any(
-                b.blocks_bullet for b in self._game.colliding_blocks(self).values()
-            ) or any(e.blocks_bullet for e in self._game.collidingEntities(self))
-            if blocked:
-                self._game.mark(Marker(self.position, PygameColor.light_grey()))
-                return self._game.delete_entity(self)
-
-        hit_this_tick = set[Entity]()
-        for entity in self._game.collidingEntities(self):
-            self._game.mark(Marker(self.position, PygameColor.green()))
-            if not isinstance(entity, ServerEnemyRobot):
-                continue
-            hit_this_tick.add(entity)
-            if entity not in self._hit_last_tick:
-                entity.health.hit(self._strength)
-        self._hit_last_tick = hit_this_tick
-
-    def to_event(self, entity_id: EntityId) -> ServerSpawnPlayerBulletEvent:
-        return ServerSpawnPlayerBulletEvent(
-            entity_id, self._position.get(), self._velocity.get()
         )
 
 
@@ -268,7 +272,7 @@ class ServerEnemyRobot(EnemyRobot):
             motion, self.move, partial(game.dispatch, self, "motion")
         )
         self.color = ActiveRemoteValue(color, partial(game.dispatch, self, "color"))  # type: ignore
-        self.weapon = ServerWeapon(game, self, weapon, lambda: Vector(0.0, 0.0))  # type: ignore
+        self.weapon = ServerWeapon(game, self, weapon, lambda: Vector(0.0, 0.0), False)  # type: ignore # noqa B950
         self.events = EventTarget()
 
         self.health.events.add_listener(DeathEvent, self.events.dispatch)
