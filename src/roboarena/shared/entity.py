@@ -106,7 +106,7 @@ class PlayerRobot(Entity):
     def __init__(self, game: "GameState") -> None:
         super().__init__(game)
         self.collision = CollideAroundCenter(  # type: ignore
-            lambda: self.motion.get()[0], Rect.from_width_height(Vector.one())
+            lambda: self.motion.get()[0], Rect.from_size(Vector.from_scalar(0.95))
         )
 
     @property
@@ -196,7 +196,7 @@ class EnemyRobot(Entity):
     def __init__(self, game: "GameState", motion: Motion) -> None:
         super().__init__(game)
         self.collision = CollideAroundCenter(
-            lambda: self.motion.get()[0], Rect.from_width_height(Vector.one())
+            lambda: self.motion.get()[0], Rect.from_size(Vector.from_scalar(0.95))
         )
         self.initial_position = motion[0]
 
