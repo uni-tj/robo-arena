@@ -134,6 +134,7 @@ class GameState(SharedGameState):
     _client: "Client"
     _screen: Surface
     _renderer: GameRenderer
+    game_ui: GameUI
     master_mixer: MasterMixer
     _ambience_sound: AmbienceSound
     _ack: Counter
@@ -159,7 +160,6 @@ class GameState(SharedGameState):
         self._screen = screen
         self._renderer = GameRenderer(screen, self)
         self.master_mixer = master_mixer
-        self.game_ui = GameUI(LaserGun())
         self._ack = counter()
         self._client_id = client_id
         self._entity_id = start.client_entity
@@ -184,6 +184,7 @@ class GameState(SharedGameState):
             )
             self.entities[spawn.id] = entity
             self._entity = entity
+            self.game_ui = GameUI(LaserGun(), self._entity.health.get())
             self._logger.debug(f"intialized client entity: {self._entity}")
         self._logger.debug(f"initialized all entities: {self.entities}")
 
