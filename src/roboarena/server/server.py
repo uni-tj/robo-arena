@@ -23,7 +23,11 @@ from roboarena.server.level_generation.level_generator import (
 from roboarena.server.level_generation.tileset import tileset
 from roboarena.server.room import Room
 from roboarena.shared.block import floor_door, floor_room_spawn, room_blocks
-from roboarena.shared.constants import SERVER_FRAMES_PER_TIMESTEP, SERVER_TIMESTEP
+from roboarena.shared.constants import (
+    SERVER_FRAMES_PER_TIMESTEP,
+    SERVER_TIMESTEP,
+    PlayerConstants,
+)
 from roboarena.shared.custom_threading import Atom
 from roboarena.shared.game import GameState as SharedGameState
 from roboarena.shared.network import IpV4, Network, Receiver
@@ -242,7 +246,7 @@ class GameState(SharedGameState):
         entity_id = gen_id(self.entities.keys())
         entity = ServerPlayerRobot(
             self,
-            100,
+            PlayerConstants.MAX_HEALTH,
             (Vector(12.5, 12.5), Vector(1.0, 0.0)),
             Color(0, 255, 0),
             self.dispatch_factory(None, entity_id),

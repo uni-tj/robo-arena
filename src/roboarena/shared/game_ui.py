@@ -21,8 +21,6 @@ HEALTHBAR_BACKGROUND_TEXTURE = load_graphic("gameUI/healthbar/healthbar-backgrou
 
 WEAPON_UI_BACKGROUND_TEXTURE = load_graphic("gameUI/weaponUI/weaponUI-background.png")
 
-MAX_HEALTH = 5
-
 
 class Healthbar:
 
@@ -38,20 +36,20 @@ class Healthbar:
         self.max_health = max_health
         self.texture = self.render_healthbar(max_health)
 
-    def render_healthbar(self, health: float) -> Surface:
+    def render_healthbar(self, health: int) -> Surface:
         healthbar = self.background_texture.copy()
         for heart in range(0, self.max_health):
-            if health >= 1:
+            if health >= 2:
                 healthbar.blit(self.heart_full_texture, (heart * 500, 0))
-                health -= 1
-            elif health == 0.5:
+                health -= 2
+            elif health == 1:
                 healthbar.blit(self.heart_half_texture, (heart * 500, 0))
-                health -= 0.5
+                health -= 1
             else:
                 healthbar.blit(self.heart_empty_texture, (heart * 500, 0))
         return healthbar
 
-    def update_healthbar(self, health: float) -> None:
+    def update_healthbar(self, health: int) -> None:
         self.texture = self.render_healthbar(health)
 
 
@@ -85,8 +83,8 @@ class GameUI:
     healthbar: Healthbar
     weapon_ui: WeaponUI
 
-    def __init__(self, current_weapon: Weapon) -> None:
-        self.healthbar = Healthbar(MAX_HEALTH)
+    def __init__(self, current_weapon: Weapon, current_health: int) -> None:
+        self.healthbar = Healthbar(current_health)
         self.weapon_ui = WeaponUI(current_weapon)
 
     def texture_size(self, texture: Surface) -> Vector[float]:
@@ -106,7 +104,7 @@ class GameUI:
         ctx.screen.blit(scaled_healthbar, (10, 10))
         ctx.screen.blit(weapon_ui_scaled, weapon_ui_pos_px.to_tuple())
 
-    def update_health(self, health: float) -> None:
+    def update_health(self, health: int) -> None:
         self.healthbar.update_healthbar(health)
 
     def update_weapon(self, weapon: Weapon) -> None:

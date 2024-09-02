@@ -8,3 +8,5 @@ VSYNC = True
 class PlayerConstants:
     ACCELEARTE = 0.6
     DECELERATE = 0.1
+
+    MAX_HEALTH = 10
