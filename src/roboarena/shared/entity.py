@@ -45,7 +45,7 @@ class CollideAroundCenter(Collidable):
     def hitbox(self) -> Rect:
         return self._rect.centerAround(self._center())
 
-    def hitbox_around(self, center: Vector[float]) -> Rect:
+    def hitbox_at(self, center: Vector[float]) -> Rect:
         return self._rect.centerAround(center)
 
 
@@ -115,38 +115,36 @@ class PlayerRobot(Entity):
 
     def move(self, current: Motion, ctx: PlayerRobotMoveCtx) -> Motion:
         input, dt = ctx
-        cur_position, cur_orientation = current
+        cur_position, cur_velocity = current
 
-        new_orientation = Vector[float](0.0, 0.0)
+        acceleration = Vector(0.0, 0.0)
         if input.move_right:
-            new_orientation += Vector(PlayerConstants.ACCELEARTE, 0.0)
+            acceleration += Vector(1, 0.0)
         if input.move_down:
-            new_orientation += Vector(0.0, PlayerConstants.ACCELEARTE)
+            acceleration += Vector(0.0, 1)
         if input.move_left:
-            new_orientation += Vector(-PlayerConstants.ACCELEARTE, 0.0)
+            acceleration += Vector(-1, 0.0)
         if input.move_up:
-            new_orientation += Vector(0.0, -PlayerConstants.ACCELEARTE)
-        if new_orientation.length() != 0.0:
-            new_orientation = new_orientation.normalize()
-            new_orientation = new_orientation + cur_orientation
-        else:
-            new_orientation = cur_orientation * PlayerConstants.DECELERATE
+            acceleration += Vector(0.0, -1)
+        if acceleration != Vector(0.0, 0.0):
+            acceleration = acceleration.normalize() * PlayerConstants.ACCELEARTE
 
-        if new_orientation.length() > PlayerConstants.MAX_SPEED:
-            new_orientation = new_orientation.normalize()
-            new_orientation *= PlayerConstants.MAX_SPEED
+        new_velocity = cur_velocity * (1 - PlayerConstants.DECELERATE) + acceleration
+        if new_velocity.length() < 0.1:
+            new_velocity = Vector(0.0, 0.0)
 
-        if new_orientation.length() < 0.1:
-            new_orientation = Vector(0.0, 0.0)
-
-        new_position = cur_position + new_orientation * dt
-        new_hitbox = self.collision.hitbox_around(new_position)
-        blocked = any(
-            b.blocks_robot for b in self._game.colliding_blocks(new_hitbox).values()
-        ) or any(e.blocks_robot for e in self._game.collidingEntities(new_hitbox))
-        if blocked:
-            return (cur_position, Vector.zero().to_float())
-        return (new_position, new_orientation)
+        new_position = cur_position + new_velocity * dt
+        if not self._game.blocking(self.collision.hitbox_at(new_position), "robot"):
+            return (new_position, new_velocity)
+        new_velocity_x = new_velocity * Vector(1, 0)
+        new_position_x = cur_position + new_velocity_x * dt
+        if not self._game.blocking(self.collision.hitbox_at(new_position_x), "robot"):
+            return (new_position_x, new_velocity_x)
+        new_velocity_y = new_velocity * Vector(0, 1)
+        new_position_y = cur_position + new_velocity_y * dt
+        if not self._game.blocking(self.collision.hitbox_at(new_position_y), "robot"):
+            return (new_position_y, new_velocity_y)
+        return (cur_position, Vector(0.0, 0.0))
 
 
 player_bullet_texture = load_graphic("bullets/bullet-laser.png")

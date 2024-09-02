@@ -6,6 +6,5 @@ VSYNC = True
 
 
 class PlayerConstants:
-    MAX_SPEED = 5
-    ACCELEARTE = 0.7
-    DECELERATE = 0.9
+    ACCELEARTE = 0.6
+    DECELERATE = 0.1

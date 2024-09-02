@@ -5,6 +5,14 @@ from typing import Callable, Sequence, overload
 from pygame import Vector2
 
 
+def sign(x: int | float) -> int:
+    if x > 0:
+        return 1
+    if x < 1:
+        return -1
+    return 0
+
+
 @dataclass(frozen=True)
 class Vector[T: (int, float)]:
     x: T
@@ -130,6 +138,9 @@ class Vector[T: (int, float)]:
 
     def normalize(self) -> "Vector[float]":
         return self / self.length()
+
+    def sign(self) -> "Vector[int]":
+        return Vector(sign(self.x), sign(self.y))
 
     def distance_to(self, to: "Vector[T]") -> float:
         return (to - self).length()  # type: ignore

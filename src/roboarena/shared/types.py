@@ -19,8 +19,8 @@ type EntityId = int
 type ClientId = int
 
 type Position = Vector[float]
-type Orientation = Vector[float]
-type Motion = tuple[Position, Orientation]
+type Velocity = Vector[float]
+type Motion = tuple[Position, Velocity]
 type Color = pygame.Color
 
 type Entities = dict[EntityId, "Entity"]
