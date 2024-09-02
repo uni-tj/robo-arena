@@ -170,7 +170,7 @@ class PlayerRobot(Entity):
         return super().prepare_render(ctx)
 
 
-player_bullet_texture = load_graphic("bullets/bullet-laser.png")
+player_bullet_texture = load_graphic("bullets/bullet-player.png")
 player_bullet_texture_size = Vector.one()  # * 9 / 50
 
 type PlayerBulletMoveCtx = tuple[Time]

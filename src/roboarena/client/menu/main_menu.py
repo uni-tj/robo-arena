@@ -14,10 +14,10 @@ from roboarena.shared.utils.vector import Vector
 if TYPE_CHECKING:
     from roboarena.client.client import Client
 
-START_BUTTON_UH_TEXTURE = load_graphic("buttons/button-play-unhover.png")
-START_BUTTON_H_TEXTURE = load_graphic("buttons/button-play-hover.png")
-SETTINGS_BUTTON_UH_TEXTURE = load_graphic("buttons/button-settings-unhover.png")
-SETTINGS_BUTTON_H_TEXTURE = load_graphic("buttons/button-settings-hover.png")
+START_BUTTON_UH_TEXTURE = load_graphic("buttons/button-play-uh.png")
+START_BUTTON_H_TEXTURE = load_graphic("buttons/button-play-h.png")
+SETTINGS_BUTTON_UH_TEXTURE = load_graphic("buttons/button-settings-uh.png")
+SETTINGS_BUTTON_H_TEXTURE = load_graphic("buttons/button-settings-h.png")
 
 MENU_MUSIC_PATH = sound_path("menu/menu-music.mp3")
 

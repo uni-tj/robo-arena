@@ -40,13 +40,13 @@ class Healthbar:
         healthbar = self.background_texture.copy()
         for heart in range(0, self.max_health):
             if health >= 2:
-                healthbar.blit(self.heart_full_texture, (heart * 500, 0))
+                healthbar.blit(self.heart_full_texture, (12 + heart * 50, 13))
                 health -= 2
             elif health == 1:
-                healthbar.blit(self.heart_half_texture, (heart * 500, 0))
+                healthbar.blit(self.heart_half_texture, (12 + heart * 50, 13))
                 health -= 1
             else:
-                healthbar.blit(self.heart_empty_texture, (heart * 500, 0))
+                healthbar.blit(self.heart_empty_texture, (12 + heart * 50, 13))
         return healthbar
 
     def update_healthbar(self, health: int) -> None:
@@ -64,7 +64,7 @@ class WeaponUI:
     def render_weapon_ui(self, weapon: Weapon) -> Surface:
         weapon_ui = self.background_texture.copy()
         scaled_weapon_texture = transform.scale(
-            weapon.texture, (weapon_ui.get_height() * 0.7, weapon_ui.get_height() * 0.7)
+            weapon.texture, (weapon_ui.get_height() * 0.6, weapon_ui.get_height() * 0.6)
         )
         weapon_pos = (
             Vector.from_tuple(weapon_ui.get_size()) / 2

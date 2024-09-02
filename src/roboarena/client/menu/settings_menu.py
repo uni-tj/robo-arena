@@ -13,18 +13,18 @@ from roboarena.shared.utils.vector import Vector
 if TYPE_CHECKING:
     from roboarena.client.client import Client
 
-BACK_BUTTON_UH_TEXTURE = load_graphic("buttons/button-back-unhover.png")
-BACK_BUTTON_H_TEXTURE = load_graphic("buttons/button-back-hover.png")
+BACK_BUTTON_UH_TEXTURE = load_graphic("buttons/button-back-uh.png")
+BACK_BUTTON_H_TEXTURE = load_graphic("buttons/button-back-h.png")
 SOUND_BUTTON_MUTE_TEXTURE = load_graphic("buttons/button-sound-mute.png")
 SOUND_BUTTON_UNMUTE_TEXTURE = load_graphic("buttons/button-sound-unmute.png")
-UP_BUTTON_UH_TEXTURE = load_graphic("buttons/button-upkey-unhover.png")
-UP_BUTTON_H_TEXTURE = load_graphic("buttons/button-upkey-hover.png")
-DOWN_BUTTON_UH_TEXTURE = load_graphic("buttons/button-downkey-unhover.png")
-DOWN_BUTTON_H_TEXTURE = load_graphic("buttons/button-downkey-hover.png")
-LEFT_BUTTON_UH_TEXTURE = load_graphic("buttons/button-leftkey-unhover.png")
-LEFT_BUTTON_H_TEXTURE = load_graphic("buttons/button-leftkey-hover.png")
-RIGHT_BUTTON_UH_TEXTURE = load_graphic("buttons/button-rightkey-unhover.png")
-RIGHT_BUTTON_H_TEXTURE = load_graphic("buttons/button-rightkey-hover.png")
+UP_BUTTON_UH_TEXTURE = load_graphic("buttons/button-upkey-uh.png")
+UP_BUTTON_H_TEXTURE = load_graphic("buttons/button-upkey-h.png")
+DOWN_BUTTON_UH_TEXTURE = load_graphic("buttons/button-downkey-uh.png")
+DOWN_BUTTON_H_TEXTURE = load_graphic("buttons/button-downkey-h.png")
+LEFT_BUTTON_UH_TEXTURE = load_graphic("buttons/button-leftkey-uh.png")
+LEFT_BUTTON_H_TEXTURE = load_graphic("buttons/button-leftkey-h.png")
+RIGHT_BUTTON_UH_TEXTURE = load_graphic("buttons/button-rightkey-uh.png")
+RIGHT_BUTTON_H_TEXTURE = load_graphic("buttons/button-rightkey-h.png")
 
 
 class SettingsMenu(Menu):
