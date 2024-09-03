@@ -55,7 +55,7 @@ class MainMenu(Menu):
         }
 
         text_fields: dict[str, Text] = {
-            "header": Text("RoboArena", 100, Vector(50, 10))
+            "header": Text("I N F I N I T U M", 200, Vector(50, 10))
         }
 
         super().__init__(

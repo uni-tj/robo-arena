@@ -103,8 +103,10 @@ class SettingsMenu(Menu):
         }
 
         text_fields: dict[str, Text] = {
-            "header": Text("  Settings  ", 100, Vector(50, 5)),
-            "info_mute": Text("  Toggle sound  ", 100, Vector(50, 15)),
+            "header": Text("          Settings          ", 100, Vector(50, 5)),
+            "info_mute": Text(
+                "              Toggle sound              ", 100, Vector(50, 15)
+            ),
             "info_keys": Text(
                 "Click button and hit key to change key binding", 100, Vector(50, 35)
             ),
