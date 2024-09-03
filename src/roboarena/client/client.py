@@ -1,6 +1,7 @@
 import functools
 import logging
 from collections import deque
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 import pygame
@@ -49,6 +50,7 @@ from roboarena.shared.types import (
     ServerConnectionConfirmEvent,
     ServerDeleteEntityEvent,
     ServerEntityEvent,
+    ServerGameEndEvent,
     ServerGameEvent,
     ServerGameStartEvent,
     ServerLevelUpdateEvent,
@@ -77,6 +79,11 @@ def setup_font() -> Font:
     pygame.font.init
     default_font = pygame.font.get_default_font()
     return pygame.font.SysFont(default_font, 48)
+
+
+@dataclass(frozen=True)
+class Ended:
+    score: int
 
 
 class GameOverState:
@@ -202,7 +209,9 @@ class GameState(SharedGameState):
 
         self._camera_pos = CameraPosition(self._entity.position)
 
-    def handle(self, t_msg: Time, msg: EventType):
+    def handle(self, t_msg: Time, msg: EventType) -> None | Ended:
+        if isinstance(msg, ServerGameEndEvent):
+            return Ended(round(self._entity.position.length()))
         if not isinstance(msg, ServerGameEvent):
             self._logger.error(f"Unexpected event: {msg}")
             raise ValueError(f"Unexpected event: {msg}")
@@ -260,7 +269,7 @@ class GameState(SharedGameState):
             mouse=mouse_pos_gu,
         )
 
-    def loop(self) -> Stopped:
+    def loop(self) -> Stopped | Ended:
         self._logger.debug("Enterered loop")
         clock = PreciseClock(NetworkConstants.CLIENT_TIMESTEP)
         _ambience_sound = AmbienceSound(self.master_mixer)
@@ -276,7 +285,9 @@ class GameState(SharedGameState):
             self.events.dispatch(StartFrameEvent())
 
             for t_msg, msg in self._client.receiver.receive():
-                self.handle(t_msg, msg)
+                handle_result = self.handle(t_msg, msg)
+                if isinstance(handle_result, Ended):
+                    return handle_result
 
             input = self.get_input(dt)
             ack = self.dispatch(ClientInputEvent(input, dt))
@@ -333,53 +344,66 @@ class Client(Stoppable):
             vsync=int(NetworkConstants.VSYNC),
         )
 
-        menu = MainMenu(screen, self, self.master_mixer)
-        menu.events.add_listener(QuitEvent, self.events.dispatch)
-        if isinstance(menu.loop(), Stopped):
-            return Stopped()
-
-        self.dispatch(ClientConnectionRequestEvent(self.ip))
-        # wait for connection confirmation
-        client_id: None | ClientId = None
-        while client_id is None:
-            if self.stopped.get():
+        last_score: int | None = None
+        while True:
+            # use last_score as menu will use it in the future
+            last_score  # type: ignore
+            menu = MainMenu(screen, self, self.master_mixer)
+            menu.events.add_listener(QuitEvent, self.events.dispatch)
+            if isinstance(menu.loop(), Stopped):
                 return Stopped()
-            arrived = self.network.receive_one(self.ip)
-            if arrived is None:
-                continue
-            _, msg = arrived
-            if not isinstance(msg, ServerConnectionConfirmEvent):
-                self._logger.critical(
-                    unexpected_evt("ServerConnectionConfirmEvent", msg)
-                )
-                raise ValueError(unexpected_evt("ServerConnectionConfirmEvent", msg))
-            # handle connection confirm
-            client_id = msg.client_id
-        self._logger.info("Conntected to server")
 
-        self.dispatch(ClientLobbyReadyEvent(client_id))
-        # wait for game start
-        start: None | Arrived[ServerGameStartEvent] = None
-        while start is None:
-            if self.stopped.get():
-                return Stopped()
-            arrived = self.network.receive_one(self.ip)
-            if arrived is None:
-                continue
-            t_msg, msg = arrived
-            if not isinstance(msg, ServerGameStartEvent):
-                self._logger.critical(
-                    unexpected_evt("ServerConnectionConfirmEvent", msg)
-                )
-                raise ValueError(unexpected_evt("ServerConnectionConfirmEvent", msg))
-            start = t_msg, msg
-        self._logger.info("Started game")
+            self.dispatch(ClientConnectionRequestEvent(self.ip))
+            # wait for connection confirmation
+            client_id: None | ClientId = None
+            while client_id is None:
+                if self.stopped.get():
+                    return Stopped()
+                arrived = self.network.receive_one(self.ip)
+                if arrived is None:
+                    continue
+                _, msg = arrived
+                if not isinstance(msg, ServerConnectionConfirmEvent):
+                    self._logger.critical(
+                        unexpected_evt("ServerConnectionConfirmEvent", msg)
+                    )
+                    raise ValueError(
+                        unexpected_evt("ServerConnectionConfirmEvent", msg)
+                    )
+                # handle connection confirm
+                client_id = msg.client_id
+            self._logger.info("Conntected to server")
 
-        game_state = GameState(
-            self, screen, client_id, start[0], start[1], self.master_mixer
-        )
-        game_state.events.add_listener(QuitEvent, self.events.dispatch)
-        return game_state.loop()
+            self.dispatch(ClientLobbyReadyEvent(client_id))
+            # wait for game start
+            start: None | Arrived[ServerGameStartEvent] = None
+            while start is None:
+                if self.stopped.get():
+                    return Stopped()
+                arrived = self.network.receive_one(self.ip)
+                if arrived is None:
+                    continue
+                t_msg, msg = arrived
+                if not isinstance(msg, ServerGameStartEvent):
+                    self._logger.critical(
+                        unexpected_evt("ServerConnectionConfirmEvent", msg)
+                    )
+                    raise ValueError(
+                        unexpected_evt("ServerConnectionConfirmEvent", msg)
+                    )
+                start = t_msg, msg
+            self._logger.info("Started game")
+
+            game = GameState(
+                self, screen, client_id, start[0], start[1], self.master_mixer
+            )
+            game.events.add_listener(QuitEvent, self.events.dispatch)
+            gmae_result = game.loop()
+            if isinstance(gmae_result, Stopped):
+                self._logger.info("Stopped game")
+                return gmae_result
+            self._logger.info(f"Ended game with score {gmae_result.score}")
+            last_score = gmae_result.score
 
     def stop(self) -> None:
         return self.stopped.set(True)

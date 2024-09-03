@@ -9,10 +9,7 @@ from bidict import bidict
 from pygame import Color
 from pygame.time import Clock
 
-from roboarena.server.entity import (
-    ServerInputHandler,
-    ServerPlayerRobot,
-)
+from roboarena.server.entity import ServerPlayerRobot
 from roboarena.server.events import EventBuffer, EventName
 from roboarena.server.level_generation.level_generator import (
     LevelGenerator,
@@ -42,6 +39,7 @@ from roboarena.shared.types import (
     ServerDeleteEntityEvent,
     ServerEntityEvent,
     ServerEntityType,
+    ServerGameEndEvent,
     ServerGameEvent,
     ServerGameEventType,
     ServerGameStartEvent,
@@ -67,6 +65,11 @@ if TYPE_CHECKING:
     from roboarena.server.level_generation.level_generator import Level
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class Ended:
+    pass
 
 
 class LobbyState:
@@ -113,7 +116,7 @@ class GameState(SharedGameState):
         ip: IpV4
         last_ack: Acknoledgement
         entity_id: EntityId
-        entity: ServerInputHandler
+        entity: ServerPlayerRobot
         events: EventBuffer[ServerGameEventType] = field(
             default_factory=EventBuffer, init=False
         )
@@ -261,13 +264,17 @@ class GameState(SharedGameState):
         self.markers_vect += markers
         self._dispatch(None, f"markvect/{uuid4()}", ServerMarkVectEvent(markers))
 
-    def loop(self) -> Stopped:
+    def loop(self) -> Stopped | Ended:
         last_t = get_time()
         clock = Clock()
 
         while True:
             if self._server.stopped.get():
                 return Stopped()
+            if all(c.entity.health.get() <= 0 for c in self._clients.values()):
+                for client in self._clients.values():
+                    self._server.network.send(client.ip, ServerGameEndEvent())
+                return Ended()
 
             # init update
             t_update = get_time()
@@ -333,14 +340,20 @@ class Server(Stoppable):
         self.receiver = Receiver(network, self.ip)
         self.stopped = Atom(False)
 
-    def loop(self) -> None:
-        clients = LobbyState(self).loop()
-        self._logger.info("stopped lobby")
-        if isinstance(clients, Stopped):
-            return
-        self._logger.info("starting game")
-        GameState(self, clients).loop()
-        self._logger.info("stopped game")
+    def loop(self) -> Stopped:
+        while True:
+            self._logger.info("starting lobby")
+            clients = LobbyState(self).loop()
+            self._logger.info("stopped lobby")
+            if isinstance(clients, Stopped):
+                return clients
+
+            self._logger.info("starting game")
+            result = GameState(self, clients).loop()
+            if isinstance(result, Stopped):
+                self._logger.info("stopped game")
+                return result
+            self._logger.info("ended game")
 
     def stop(self) -> None:
         self.stopped.set(True)

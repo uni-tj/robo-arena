@@ -199,6 +199,7 @@ type ServerEventType = (
     ServerConnectionConfirmEvent
     | ServerGameStartEvent
     | ServerGameEvent[ServerGameEventType]
+    | ServerGameEndEvent
 )
 type ClientGameEventType = ClientInputEvent
 type ClientEventType = (
@@ -242,6 +243,11 @@ class ServerGameStartEvent:
 class ServerGameEvent[Evt]:
     last_ack: Acknoledgement
     event: Evt
+
+
+@dataclass(frozen=True)
+class ServerGameEndEvent:
+    pass
 
 
 @dataclass(frozen=True)
