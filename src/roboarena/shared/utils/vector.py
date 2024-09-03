@@ -161,6 +161,21 @@ class Vector[T: (int, float)]:
         return Vector(int(self.x), int(self.y))
 
     @staticmethod
+    def dot[U: (int, float)](v1: "Vector[U]", v2: "Vector[U]") -> U:
+        return v1.x * v2.x + v1.y * v2.y
+
+    @staticmethod
+    def angle_90(v1: "Vector[int | float]", v2: "Vector[int | float]") -> float:
+        return math.acos(Vector.dot(v1, v2) / (v1.length() * v2.length()))
+
+    @staticmethod
+    def angle(v1: "Vector[int | float]", v2: "Vector[int | float]") -> float:
+        """Returns the clockwise angle from v1 to v2 in [-pi, pi]"""
+        dot = Vector.dot(v1, v2)
+        det = v1.x * v2.y - v1.y * v2.x
+        return math.atan2(det, dot)
+
+    @staticmethod
     def zero() -> "Vector[float]":
         return Vector(0, 0)
 

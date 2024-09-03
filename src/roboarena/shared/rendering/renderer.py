@@ -5,6 +5,7 @@ from collections import defaultdict, deque
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from functools import cache, cached_property
+from itertools import chain
 from math import ceil, floor, nan
 from typing import TYPE_CHECKING
 
@@ -280,7 +281,7 @@ class GameRenderer(Renderer):
     def _prepare_render_entities(
         self, ctx: RenderCtx, entities: list["Entity"]
     ) -> Iterable[RenderInfo]:
-        return (entity.prepare_render(ctx) for entity in entities)
+        return chain(*(entity.prepare_render(ctx) for entity in entities))
 
     def _render_ui(self, ctx: RenderCtx) -> None:
         self._game.game_ui.render(ctx)

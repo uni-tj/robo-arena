@@ -16,6 +16,7 @@ import numpy as np
 import pygame
 from attrs import define
 from numpy.typing import NDArray
+from pygame import Surface
 
 from roboarena.shared.time import Time, get_time
 from roboarena.shared.types import StartFrameEvent
@@ -221,6 +222,13 @@ def gradientRect(
         colour_rect, target_rect.size
     )
     window.blit(colour_rect, target_rect)
+
+
+def rotate(surface: Surface, angle: float, pivot: tuple[int, int]) -> Surface:
+    w, h = surface.get_size()
+    surface2 = Surface((2 * w, 2 * h), pygame.SRCALPHA)
+    surface2.blit(surface, (w - pivot[0], h - pivot[1]))
+    return pygame.transform.rotate(surface2, angle)
 
 
 def graphic_path(path: str) -> str:

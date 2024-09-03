@@ -19,6 +19,7 @@ from roboarena.shared.entity import (
     PlayerBullet,
     PlayerRobot,
     PlayerRobotMoveCtx,
+    SharedWeapon,
     Value,
     interpolateMotion,
 )
@@ -234,12 +235,12 @@ class ShotEvent:
 
 
 @define
-class ClientWeapon:
-    _game: "GameState"
-    _entity: ClientEntityType
+class ClientWeapon(SharedWeapon):
+    if TYPE_CHECKING:
+        _game: "GameState"  # type: ignore
+        _entity: ClientEntityType  # type: ignore
     events: EventTarget[ShotEvent] = field(factory=EventTarget, init=False)
 
-    _weapon: Weapon
     _last_shot: float = field(default=0.0, init=False)
     """
     The time the last shot was fired.
@@ -289,7 +290,7 @@ class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
         self.health = PassiveRemoteValue(health)  # type: ignore
         self.motion = PredictedValue(motion, self.move)  # type: ignore
         self.color = PassiveRemoteValue(color)  # type: ignore
-        self.weapon = ClientWeapon(game, self, weapon)
+        self.weapon = ClientWeapon(game, self, weapon, lambda: self.aim)  # type: ignore
         self.aim = Vector(0, 0)
         self.events = EventTarget()
         self._player_sounds = PlayerSounds(game.master_mixer)
@@ -424,7 +425,7 @@ class ClientEnemyRobot(EnemyRobot, ClientEntity):
         self.health = PassiveRemoteValue(health)  # type: ignore
         self.motion = InterpolatedValue(motion, last_ack, t_ack, interpolateMotion)  # type: ignore
         self.color = PassiveRemoteValue(color)  # type: ignore
-        self.weapon = ClientWeapon(game, self, weapon)
+        self.weapon = ClientWeapon(game, self, weapon, lambda: Vector(0.0, 0.0))  # type: ignore
         self.events = EventTarget()
         self._enemy_sounds = EnemySounds(game.master_mixer)
 

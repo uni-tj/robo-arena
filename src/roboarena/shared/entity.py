@@ -1,17 +1,20 @@
 import logging
 from abc import ABC, abstractmethod
 from collections import deque
+from collections.abc import Iterable
+from itertools import chain
+from math import copysign, degrees
 from typing import TYPE_CHECKING, Callable
 
 import pygame
-from attrs import define
+from attrs import define, field
 from pygame import Surface
 
 from roboarena.shared.constants import PlayerConstants
 from roboarena.shared.rendering.util import size_from_texture_width
 from roboarena.shared.time import Time
-from roboarena.shared.types import Color, Input, Motion, Position
-from roboarena.shared.util import load_graphic
+from roboarena.shared.types import Color, Input, Motion, Position, Weapon
+from roboarena.shared.util import load_graphic, rotate
 from roboarena.shared.utils.rect import Rect
 from roboarena.shared.utils.vector import Vector
 
@@ -66,16 +69,50 @@ class Entity(ABC):
     @abstractmethod
     def position(self) -> Position: ...
 
-    def prepare_render(self, ctx: "RenderCtx") -> "RenderInfo":
+    def prepare_render(self, ctx: "RenderCtx") -> Iterable["RenderInfo"]:
         scaled_texture = ctx.scale_gu(self.texture, self.texture_size)
         # Simulate physically square base surface by offsetting
         # by half width to bottom
         bottom_right_gu = self.position + (self.texture_size.x / 2)
         top_left_gu = bottom_right_gu - self.texture_size
-        return scaled_texture, ctx.gu2screen(top_left_gu).to_tuple()
+        yield scaled_texture, ctx.gu2screen(top_left_gu).to_tuple()
 
     @abstractmethod
     def tick(self, dt: Time, t: Time): ...
+
+
+@define
+class SharedWeapon:
+    texture: Surface = field(default=load_graphic("weapons/laser-gun.PNG"), init=False)
+    texture_size: Vector[float] = field(
+        default=size_from_texture_width(
+            load_graphic("weapons/laser-gun.PNG"), width=0.75
+        ),
+        init=False,
+    )
+    _game: "GameState"
+    _entity: Entity
+    _weapon: Weapon
+    _aim: Callable[[], Position]
+
+    def prepare_render(self, ctx: "RenderCtx") -> Iterable["RenderInfo"]:
+        angle = degrees(Vector.angle(self._aim() - self._entity.position, Vector(1, 0)))
+        scaled_texture = ctx.scale_gu(self.texture, self.texture_size)
+        rotated_texture = rotate(
+            scaled_texture,
+            (90 - abs(abs(angle) - 90)) * copysign(1, angle),
+            (0, scaled_texture.get_height() // 2),
+        )
+        flipped_texture = (
+            pygame.transform.flip(rotated_texture, flip_x=True, flip_y=False)
+            if abs(angle) > 90
+            else rotated_texture
+        )
+        pos_screen = (
+            ctx.gu2screen(self._entity.position)
+            - Vector.from_tuple(rotated_texture.get_size()) // 2
+        )
+        yield flipped_texture, pos_screen.to_tuple()
 
 
 type PlayerRobotMoveCtx = tuple[Input, Time]
@@ -101,6 +138,7 @@ class PlayerRobot(Entity):
     health: Value[int]
     motion: Value[Motion]
     color: Value[Color]
+    weapon: SharedWeapon
     texture = PLAYER_CENTRE_TEXTURE
     texture_size = size_from_texture_width(PLAYER_CENTRE_TEXTURE, width=1.0)
     _texture_queue: deque[Surface]
@@ -152,7 +190,7 @@ class PlayerRobot(Entity):
             return (new_position_y, new_velocity_y)
         return (cur_position, Vector(0.0, 0.0))
 
-    def prepare_render(self, ctx: "RenderCtx") -> "RenderInfo":
+    def prepare_render(self, ctx: "RenderCtx") -> Iterable["RenderInfo"]:
         self.texture = self._texture_queue.popleft()
         _, orientation = self.motion.get()
         if len(self._texture_queue) == 0:
@@ -167,7 +205,7 @@ class PlayerRobot(Entity):
             else:
                 self._texture_queue.extend([PLAYER_CENTRE_TEXTURE] * 7)
 
-        return super().prepare_render(ctx)
+        return chain(super().prepare_render(ctx), self.weapon.prepare_render(ctx))
 
 
 player_bullet_texture = load_graphic("bullets/bullet-player.png")
@@ -242,7 +280,7 @@ class EnemyRobot(Entity):
         new_pos = pos + new_ori * dt
         return (new_pos, new_ori)
 
-    def prepare_render(self, ctx: "RenderCtx") -> "RenderInfo":
+    def prepare_render(self, ctx: "RenderCtx") -> Iterable["RenderInfo"]:
         self.texture = self._texture_queue.popleft()
         if len(self._texture_queue) == 0:
             if self.texture == ENEMY_TEXTURE_1:

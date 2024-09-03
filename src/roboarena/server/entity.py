@@ -14,6 +14,7 @@ from roboarena.shared.entity import (
     PlayerBullet,
     PlayerRobot,
     PlayerRobotMoveCtx,
+    SharedWeapon,
     Value,
 )
 from roboarena.shared.game import OutOfLevelError
@@ -119,12 +120,12 @@ class ShotEvent:
 
 
 @define
-class ServerWeapon:
-    _game: "GameState"
-    _entity: ServerEntityType
+class ServerWeapon(SharedWeapon):
+    if TYPE_CHECKING:
+        _game: "GameState"  # type: ignore
+        _entity: ServerEntityType  # type: ignore
     events: EventTarget[ShotEvent] = field(factory=EventTarget, init=False)
 
-    _weapon: Weapon
     _last_shot: float = field(default=0.0, init=False)
 
     def on_input(self, input: Input, t: Time):
@@ -155,6 +156,7 @@ class ServerPlayerRobot(PlayerRobot, ServerInputHandler):
     motion: CalculatedValue[Motion, PlayerRobotMoveCtx]
     color: ActiveRemoteValue[Color]
     weapon: ServerWeapon
+    aim: Position
 
     def __init__(
         self,
@@ -169,11 +171,12 @@ class ServerPlayerRobot(PlayerRobot, ServerInputHandler):
         self.health = HealthController(health, partial(dispatch, "health"))  # type: ignore
         self.motion = CalculatedValue(motion, self.move, partial(dispatch, "motion"))  # type: ignore
         self.color = ActiveRemoteValue(color, partial(dispatch, "color"))  # type: ignore
-        self.weapon = ServerWeapon(game, self, basic_weapon)
+        self.weapon = ServerWeapon(game, self, basic_weapon, lambda: self.aim)  # type: ignore
 
     def on_input(self, input: Input, dt: Time, t: Time):
         self.motion.tick((input, dt))
         self.weapon.on_input(input, t)
+        self.aim = input.mouse
 
     def tick(self, dt: Time, t: Time):
         pass
@@ -265,7 +268,7 @@ class ServerEnemyRobot(EnemyRobot):
             motion, self.move, partial(game.dispatch, self, "motion")
         )
         self.color = ActiveRemoteValue(color, partial(game.dispatch, self, "color"))  # type: ignore
-        self.weapon = ServerWeapon(game, self, weapon)
+        self.weapon = ServerWeapon(game, self, weapon, lambda: Vector(0.0, 0.0))  # type: ignore
         self.events = EventTarget()
 
         self.health.events.add_listener(DeathEvent, self.events.dispatch)
