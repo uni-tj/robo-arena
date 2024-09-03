@@ -25,10 +25,12 @@ from roboarena.shared.time import Time
 from roboarena.shared.types import (
     Acknoledgement,
     ChangedEvent,
+    CloseEvent,
     DeathEvent,
     HitEvent,
     Input,
     Motion,
+    OpenEvent,
     Position,
     Weapon,
 )
@@ -441,11 +443,19 @@ class ClientEnemyRobot(EnemyRobot, ClientEntity):
 
 class ClientDoorEntity(DoorEntity):
     open: PassiveRemoteValue[bool]
+    events: EventTarget[CloseEvent | OpenEvent]
 
     def __init__(self, game: "GameState", position: Position, open: bool):
         super().__init__(game)
         self._position = position
         self.open = PassiveRemoteValue(open)  # type: ignore
+
+        self.open.events.add_listener(
+            ChangedEvent,
+            lambda e: self.events.dispatch(
+                OpenEvent() if e.new is False else CloseEvent()
+            ),
+        )
 
     def tick(self, dt: Time, t: Time):
         pass

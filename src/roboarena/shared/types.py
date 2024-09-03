@@ -86,12 +86,12 @@ class DeathEvent:
 
 
 @dataclass(frozen=True)
-class DoorsCloseEvent:
+class CloseEvent:
     """Fired when the doors of an room close"""
 
 
 @dataclass(frozen=True)
-class DoorsOpenEvent:
+class OpenEvent:
     """Fired when the doors of an room open"""
 
 

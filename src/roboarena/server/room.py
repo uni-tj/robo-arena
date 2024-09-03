@@ -11,12 +11,7 @@ from roboarena.server.entity import (
     ServerPlayerRobot,
 )
 from roboarena.server.level_generation.level_generator import BlockPosition
-from roboarena.shared.types import (
-    DeathEvent,
-    DoorsCloseEvent,
-    DoorsOpenEvent,
-    basic_weapon,
-)
+from roboarena.shared.types import CloseEvent, DeathEvent, OpenEvent, basic_weapon
 from roboarena.shared.util import EventTarget, frame_cache_method
 from roboarena.shared.utils.vector import Vector
 
@@ -43,9 +38,7 @@ class Room:
     _floors: set[BlockPosition]
     _doors: set[BlockPosition]
     _door_entities: list[ServerDoorEntity] = field(init=False)
-    events: EventTarget[DoorsCloseEvent | DoorsOpenEvent] = field(
-        factory=EventTarget, init=False
-    )
+    events: EventTarget[CloseEvent | OpenEvent] = field(factory=EventTarget, init=False)
 
     _started: bool = field(default=False, init=False)
     _enemies_alive: int = field(init=False)
@@ -68,7 +61,7 @@ class Room:
         logger.info("starting room")
         self._started = True
         # close doors
-        self.events.dispatch(DoorsCloseEvent())
+        self.events.dispatch(CloseEvent())
         for door in self._door_entities:
             door.open.set(False)
 
@@ -107,7 +100,7 @@ class Room:
     def on_end(self) -> None:
         logger.info("ending room")
         # open doors
-        self.events.dispatch(DoorsOpenEvent())
+        self.events.dispatch(OpenEvent())
         for door in self._door_entities:
             door.open.set(True)
 
