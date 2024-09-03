@@ -7,24 +7,17 @@ from roboarena.client.master_mixer import MasterMixer
 from roboarena.client.menu.button import Button
 from roboarena.client.menu.menu import Menu
 from roboarena.client.menu.text import Text
-from roboarena.shared.util import load_graphic
-from roboarena.shared.utils.vector import Vector
+from roboarena.shared.constants import (
+    ButtonPos,
+    Colors,
+    Graphics,
+    TextContent,
+    TextPos,
+    TextSize,
+)
 
 if TYPE_CHECKING:
     from roboarena.client.client import Client
-
-BACK_BUTTON_UH_TEXTURE = load_graphic("buttons/button-back-uh.png")
-BACK_BUTTON_H_TEXTURE = load_graphic("buttons/button-back-h.png")
-SOUND_BUTTON_MUTE_TEXTURE = load_graphic("buttons/button-sound-mute.png")
-SOUND_BUTTON_UNMUTE_TEXTURE = load_graphic("buttons/button-sound-unmute.png")
-UP_BUTTON_UH_TEXTURE = load_graphic("buttons/button-upkey-uh.png")
-UP_BUTTON_H_TEXTURE = load_graphic("buttons/button-upkey-h.png")
-DOWN_BUTTON_UH_TEXTURE = load_graphic("buttons/button-downkey-uh.png")
-DOWN_BUTTON_H_TEXTURE = load_graphic("buttons/button-downkey-h.png")
-LEFT_BUTTON_UH_TEXTURE = load_graphic("buttons/button-leftkey-uh.png")
-LEFT_BUTTON_H_TEXTURE = load_graphic("buttons/button-leftkey-h.png")
-RIGHT_BUTTON_UH_TEXTURE = load_graphic("buttons/button-rightkey-uh.png")
-RIGHT_BUTTON_H_TEXTURE = load_graphic("buttons/button-rightkey-h.png")
 
 
 class SettingsMenu(Menu):
@@ -41,8 +34,8 @@ class SettingsMenu(Menu):
             main_menu.loop()
 
         def toggle_sound() -> None:
-            unmute_texture = SOUND_BUTTON_UNMUTE_TEXTURE
-            mute_texture = SOUND_BUTTON_MUTE_TEXTURE
+            unmute_texture = Graphics.SOUND_BUTTON_UNMUTE
+            mute_texture = Graphics.SOUND_BUTTON_MUTE
             mixer = master_mixer
 
             if not mixer.muted:
@@ -59,62 +52,66 @@ class SettingsMenu(Menu):
 
         buttons: dict[str, Button] = {
             "mute_button": Button(
-                SOUND_BUTTON_UNMUTE_TEXTURE,
-                SOUND_BUTTON_MUTE_TEXTURE,
-                Vector(50, 25),
+                Graphics.SOUND_BUTTON_UNMUTE,
+                Graphics.SOUND_BUTTON_MUTE,
+                ButtonPos.MUTE_BUTTON,
                 toggle_sound,
                 master_mixer,
             ),
             "back_button": Button(
-                BACK_BUTTON_UH_TEXTURE,
-                BACK_BUTTON_H_TEXTURE,
-                Vector(20, 70),
+                Graphics.BACK_BUTTON_UH,
+                Graphics.BACK_BUTTON_H,
+                ButtonPos.BACK_BUTTON,
                 switch_to_main_menu,
                 master_mixer,
             ),
             "up_button": Button(
-                UP_BUTTON_UH_TEXTURE,
-                UP_BUTTON_H_TEXTURE,
-                Vector(50, 45),
+                Graphics.UP_BUTTON_UH,
+                Graphics.UP_BUTTON_H,
+                ButtonPos.UP_BUTTON,
                 change_key("key_up"),
                 master_mixer,
             ),
             "down_button": Button(
-                DOWN_BUTTON_UH_TEXTURE,
-                DOWN_BUTTON_H_TEXTURE,
-                Vector(50, 60),
+                Graphics.DOWN_BUTTON_UH,
+                Graphics.DOWN_BUTTON_H,
+                ButtonPos.DOWN_BUTTON,
                 change_key("key_down"),
                 master_mixer,
             ),
             "left_button": Button(
-                LEFT_BUTTON_UH_TEXTURE,
-                LEFT_BUTTON_H_TEXTURE,
-                Vector(50, 75),
+                Graphics.LEFT_BUTTON_UH,
+                Graphics.LEFT_BUTTON_H,
+                ButtonPos.LEFT_BUTTON,
                 change_key("key_left"),
                 master_mixer,
             ),
             "right_button": Button(
-                RIGHT_BUTTON_UH_TEXTURE,
-                RIGHT_BUTTON_H_TEXTURE,
-                Vector(50, 90),
+                Graphics.RIGHT_BUTTON_UH,
+                Graphics.RIGHT_BUTTON_H,
+                ButtonPos.RIGHT_BUTTON,
                 change_key("key_right"),
                 master_mixer,
             ),
         }
 
         text_fields: dict[str, Text] = {
-            "header": Text("          Settings          ", 100, Vector(50, 5)),
+            "header": Text(
+                TextContent.HEADER_SETTINGS,
+                TextSize.STANDARD_SIZE,
+                TextPos.HEADER_SETTINGS,
+            ),
             "info_mute": Text(
-                "              Toggle sound              ", 100, Vector(50, 15)
+                TextContent.INFO_MUTE, TextSize.STANDARD_SIZE, TextPos.INFO_MUTE
             ),
             "info_keys": Text(
-                "Click button and hit key to change key binding", 100, Vector(50, 35)
+                TextContent.INFO_KEYS, TextSize.STANDARD_SIZE, TextPos.INFO_KEYS
             ),
         }
 
         super().__init__(
             screen,
-            ((80, 80, 80), (140, 140, 140)),
+            Colors.BACKGROUND_GRADIENT,
             buttons,
             text_fields,
             client,

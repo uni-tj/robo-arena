@@ -4,15 +4,12 @@ from pygame import Surface, mixer
 
 from roboarena.client.master_mixer import MasterMixer
 from roboarena.client.menu.renderable import Renderable
+from roboarena.shared.constants import SoundPath, SoundVolume, TextureSize
 from roboarena.shared.rendering.util import size_from_texture_height
-from roboarena.shared.util import sound_path
 from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
     from roboarena.shared.rendering.renderer import RenderCtx
-
-BUTTON_HOVER_SOUND_PATH = sound_path("menu/button-hover.mp3")
-BUTTON_CLICK_SOUND_PATH = sound_path("menu/button-click.mp3")
 
 
 class Button(Renderable):
@@ -33,14 +30,18 @@ class Button(Renderable):
         function: Callable[[], None],
         master_mixer: MasterMixer,
     ) -> None:
-        texture_size = size_from_texture_height(texture_uh, height=1.3)
+        texture_size = size_from_texture_height(
+            texture_uh, height=TextureSize.BUTTON_HEIGHT
+        )
         super().__init__(position_pct, texture_uh, texture_size)
         self.texture_uh = texture_uh
         self.texture_h = texture_h
         self.function = function
         self._master_mixer = master_mixer
-        self._hover_sound = master_mixer.load_sound(BUTTON_HOVER_SOUND_PATH)
-        self._click_sound = master_mixer.load_sound(BUTTON_CLICK_SOUND_PATH)
+        self._hover_sound = master_mixer.load_sound(SoundPath.BUTTON_HOVER_SOUND)
+        self._click_sound = master_mixer.load_sound(SoundPath.BUTTON_CLICK_SOUND)
+        self._master_mixer.set_sound_volume(self._hover_sound, SoundVolume.BUTTON_HOVER)
+        self._master_mixer.set_sound_volume(self._click_sound, SoundVolume.BUTTON_CLICK)
 
     def mouse_over(self, mouse_pos_px: Tuple[int, int]) -> bool:
         return (
