@@ -458,6 +458,7 @@ class ClientDoorEntity(DoorEntity):
         super().__init__(game)
         self._position = position
         self.open = PassiveRemoteValue(open)  # type: ignore
+        self.events = EventTarget()
 
         self.open.events.add_listener(
             ChangedEvent,
