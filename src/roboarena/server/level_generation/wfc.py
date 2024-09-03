@@ -118,6 +118,7 @@ class MinEntropyStore:
 
     Positions are added initially and updated when changed by propagation.
     Positions are removed when they are collapsed.
+    Used for speeding up the computations of wfc
     """
 
     def add(self, position: TilePosition, entropy: int) -> None:
@@ -154,6 +155,7 @@ class WFC:
     events: EventTarget[CollapsedOneEvent | CollapsedAllEvent | PropagatedOneEvent] = (
         field(init=False, factory=EventTarget)
     )
+
     # Performance relevant
     _collapsed: set[TilePosition] = field(init=False, factory=set)
     _not_collapsed: set[TilePosition] = field(init=False, factory=set)
@@ -163,6 +165,7 @@ class WFC:
 
     @staticmethod
     def from_map(tileset: Tileset, map: dict[TilePosition, Tile]) -> "WFC":
+        """Initializes a WFC instance where tiles are placed according to the map"""
         wfc = WFC(tileset)
         for p, t in map.items():
             wfc.map[p] = one_hot(t)
@@ -174,11 +177,14 @@ class WFC:
         """Guarantee positions to be collapsed and return newly collapsed"""
         positions = set(positions)
         positions = positions.difference(self._args)  # already handled before
+        # _args contain the positions that were already passed as arguments
         self._args = self._args.union(positions)
 
+        # calculate the values that need to be placed on map expansions
         init_possible = ones_except(self.tileset.tiles, 0)
         init_entropy = entropy(init_possible)
 
+        # Initialization of new positions into the map
         alloc_apothem = ceil(4 * math.log(self.tileset.tiles, 2))  # works empirically
         for pos in positions:
             for sur in gen_square_space_wfc_fast(pos, alloc_apothem):
@@ -188,24 +194,32 @@ class WFC:
                 self._not_collapsed.add(sur)
                 self._entropy_store.add(sur, init_entropy)
 
+        # Collapse
         map_update: WFCUpdate = list()
         positions = positions.difference(self._collapsed)
-        c = 0
         while len(positions) > 0:
-            # collapse tile with lowest entropy
+            # select tile with lowest entropy
             pos = self._entropy_store.pop_min()
+            # select random tiletype from the possible tiletypes
             selected = self._select_possible(self.map[pos])
+            # Update the map with the selected tile
             self.map[pos] = one_hot(selected)
 
+            # If we select the impossible tile we dont want to propagate theinformation
             if selected != 0:
-                c += self._propagate(pos)
+                self._propagate(pos)
 
+            # Update all tracking variables
             self._collapsed.add(pos)
             self._not_collapsed.remove(pos)
             positions.discard(pos)
-            map_update.append((pos, selected))
             self._collapsed.add(pos)
+            # Add the selection to the map update
+            map_update.append((pos, selected))
+
+            # DEBUG dispach a Event for testing
             self.events.dispatch(CollapsedOneEvent(pos))
+        # DEBUG dispach a Event for testing
         self.events.dispatch(CollapsedAllEvent(list(p for p, _ in map_update)))
         return map_update
 
@@ -214,30 +228,39 @@ class WFC:
             return 0
         return random.choice(nonzero(possible))
 
-    def _propagate(self, start: TilePosition) -> int:
+    def _propagate(self, start: TilePosition) -> None:
+        """Propagates the update of one position(tile selection)
+        to all tiles until no more updates occur
+        Args:
+            start (TilePosition): The position that was changed in the map
+
+        """
+        ts = self.tileset
         queue = deque([start])
-        c = 0
         while len(queue) > 0:
-            c += 1
             pos = queue.popleft()
             if self.map[pos] == 0:
                 continue  # nothing possible
+            # Update the constraints of all neighbours
             for dir in Direction:
                 neigh = pos + dir.value
                 if neigh not in self.map:
                     continue
                 old = self.map[neigh]
-                ts = self.tileset
+                # Use Binary and to remove all possiblities,
+                # that are not in the neighbour and implied constraints.
                 self.map[neigh] &= self._propagation_by_poss(self.map[pos], dir, ts)
                 new = self.map[neigh]
-
+                # If the map for the neighbor wasnt changed the neighbour cannot
+                # propagate any new information to its neighbors
                 if old != new:
                     if neigh not in self._not_collapsed:
                         continue
                     self._entropy_store.update(neigh, entropy(old), entropy(new))
                     queue.append(neigh)
+
+            # DEBUG dispach a Event for testing
             self.events.dispatch(PropagatedOneEvent(pos))
-        return c
 
     @staticmethod
     @cache
@@ -264,6 +287,14 @@ def print_wfc(
     tiles: dict[int, str | None] = {},  # noqa: B006
     colors: dict[TilePosition, Color] = {},  # noqa: B006
 ):
+    """Prints the WFC onto the screen in a grid for ease of inspection
+
+    Args:
+        wfc (WFC): _description_
+        tiles : A map containg string names for each tile. Defaults to {}.
+        colors (dict[Tileposition| Color], optional):
+        Tiles that should be colored in a certain way. Defaults to {}.
+    """
     min_pos = Vector(min(p.x for p in wfc.map), min(p.y for p in wfc.map))
     max_pos = Vector(max(p.x for p in wfc.map), max(p.y for p in wfc.map))
     dim = max_pos - min_pos + 1
