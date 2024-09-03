@@ -17,6 +17,7 @@ import pygame
 from attrs import define
 from numpy.typing import NDArray
 
+from roboarena.shared.time import Time, get_time
 from roboarena.shared.types import StartFrameEvent
 from roboarena.shared.utils.vector import Vector
 
@@ -269,6 +270,23 @@ def frame_cache_method[**P, R](f: Callable[P, R]) -> Callable[P, R]:  # noqa: F8
         return cached_f(*args, **kwargs)
 
     return wrapper
+
+
+def debounce(seconds: Time):
+    def decorator[**P, R](f: Callable[P, R]) -> Callable[P, R | None]:
+        last_call: Time = 0
+
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R | None:
+            nonlocal last_call
+            if get_time() - last_call < seconds:
+                last_call = get_time()
+                return
+            last_call = get_time()
+            return f(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
 
 
 class EventTarget[Evt]:

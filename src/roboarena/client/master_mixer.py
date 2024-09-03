@@ -3,7 +3,7 @@ import logging
 import pygame
 from pygame import mixer
 
-from roboarena.shared.util import sound_path
+from roboarena.shared.util import debounce, sound_path
 
 MUSIC_DONE = pygame.USEREVENT + 1
 
@@ -115,3 +115,19 @@ class EnemySounds:
     def enemy_dying(self) -> None:
         self._master_mixer.stop_sound(self._hover_sound)
         self._master_mixer.play_sound(self._dying_sound)
+
+
+DOOR_SOUND_PATH = sound_path("door/door.mp3")
+
+
+class DoorSounds:
+    _master_mixer: MasterMixer
+    _door_sound: mixer.Sound
+
+    def __init__(self, master_mixer: MasterMixer):
+        self._master_mixer = master_mixer
+        self._door_sound = master_mixer.load_sound(DOOR_SOUND_PATH)
+
+    @debounce(1)
+    def door_moving(self):
+        self._master_mixer.play_sound(self._door_sound)

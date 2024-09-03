@@ -9,7 +9,7 @@ import pygame
 from attrs import define, field
 from pygame import Color
 
-from roboarena.client.master_mixer import EnemySounds
+from roboarena.client.master_mixer import DoorSounds, EnemySounds
 from roboarena.server.events import EventName
 from roboarena.shared.constants import SERVER_TIMESTEP
 from roboarena.shared.entity import (
@@ -453,12 +453,14 @@ class ClientEnemyRobot(EnemyRobot, ClientEntity):
 class ClientDoorEntity(DoorEntity):
     open: PassiveRemoteValue[bool]
     events: EventTarget[CloseEvent | OpenEvent]
+    _door_sounds: DoorSounds
 
     def __init__(self, game: "GameState", position: Position, open: bool):
         super().__init__(game)
         self._position = position
         self.open = PassiveRemoteValue(open)  # type: ignore
         self.events = EventTarget()
+        self._door_sounds = DoorSounds(game.master_mixer)
 
         self.open.events.add_listener(
             ChangedEvent,
@@ -466,6 +468,8 @@ class ClientDoorEntity(DoorEntity):
                 OpenEvent() if e.new is False else CloseEvent()
             ),
         )
+        self.events.add_listener(OpenEvent, lambda _: self._door_sounds.door_moving())
+        self.events.add_listener(CloseEvent, lambda _: self._door_sounds.door_moving())
 
     def tick(self, dt: Time, t: Time):
         pass
