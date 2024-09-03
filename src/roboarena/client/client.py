@@ -13,14 +13,20 @@ from roboarena.client.entity import (
     ClientBullet,
     ClientDoorEntity,
     ClientEnemyRobot,
-    ClientEntityType,
     ClientInputHandler,
     ClientPlayerRobot,
 )
 from roboarena.client.keys import load_keys
-from roboarena.client.master_mixer import MUSIC_DONE, MasterMixer
+from roboarena.client.master_mixer import MasterMixer
 from roboarena.client.menu.main_menu import MainMenu
-from roboarena.shared.constants import CLIENT_TIMESTEP, SERVER_IP, VSYNC
+from roboarena.shared.constants import (
+    CLIENT_TIMESTEP,
+    SERVER_IP,
+    VSYNC,
+    CameraPositionConstants,
+    ClientConstants,
+    UserEvents,
+)
 from roboarena.shared.custom_threading import Atom
 from roboarena.shared.game import GameState as SharedGameState
 from roboarena.shared.game_ui import GameUI
@@ -59,6 +65,7 @@ from roboarena.shared.weapon import LaserGun
 
 if TYPE_CHECKING:
     from roboarena.server.level_generation.level_generator import Level
+    from roboarena.shared.types import ClientEntityType
 
 
 def unexpected_evt(expected: str, actual: Any) -> str:
@@ -115,8 +122,6 @@ class GameOverState:
 @define
 class CameraPosition:
     _camera_pos: Vector[float]
-    _RESPONSIVENESS_FACTOR: float = 0.025
-    """Regulates the responsiveness. [0.01, 0.05] works with reasonable speeds"""
 
     def get(self) -> Vector[float]:
         return self._camera_pos
@@ -124,7 +129,7 @@ class CameraPosition:
     def update(self, player_pos: Vector[float]) -> Vector[float]:
         self._camera_pos += (
             player_pos - self._camera_pos
-        ) * self._RESPONSIVENESS_FACTOR
+        ) * CameraPositionConstants.RESPONSIVENESS_FACTOR
 
         return self._camera_pos
 
@@ -142,7 +147,7 @@ class GameState(SharedGameState):
     _entity_id: EntityId
     _entity: ClientInputHandler
     env = "client"
-    entities: dict[EntityId, ClientEntityType]
+    entities: dict[EntityId, "ClientEntityType"]
     markers: deque[Marker]
     level: "Level"
     _camera_pos: CameraPosition
@@ -277,7 +282,7 @@ class GameState(SharedGameState):
             for e in event.get():
                 if e.type == pygame.QUIT:
                     self.events.dispatch(QuitEvent())
-                elif e.type == MUSIC_DONE:
+                elif e.type == UserEvents.MUSIC_DONE:
                     _ambience_sound.switch_music()
                 else:
                     continue
@@ -316,7 +321,7 @@ class Client(Stoppable):
     def loop(self) -> Stopped:
         pygame.init()
         screen = pygame.display.set_mode(
-            (1000, 1000),
+            ClientConstants.START_SCREEN_SIZE,
             flags=RESIZABLE,
             vsync=int(VSYNC),
         )

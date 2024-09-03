@@ -10,6 +10,12 @@ from roboarena.shared.time import Time
 from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
+    from roboarena.client.entity import (
+        ClientBullet,
+        ClientDoorEntity,
+        ClientEnemyRobot,
+        ClientPlayerRobot,
+    )
     from roboarena.server.level_generation.level_generator import Level, LevelUpdate
     from roboarena.shared.entity import Entity
 
@@ -24,6 +30,12 @@ type Motion = tuple[Position, Velocity]
 type Color = pygame.Color
 
 type Entities = dict[EntityId, "Entity"]
+
+type Path = str
+
+type ClientEntityType = (
+    "ClientPlayerRobot | ClientEnemyRobot | ClientBullet | ClientDoorEntity"
+)
 
 
 @dataclass(frozen=True)

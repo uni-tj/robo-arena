@@ -43,6 +43,7 @@ from roboarena.shared.utils.vector import Vector
 if TYPE_CHECKING:
     from roboarena.client.client import GameState
     from roboarena.shared.rendering.renderer import RenderCtx
+    from roboarena.shared.types import ClientEntityType
 
 
 @dataclass(frozen=True)
@@ -225,11 +226,6 @@ class ClientEntity(Entity, ABC):
     ): ...
 
 
-type ClientEntityType = (
-    ClientPlayerRobot | ClientEnemyRobot | ClientBullet | ClientDoorEntity
-)
-
-
 class ShotEvent:
     """Fired after shooting"""
 
@@ -238,7 +234,7 @@ class ShotEvent:
 class ClientWeapon(SharedWeapon):
     if TYPE_CHECKING:
         _game: "GameState"  # type: ignore
-        _entity: ClientEntityType  # type: ignore
+        _entity: "ClientEntityType"  # type: ignore
     events: EventTarget[ShotEvent] = field(factory=EventTarget, init=False)
 
     _last_shot: float = field(default=0.0, init=False)
@@ -426,7 +422,7 @@ class ClientEnemyRobot(EnemyRobot, ClientEntity):
         self.health = PassiveRemoteValue(health)  # type: ignore
         self.motion = InterpolatedValue(motion, last_ack, t_ack, interpolateMotion)  # type: ignore
         self.color = PassiveRemoteValue(color)  # type: ignore
-        self.weapon = ClientWeapon(game, self, weapon, lambda: Vector(0.0, 0.0))  # type: ignore
+        self.weapon = ClientWeapon(game, self, weapon, lambda: Vector.zero())
         self.events = EventTarget()
         self._enemy_sounds = EnemySounds(game.master_mixer)
 

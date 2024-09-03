@@ -1,21 +1,8 @@
+import pygame
+
+from roboarena.shared.types import Path
 from roboarena.shared.util import load_graphic, sound_path
 from roboarena.shared.utils.vector import Vector
-
-CLIENT_TIMESTEP = 1 / 60
-SERVER_TIMESTEP = 1 / 20
-SERVER_FRAMES_PER_TIMESTEP = 3
-SERVER_IP = 0x00000000
-VSYNC = True
-
-
-class PlayerConstants:
-
-    # Movement
-    ACCELEARTE = 0.6
-    DECELERATE = 0.1
-
-    # Health
-    MAX_HEALTH = 10
 
 
 class Graphics:
@@ -49,12 +36,48 @@ class MusicPaths:
     # Menue
     MENU_MUSIC = sound_path("menu/menu-music.mp3")
 
+    # AmbienceMusic
+    AMBIENCE_MUSIC: list[Path] = [
+        sound_path("game_ambience/game-music_1.mp3"),
+        sound_path("game_ambience/game-music_2.mp3"),
+    ]
+
 
 class SoundPath:
 
     # Buttons
     BUTTON_HOVER_SOUND = sound_path("menu/button-hover.mp3")
     BUTTON_CLICK_SOUND = sound_path("menu/button-click.mp3")
+
+    # AmbienceSound
+    AMBIENCE_SOUND: list[Path] = [
+        sound_path("game_ambience/background-ambience_1.mp3"),
+        sound_path("game_ambience/background-ambience_2.mp3"),
+        sound_path("game_ambience/background-ambience_3.mp3"),
+        sound_path("game_ambience/background-ambience_4.mp3"),
+        sound_path("game_ambience/background-ambience_5.mp3"),
+        sound_path("game_ambience/background-ambience_6.mp3"),
+        sound_path("game_ambience/background-ambience_7.mp3"),
+        sound_path("game_ambience/background-ambience_8.mp3"),
+        sound_path("game_ambience/background-ambience_9.mp3"),
+        sound_path("game_ambience/background-ambience_10.mp3"),
+        sound_path("game_ambience/background-ambience_1.mp3"),
+    ]
+
+    # EnemySounds
+    ENEMY_HOVER_SOUND = sound_path("enemy/enemy-hover.mp3")
+    ENEMY_SHOOTING_SOUND = sound_path("enemy/enemy-shot.mp3")
+    ENEMY_HIT_SOUND = sound_path("enemy/enemy-hit.mp3")
+    ENEMY_DYING_SOUND = sound_path("enemy/enemy-dying.mp3")
+
+    # DoorSounds
+    DOOR_SOUND = sound_path("door/door.mp3")
+
+    # PlayerSounds
+    PLAYER_WALKING_SOUND = sound_path("player/player-moving.mp3")
+    PLAYER_SHOOTING_SOUND = sound_path("player/laser-gun.mp3")
+    PLAYER_HIT_SOUND = sound_path("player/player-hit.mp3")
+    PLAYER_DYING_SOUND = sound_path("player/player-dying.mp3")
 
 
 class ButtonPos:
@@ -123,9 +146,72 @@ class MusicVolume:
     # MainMenu
     MAIN_MENU = 1.0
 
+    # AmbienceMusic
+    AMBIENCE_MUSIC = 0.15
+
+    # MasterMixer
+    START_VOLUME = 1.0
+    MUSIC_FADE = 500
+
 
 class SoundVolume:
 
     # Buttons
     BUTTON_HOVER = 1.0
     BUTTON_CLICK = 1.0
+
+    # AmbienceSound
+    AMBIENCE_SOUND = 0.1
+    AMBIENCE_SOUND_FADE = 1000
+
+    # EnemySounds
+    ENEMY_HOVER = 0.2
+    ENEMY_SHOOTING = 1.0
+    ENEMY_HIT = 0.5
+    ENEMY_DYING = 1.0
+
+    # DoorSounds
+    DOOR = 1.0
+
+    # PlayerSounds
+    PLAYER_WALKING = 1.0
+    PLAYER_SHOOTING = 0.2
+    PLAYER_HIT = 1.0
+    PLAYER_DYING = 1.0
+
+
+class UserEvents:
+    MUSIC_DONE = pygame.USEREVENT + 1
+
+
+class PlayerConstants:
+
+    # Movement
+    ACCELEARTE = 0.6
+    DECELERATE = 0.1
+
+    # Health
+    MAX_HEALTH = 10
+
+
+class AmbienceSoundConstants:
+
+    DELTA_TIME_BETWEEN_AMBIENCE_SOUNDS = 20
+    AMBIENCE_MUSIC_NUM = len(MusicPaths.AMBIENCE_MUSIC)
+    PROBABILITY_AMBIENCE_SOUND = 0.6
+
+
+class CameraPositionConstants:
+    RESPONSIVENESS_FACTOR: float = 0.025
+    """Regulates the responsiveness. [0.01, 0.05] works with reasonable speeds"""
+
+
+class ClientConstants:
+    START_SCREEN_SIZE = (1920, 1080)
+
+
+CLIENT_TIMESTEP = 1 / 60
+SERVER_TIMESTEP = 1 / 20
+SERVER_FRAMES_PER_TIMESTEP = 3
+SERVER_IP = 0x00000000
+VSYNC = True
