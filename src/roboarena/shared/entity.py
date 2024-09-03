@@ -1,7 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
 from collections import deque
-from functools import cache
 from typing import TYPE_CHECKING, Callable
 
 import pygame
@@ -255,30 +254,17 @@ class EnemyRobot(Entity):
         return super().prepare_render(ctx)
 
 
-@cache
-def load_door_texture_open() -> Surface:
-    texture = Surface((50, 50))
-    pygame.draw.rect(texture, (128, 128, 128), pygame.Rect((0, 20), (50, 10)))
-    return texture
-
-
-@cache
-def load_door_texture_close() -> Surface:
-    texture = Surface((50, 50))
-    pygame.draw.rect(texture, (0, 0, 0), pygame.Rect((0, 20), (50, 10)))
-    return texture
-
-
 class DoorEntity(Entity):
+    OPEN_TEXTURE = Surface((50, 65), pygame.SRCALPHA)
+    CLOSED_TEXTURE = load_graphic("doors/door-closed.png")
+
     @property
     def texture(self) -> Surface:  # type: ignore
         if self.open.get():
-            return load_door_texture_open()
-        return load_door_texture_close()
+            return self.OPEN_TEXTURE
+        return self.CLOSED_TEXTURE
 
-    texture_size: Vector[float] = size_from_texture_width(
-        load_door_texture_open(), width=1.0
-    )
+    texture_size: Vector[float] = size_from_texture_width(OPEN_TEXTURE, width=1.0)
 
     @property
     def blocks_robot(self) -> bool:  # type: ignore

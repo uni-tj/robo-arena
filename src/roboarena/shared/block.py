@@ -54,7 +54,7 @@ floor_room_spawn = Block(
     blocks_bullet=False,
 )
 floor_door = Block(
-    load_graphic("floor/floor2.PNG"),
+    load_graphic("doors/door-open.png"),
     render_above_entities=False,
     blocks_robot=False,
     blocks_bullet=False,
