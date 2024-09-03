@@ -301,10 +301,11 @@ def frame_cache_method[**P, R](f: Callable[P, R]) -> Callable[P, R]:  # noqa: F8
 
 
 def debounce(seconds: Time):
-    def decorator[**P, R](f: Callable[P, R]) -> Callable[P, R | None]:
+
+    def decorator[**P, R](f: Callable[P, R]) -> Callable[P, R | None]:  # noqa F821
         last_call: Time = 0
 
-        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R | None:
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R | None:  # noqa F821
             nonlocal last_call
             if get_time() - last_call < seconds:
                 last_call = get_time()
