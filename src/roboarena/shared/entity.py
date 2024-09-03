@@ -118,10 +118,10 @@ class Bullet(Entity):
 
 @define
 class SharedWeapon:
-    texture: Surface = field(default=load_graphic("weapons/laser-gun.PNG"), init=False)
+    texture: Surface = field(default=load_graphic("weapons/laser-gun.png"), init=False)
     texture_size: Vector[float] = field(
         default=size_from_texture_width(
-            load_graphic("weapons/laser-gun.PNG"), width=0.75
+            load_graphic("weapons/laser-gun.png"), width=0.75
         ),
         init=False,
     )

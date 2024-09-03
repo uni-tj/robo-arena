@@ -36,19 +36,19 @@ def load_void_debug_texture() -> Surface:
 
 
 floor = Block(
-    load_graphic("floor/floor1.PNG"),
+    load_graphic("floor/floor1.png"),
     render_above_entities=False,
     blocks_robot=False,
     blocks_bullet=False,
 )
 floor_room = Block(
-    load_graphic("floor/floor2.PNG"),
+    load_graphic("floor/floor2.png"),
     render_above_entities=False,
     blocks_robot=False,
     blocks_bullet=False,
 )
 floor_room_spawn = Block(
-    load_graphic("floor/floor-start.PNG"),
+    load_graphic("floor/floor-start.png"),
     render_above_entities=False,
     blocks_robot=False,
     blocks_bullet=False,
@@ -60,13 +60,13 @@ floor_door = Block(
     blocks_bullet=False,
 )
 wall = Block(
-    load_graphic("wall/wall.PNG"),
+    load_graphic("wall/wall.png"),
     render_above_entities=True,
     blocks_robot=True,
     blocks_bullet=True,
 )
 void = Block(
-    load_graphic("void/void.PNG"),
+    load_graphic("void/void.png"),
     render_above_entities=True,
     blocks_robot=True,
     blocks_bullet=True,

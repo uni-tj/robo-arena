@@ -11,15 +11,17 @@ if TYPE_CHECKING:
     from roboarena.shared.rendering.renderer import RenderCtx
 
 
-HEART_FULL_TEXTURE = load_graphic("gameUI/healthbar/heart-full.png")
+HEART_FULL_TEXTURE = load_graphic("game_ui/healthbar/heart-full.png")
 
-HEART_EMPTY_TEXTURE = load_graphic("gameUI/healthbar/heart-empty.png")
+HEART_EMPTY_TEXTURE = load_graphic("game_ui/healthbar/heart-empty.png")
 
-HEART_HALF_TEXTURE = load_graphic("gameUI/healthbar/heart-half.png")
+HEART_HALF_TEXTURE = load_graphic("game_ui/healthbar/heart-half.png")
 
-HEALTHBAR_BACKGROUND_TEXTURE = load_graphic("gameUI/healthbar/healthbar-background.png")
+HEALTHBAR_BACKGROUND_TEXTURE = load_graphic(
+    "game_ui/healthbar/healthbar-background.png"
+)
 
-WEAPON_UI_BACKGROUND_TEXTURE = load_graphic("gameUI/weaponUI/weaponUI-background.png")
+WEAPON_UI_BACKGROUND_TEXTURE = load_graphic("game_ui/weaponUI/weaponUI-background.png")
 
 
 class Healthbar:
