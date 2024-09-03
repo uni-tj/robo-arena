@@ -361,7 +361,7 @@ class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
         self.events.add_listener(
             DeathEvent, lambda _: self._player_sounds.player_dying()
         )
-        self.health.events.add_listener(
+        self.events.add_listener(
             HitEvent, lambda _: game.game_ui.update_health(self.health.get())
         )
 
