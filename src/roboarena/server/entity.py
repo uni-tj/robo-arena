@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from attrs import define, field
 
+from roboarena.server.enemy_ai import EnemyAi
+from roboarena.server.events import Dispatch, SimpleDispatch
 from roboarena.shared.entity import (
     Bullet,
     DoorEntity,
@@ -41,6 +43,7 @@ from roboarena.shared.util import EventTarget, exceqt
 from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
+    from roboarena.server.room import Room
     from roboarena.server.server import GameState
 
 logger = getLogger(__name__)
@@ -253,6 +256,7 @@ class ServerEnemyRobot(EnemyRobot):
     color: ActiveRemoteValue[Color]
     weapon: ServerWeapon
     events: EventTarget[DeathEvent]
+    ai: EnemyAi
 
     def __init__(
         self,
@@ -261,6 +265,7 @@ class ServerEnemyRobot(EnemyRobot):
         motion: Motion,
         color: Color,
         weapon: Weapon,
+        room: "Room",
     ) -> None:
         super().__init__(game, motion)
         self._game = game  # type: ignore
@@ -275,7 +280,13 @@ class ServerEnemyRobot(EnemyRobot):
         self.health.events.add_listener(DeathEvent, self.events.dispatch)
         self.health.events.add_listener(DeathEvent, lambda e: game.delete_entity(self))
 
+        self.ai = EnemyAi(room, game)
+
+    def move(self, current: Motion, ctx: EnemyRobotMoveCtx) -> Motion:
+        return self.ai.update_enemy_position(current, self, ctx)
+
     def tick(self, dt: Time, t: Time):
+        # self.ai.update_enemy_position(self, dt)
         self.motion.tick((dt,))
 
     def to_event(self, entity_id: EntityId) -> ServerSpawnRobotEvent:

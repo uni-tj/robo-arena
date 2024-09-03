@@ -44,6 +44,7 @@ from roboarena.shared.types import (
     EventType,
     Input,
     Marker,
+    MarkerVect,
     QuitEvent,
     ServerConnectionConfirmEvent,
     ServerDeleteEntityEvent,
@@ -52,6 +53,7 @@ from roboarena.shared.types import (
     ServerGameStartEvent,
     ServerLevelUpdateEvent,
     ServerMarkerEvent,
+    ServerMarkVectEvent,
     ServerSpawnBulletEvent,
     ServerSpawnDoorEvent,
     ServerSpawnRobotEvent,
@@ -147,6 +149,7 @@ class GameState(SharedGameState):
     env = "client"
     entities: dict[EntityId, "ClientEntityType"]
     markers: deque[Marker]
+    markersvect: deque[MarkerVect]
     level: "Level"
     _camera_pos: CameraPosition
 
@@ -169,6 +172,7 @@ class GameState(SharedGameState):
         self.entities = {}  # type: ignore
         self.events = EventTarget()
         self.markers = deque(maxlen=1000)
+        self.markersvect = deque(maxlen=5000)
 
         self._logger.debug(f"initialize with t_start: {t_start}, start: {start}")
 
@@ -226,6 +230,8 @@ class GameState(SharedGameState):
                 self.level |= update
             case ServerMarkerEvent(markers):
                 self.markers += markers
+            case ServerMarkVectEvent(markers):
+                self.markersvect += markers
 
     def dispatch(self, event: ClientGameEventType) -> Acknoledgement:
         ack = next(self._ack)

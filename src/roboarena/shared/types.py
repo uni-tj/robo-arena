@@ -171,7 +171,7 @@ class Weapon:
         return 1 / self.weapon_speed
 
 
-basic_weapon = Weapon(weapon_speed=1.5, bullet_speed=2, bullet_strength=10)
+basic_weapon = Weapon(weapon_speed=1.5, bullet_speed=4, bullet_strength=10)
 
 
 """Communication protocol
@@ -185,6 +185,7 @@ type ServerGameEventType = (
     | ServerEntityEvent
     | ServerLevelUpdateEvent
     | ServerMarkerEvent
+    | ServerMarkVectEvent
 )
 type ServerSpawnEventType = (
     ServerSpawnRobotEvent | ServerSpawnDoorEvent | ServerSpawnBulletEvent
@@ -273,8 +274,20 @@ class Marker:
 
 
 @dataclass(frozen=True)
+class MarkerVect:
+    start: Vector[float]
+    end: Vector[float]
+    color: PygameColor
+
+
+@dataclass(frozen=True)
 class ServerMarkerEvent:
     markers: Collection[Marker]
+
+
+@dataclass(frozen=True)
+class ServerMarkVectEvent:
+    markers: Collection[MarkerVect]
 
 
 @dataclass(frozen=True)

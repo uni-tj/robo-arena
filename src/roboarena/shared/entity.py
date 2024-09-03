@@ -260,6 +260,7 @@ class EnemyRobot(Entity):
     health: Value[int]
     motion: Value[Motion]
     color: Value[Color]
+    collision: CollideAroundCenter
     texture = Graphics.ENEMY_FRAME_1
     texture_size = size_from_texture_width(
         Graphics.ENEMY_FRAME_1, width=TextureSize.ENEMY_WIDTH
@@ -271,7 +272,7 @@ class EnemyRobot(Entity):
 
     def __init__(self, game: "GameState", motion: Motion) -> None:
         super().__init__(game)
-        self.collision = CollideAroundCenter(
+        self.collision = CollideAroundCenter(  # type: ignore
             lambda: self.motion.get()[0], Rect.from_size(Vector.from_scalar(0.95))
         )
         self.initial_position = motion[0]

@@ -3,7 +3,9 @@ import random
 from dataclasses import dataclass
 from typing import Callable, Sequence, TypeVar, Union, overload
 
+import numpy as np
 import pygame
+from numpy.typing import NDArray
 from pygame import Vector2
 
 
@@ -111,6 +113,9 @@ class Vector[T: (int, float)]:
 
     def to_pygame_vector2(self) -> pygame.Vector2:
         return pygame.Vector2(self.x, self.y)
+
+    def to_np_array(self) -> NDArray[T]:
+        return np.array([self.x, self.y])
 
     @staticmethod
     def from_tuple[U: (int, float)](tup: tuple[U, U]) -> "Vector[U]":

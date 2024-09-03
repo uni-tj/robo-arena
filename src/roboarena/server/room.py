@@ -1,5 +1,6 @@
 import logging
 import random
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, TypeGuard
 
 import pygame
@@ -42,6 +43,28 @@ class Room:
     _started: bool = field(default=False, init=False)
     _enemies_alive: int = field(init=False)
 
+    @property
+    def doors(self) -> set[BlockPosition]:
+        return self._doors
+
+    @property
+    def floors(self) -> set[BlockPosition]:
+        return self._floors
+
+    @property
+    @frame_cache_method
+    def room_enemies(self) -> Iterable[ServerEnemyRobot]:
+        return [
+            ent
+            for ent in self._game.entities.values()
+            if self._is_in_room(ent) and isinstance(ent, ServerEnemyRobot)
+        ]
+
+    @property
+    @frame_cache_method
+    def room_entities(self) -> Iterable["Entity"]:
+        return [ent for ent in self._game.entities.values() if self._is_in_room(ent)]
+
     def __attrs_post_init__(self) -> None:
         self._door_entities = list(
             ServerDoorEntity(self._game, pos + 0.5, True) for pos in self._doors
@@ -75,18 +98,19 @@ class Room:
             free_floors -= set(self._game.colliding_blocks(player))
 
         # spawn enemies
-        NUM_ENEMIES = min(len(free_floors), 1)
+        NUM_ENEMIES = min(len(free_floors), 2)
         self._enemies_alive = NUM_ENEMIES
-        enemy_entities = list(
+        enemy_entities = [
             ServerEnemyRobot(
                 self._game,
                 EnemyConstants.START_HEALTH,
-                (pos.to_float(), Vector.zero().to_float()),
+                (pos.to_float() + Vector(0.5, 0.5), Vector.zero().to_float()),
                 pygame.Color(0, 0, 0),
                 basic_weapon,
+                self,
             )
             for pos in sample(free_floors, k=NUM_ENEMIES)
-        )
+        ]
         for enemy in enemy_entities:
             enemy.events.add_listener(DeathEvent, lambda e: self.on_enemy_death())
             self._game.create_entity(enemy)

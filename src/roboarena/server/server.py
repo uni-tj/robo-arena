@@ -1,6 +1,6 @@
 import logging
 from collections import deque
-from collections.abc import Collection
+from collections.abc import Collection, Iterable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Optional
 from uuid import uuid4
@@ -11,6 +11,7 @@ from pygame.time import Clock
 
 from roboarena.server.entity import (
     ServerEnemyRobot,
+    ServerEntityType,
     ServerInputHandler,
     ServerPlayerRobot,
 )
@@ -38,6 +39,7 @@ from roboarena.shared.types import (
     EntityId,
     EventType,
     Marker,
+    MarkerVect,
     ServerConnectionConfirmEvent,
     ServerDeleteEntityEvent,
     ServerEntityEvent,
@@ -47,6 +49,7 @@ from roboarena.shared.types import (
     ServerGameStartEvent,
     ServerLevelUpdateEvent,
     ServerMarkerEvent,
+    ServerMarkVectEvent,
     StartFrameEvent,
     Time,
     basic_weapon,
@@ -125,6 +128,7 @@ class GameState(SharedGameState):
     entities: bidict[EntityId, ServerEntityType]
     _rooms: list[Room]
     markers: deque[Marker]
+    markers_vect: deque[MarkerVect]
     _deleted_entities: list[ServerEntityType]
     _created_entities: list[ServerEntityType]
 
@@ -139,16 +143,8 @@ class GameState(SharedGameState):
         self._logger.debug(f"initialize with clients: {clients}")
 
         self._level_gen = LevelGenerator(tileset)
-        enemy_id = 0
-        enemy = ServerEnemyRobot(
-            self,
-            EnemyConstants.START_HEALTH,
-            (Vector(10.0, 1.0), Vector(1.0, 0.0)),
-            Color(255, 0, 0),
-            basic_weapon,
-        )
-        self.entities[enemy_id] = enemy
         self.markers = deque(maxlen=1000)
+        self.markers_vect = deque(maxlen=1000)
         self.events = EventTarget()
 
         for client_id, ip in clients.items():
@@ -169,6 +165,14 @@ class GameState(SharedGameState):
     @property
     def level(self) -> "Level":  # type: ignore
         return self._level_gen.level
+
+    @property
+    def players(self) -> Iterable[tuple[EntityId, ServerPlayerRobot]]:
+        return (
+            (player_id, player)
+            for player_id, player in self._game.entities.items()
+            if isinstance(player, ServerPlayerRobot)
+        )
 
     def create_entity(self, entity: ServerEntityType) -> None:
         self._created_entities.append(entity)
@@ -254,6 +258,11 @@ class GameState(SharedGameState):
         markers = markers if isinstance(markers, Collection) else [markers]
         self.markers += markers
         self._dispatch(None, f"marker/{uuid4()}", ServerMarkerEvent(markers))
+
+    def markvect(self, markers: MarkerVect | Collection[MarkerVect]):
+        markers = markers if isinstance(markers, Collection) else [markers]
+        self.markers_vect += markers
+        self._dispatch(None, f"markvect/{uuid4()}", ServerMarkVectEvent(markers))
 
     def loop(self) -> Stopped:
         last_t = get_time()

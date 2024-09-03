@@ -2,6 +2,7 @@ import heapq
 import logging
 import os
 import string
+import sys
 from abc import ABC, abstractmethod
 from collections import deque
 from collections.abc import Collection, Iterable, Iterator
@@ -71,6 +72,13 @@ def rect_space_at(
     top_left: Vector[int], bottom_right: Vector[int]
 ) -> Iterable[Vector[int]]:
     return (top_left + pos for pos in rect_space(bottom_right - top_left))
+
+
+@cache
+def rect_space_cached_at(
+    top_left: Vector[int], bottom_right: Vector[int]
+) -> list[Vector[int]]:
+    return [top_left + pos for pos in rect_space(bottom_right - top_left)]
 
 
 def square_space(apothem: int) -> Iterable[Vector[int]]:
@@ -194,11 +202,18 @@ def search_connected[
     return found
 
 
-def print_points(points: Iterable[Vector[int]]):
-    labels = string.digits + string.ascii_letters
+def get_min_max[
+    T: (float, int)
+](points: Iterable[Vector[T]]) -> tuple[Vector[T], Vector[T]]:
 
     min_pos = Vector(min(p.x for p in points), min(p.y for p in points))
     max_pos = Vector(max(p.x for p in points), max(p.y for p in points))
+    return min_pos, max_pos
+
+
+def print_points(points: Iterable[Vector[int]]):
+    labels = string.digits + string.ascii_letters
+    min_pos, max_pos = get_min_max(points)
     dim = max_pos - min_pos + 1
     matrix = [["#" for _ in range(dim.x)] for _ in range(dim.y)]
     for i, point in enumerate(points):
@@ -228,12 +243,21 @@ def rotate(surface: Surface, angle: float, pivot: tuple[int, int]) -> Surface:
     return pygame.transform.rotate(surface2, angle)
 
 
+def resource_path(relative_path: str) -> str:
+    """Get the absolute path to the resource"""
+    base_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "resources")
+    )
+
+    return os.path.join(base_path, relative_path.replace("/", os.sep))
+
+
 def graphic_path(path: str) -> str:
-    return os.path.join(os.path.dirname(__file__), "..", "resources", "graphics", path)
+    return resource_path(os.path.join("graphics", path))
 
 
 def sound_path(path: str) -> str:
-    return os.path.join(os.path.dirname(__file__), "..", "resources", "sounds", path)
+    return resource_path(os.path.join("sounds", path))
 
 
 def load_graphic(path: str) -> pygame.Surface:

@@ -75,6 +75,8 @@ def test_distributivity(vectors: VFFix) -> None:
 def test_inverse_division(vectors: VFFix) -> None:
     one_vector = Vector(1.0, 1)
     for vector in vectors:
+        if vector.x == 0 or vector.y == 0:
+            continue
         assert isclose(vector / vector, one_vector)
 
 

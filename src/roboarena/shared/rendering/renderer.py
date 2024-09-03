@@ -16,6 +16,7 @@ from pygame import Surface, display
 
 from roboarena.shared.block import void
 from roboarena.shared.game import OutOfLevelError
+from roboarena.shared.rendering.util import draw_arrow
 from roboarena.shared.types import EntityId
 from roboarena.shared.util import throws
 from roboarena.shared.utils.rect import Rect
@@ -255,6 +256,7 @@ class GameRenderer(Renderer):
         ctx.screen.blits(cb_ent)
 
         self._render_markers(ctx)
+        self._render_vect_markers(ctx)
         self._fps_counter.render(self._screen)
         self._render_ui(ctx)
 
@@ -293,8 +295,26 @@ class GameRenderer(Renderer):
                 surface,
                 marker.color.to_tuple(),
                 ctx.gu2screen(marker.position).to_tuple(),
-                5,
+                2.5,
             )
+
+    def _render_vect_markers(self, ctx: RenderCtx) -> None:
+        surface = self._debug_surface
+        for marker in self._game.markersvect:
+            draw_arrow(
+                # pygame.draw.line(
+                surface,
+                ctx.gu2screen(marker.start).to_pygame_vector2(),
+                ctx.gu2screen(marker.end).to_pygame_vector2(),
+                pygame.Color(marker.color.to_tuple()),
+            )
+            # pygame.draw.line(
+            #     surface,
+            #     pygame.Color(marker.color.to_tuple()),
+            #     ctx.gu2screen(marker.start).to_pygame_vector2(),
+            #     ctx.gu2screen(marker.end).to_pygame_vector2(),
+            # )
+            pass
 
     def _render_debug_traces(
         self,
@@ -303,7 +323,7 @@ class GameRenderer(Renderer):
         surface = self._debug_surface
         for ci, poss in enumerate(self._last_entity_pos.values()):
             for i, cpos in enumerate(poss):
-                col = (255, 0, ci, floor(255 * (i / len(poss))))
+                col = (255, 0, ci % 256, floor(255 * (i / len(poss))))
                 pygame.draw.circle(
                     surface,
                     col,
