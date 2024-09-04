@@ -348,8 +348,6 @@ class Client(Stoppable):
 
         last_score: int | None = None
         while True:
-            # use last_score as menu will use it in the future
-            last_score  # type: ignore
             menu = MainMenu(screen, self, self.master_mixer)
             menu.events.add_listener(QuitEvent, self.events.dispatch)
             if isinstance(menu.loop(), Stopped):
