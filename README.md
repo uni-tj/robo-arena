@@ -15,3 +15,4 @@ Follow the development of our project here:
 - [Sprint 4](docs/sprintlogs/sprintlog-4.md)
 - [Sprint 5](docs/sprintlogs/sprintlog-5.md)
 - [Sprint 6](docs/sprintlogs/sprintlog-6.md)
+- [Sprint 7](docs/sprintlogs/sprintlog-7.md)
