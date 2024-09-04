@@ -68,6 +68,8 @@ class Network[Message]:
 
 
 class Receiver[T]:
+    """Receive messages from a network always using the same ip."""
+
     _network: Network[T]
     _ip: IpV4
     _received: Iterable[Arrived[T]]
