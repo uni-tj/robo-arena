@@ -1,9 +1,8 @@
 import logging
 from abc import ABC
 from dataclasses import dataclass
-from functools import cache, cached_property
+from functools import cached_property
 
-import pygame
 from pygame import Surface
 
 from roboarena.shared.constants import Graphics, TextureSize
@@ -15,6 +14,13 @@ logger = logging.getLogger(f"{__name__}")
 
 @dataclass(frozen=True)
 class Block(ABC):
+    """
+    A small 1x1 game units square of the level
+
+    Of each block type there exists only one instance,
+    as there would be too many instances otherwise.
+    """
+
     texture: Surface
     render_above_entities: bool
     blocks_robot: bool
@@ -24,14 +30,6 @@ class Block(ABC):
     def texture_size(self) -> Vector[float]:
         """In game units"""
         return size_from_texture_width(self.texture, width=TextureSize.BLOCK_WIDTH)
-
-
-@cache
-def load_void_debug_texture() -> Surface:
-    void_texture = Surface((50, 50))
-    void_texture.fill((0, 0, 0))
-    pygame.draw.circle(void_texture, "blue", (25, 25), 10)
-    return void_texture
 
 
 floor = Block(
@@ -78,3 +76,4 @@ void = Block(
 )
 
 room_blocks = set([floor_room, floor_room_spawn, floor_door])
+"""Blocks that are part of a room structure"""
