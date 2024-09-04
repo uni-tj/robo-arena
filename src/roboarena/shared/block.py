@@ -58,6 +58,12 @@ floor_door = Block(
     blocks_robot=False,
     blocks_bullet=False,
 )
+crate = Block(
+    Graphics.CRATE,
+    render_above_entities=True,
+    blocks_robot=True,
+    blocks_bullet=True,
+)
 wall = Block(
     Graphics.WALL,
     render_above_entities=True,

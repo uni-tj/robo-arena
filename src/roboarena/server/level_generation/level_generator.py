@@ -7,7 +7,10 @@ from more_itertools import iterate, take
 
 import roboarena.server.level_generation.wfc as wfc
 from roboarena.shared.types import BlockPosition, Level, LevelUpdate
+from roboarena.shared.block import crate, floor_room
+from roboarena.shared.constants import PerlinNoiseConstants
 from roboarena.shared.util import enumerate2d_vec, neighbours_horiz, neighbours_vert
+from roboarena.shared.utils.perlin_nose import perlin_noise_spot
 from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
@@ -153,8 +156,18 @@ class LevelGenerator:
             )
             for block_pos, block in enumerate2d_vec(tile.blocks):
                 pos = tile_pos * self._tileset.blocks_per_tile + block_pos.mirror()
+                if block == floor_room:
+                    noise_val = perlin_noise_spot(
+                        pos,
+                        PerlinNoiseConstants.gridsize,
+                        PerlinNoiseConstants.num_octaves,
+                    )
+                    if noise_val > PerlinNoiseConstants.threshold:
+                        block = crate
                 self.level[pos] = block
                 level_update.append((pos, block))
+            # add perlin_noise_obstacles
+
         return level_update
 
     def _tile_pos(self, block_pos: BlockPosition) -> wfc.TilePosition:

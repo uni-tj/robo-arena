@@ -42,6 +42,8 @@ class Graphics:
     DOOR_CLOSED = load_graphic("doors/door-closed.png")
     # Void
     VOID = load_graphic("void/void.png")
+    # Obstacles
+    CRATE = load_graphic("objects/chest.png")
 
     # Bullets
     BULLET_FRIENDLY = load_graphic("bullets/bullet-player.png")
@@ -286,3 +288,8 @@ class NetworkConstants:
     SERVER_IP = 0x00000000
     VSYNC = True
     INITIAL_ACKNOLEDGEMENT: Acknoledgement = -1
+
+class PerlinNoiseConstants:
+    threshold = 0.60
+    gridsize = 3
+    num_octaves = 10
