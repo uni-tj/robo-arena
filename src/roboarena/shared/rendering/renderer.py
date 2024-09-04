@@ -15,6 +15,7 @@ import pygame.freetype
 from pygame import Surface, display
 
 from roboarena.shared.block import void
+from roboarena.shared.constants import GraphicConstants
 from roboarena.shared.game import OutOfLevelError
 from roboarena.shared.rendering.util import draw_arrow
 from roboarena.shared.types import EntityId
@@ -36,7 +37,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger(f"{__name__}")
 
 
-GU_PER_SCREEN = 25.0
 FOV_OVERLAP_GU = 1.0
 
 type FieldOfView = Rect
@@ -134,8 +134,8 @@ class RenderCtx:
 
     @cached_property
     def px_per_gu(self) -> int:
-        px_per_gu = floor(self.screen.get_width() / GU_PER_SCREEN)
-        return px_per_gu - (px_per_gu % 10)
+        px_per_gu = ceil(self.screen.get_width() / GraphicConstants.GU_PER_SCREEN)
+        return px_per_gu // 10 * 10
 
     def gu2px(self, vector: Vector[float]) -> Vector[int]:
         return (vector * self.px_per_gu).ceil()
