@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any, Callable
 from attrs import define, field
 
 from roboarena.server.enemy_ai import EnemyAi
-from roboarena.server.events import Dispatch, SimpleDispatch
 from roboarena.shared.entity import (
     Bullet,
     DoorEntity,

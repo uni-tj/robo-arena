@@ -10,8 +10,6 @@ from pygame import Color
 from pygame.time import Clock
 
 from roboarena.server.entity import (
-    ServerEnemyRobot,
-    ServerEntityType,
     ServerInputHandler,
     ServerPlayerRobot,
 )
@@ -23,7 +21,7 @@ from roboarena.server.level_generation.level_generator import (
 from roboarena.server.level_generation.tileset import tileset
 from roboarena.server.room import Room
 from roboarena.shared.block import floor_door, floor_room_spawn, room_blocks
-from roboarena.shared.constants import EnemyConstants, NetworkConstants, PlayerConstants
+from roboarena.shared.constants import NetworkConstants, PlayerConstants
 from roboarena.shared.custom_threading import Atom
 from roboarena.shared.game import GameState as SharedGameState
 from roboarena.shared.network import IpV4, Network, Receiver
@@ -52,7 +50,6 @@ from roboarena.shared.types import (
     ServerMarkVectEvent,
     StartFrameEvent,
     Time,
-    basic_weapon,
 )
 from roboarena.shared.util import (
     EventTarget,
