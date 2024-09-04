@@ -5,7 +5,6 @@ from collections import deque
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Callable
 
-import pygame
 from attrs import define, field
 from pygame import Color
 
@@ -42,7 +41,6 @@ from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
     from roboarena.client.client import GameState
-    from roboarena.shared.rendering.renderer import RenderCtx
     from roboarena.shared.types import ClientEntityType
 
 
@@ -394,13 +392,6 @@ class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
 
     def tick(self, dt: Time, t: Time):
         pass
-
-    def render(self, ctx: "RenderCtx") -> None:
-        super().render(ctx)
-        # render crosshair
-        r = 10
-        center = ctx.gu2screen(self.aim)
-        pygame.draw.circle(ctx.screen, "orange", center.to_tuple(), r)
 
 
 class ClientEnemyRobot(EnemyRobot, ClientEntity):
