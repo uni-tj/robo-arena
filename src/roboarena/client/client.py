@@ -219,6 +219,8 @@ class GameState(SharedGameState):
 
         match event:
             case ServerEntityEvent(id, name, payload):
+                if id not in self.entities:
+                    return
                 self.entities[id].on_server(name, payload, msg.last_ack, t_msg)
             case ServerSpawnRobotEvent(id, health, motion, color, weapon):
                 entity = ClientEnemyRobot(

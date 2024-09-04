@@ -159,7 +159,7 @@ class GameState(SharedGameState):
         spawn_events = [e.to_event(i) for i, e in self.entities.items()]
         for client in self._clients.values():
             level = self._level_gen.level
-            event = ServerGameStartEvent(client.entity_id, spawn_events, level)
+            event = ServerGameStartEvent(client.entity_id, spawn_events, dict(level))
             self._server.network.send(client.ip, event)
 
     @property
