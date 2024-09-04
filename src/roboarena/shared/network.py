@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Iterable
 from queue import Empty, Queue
 from threading import Lock
@@ -5,6 +6,8 @@ from typing import Optional
 
 from roboarena.shared.time import add_seconds, get_time
 from roboarena.shared.types import Arrived, IpV4, Packet, Time
+
+logger = logging.getLogger(__name__)
 
 
 class Network[Message]:
@@ -25,6 +28,7 @@ class Network[Message]:
     def send(self, ip: IpV4, msg: Message):
         self.add_client_if_missing(ip)
         t_arrive = add_seconds(get_time(), self._delay)
+        # logger.debug(f"sending message {(t_arrive, msg)}")
         self._clients[ip].put((t_arrive, msg))
 
     def receive(
@@ -47,6 +51,9 @@ class Network[Message]:
                 break
         for packet in not_arrived:
             self._clients[ip].put(packet)
+
+        # for t_arrive, msg in sorted(arrived, key=lambda _: _[0]):
+        #     logger.debug(f"receiving message {(t_arrive, msg)}")
         return sorted(arrived, key=lambda _: _[0])
 
     def receive_one(self, ip: IpV4) -> None | Arrived[Message]:
