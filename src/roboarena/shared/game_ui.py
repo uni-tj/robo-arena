@@ -12,6 +12,12 @@ if TYPE_CHECKING:
 
 
 class Healthbar:
+    """
+    Healthbar renderer
+
+    Exposes texture, which is the currently computed texture. This value is updated
+    using `update_healthbar` and `render_healthbar` by the respective entity.
+    """
 
     heart_full_texture: Surface = Graphics.HEART_FULL
     heart_empty_texture: Surface = Graphics.HEART_EMPTY
@@ -64,6 +70,12 @@ class Healthbar:
 
 
 class WeaponUI:
+    """
+    Weapon renderer
+
+    Exposes texture, which is the currently computed texture. This value is updated
+    using `update_weapon` and `render_weapon_ui` by the respective entity.
+    """
 
     background_texture = Graphics.WEAPON_UI_BACKGROUND
     texture: Surface
@@ -93,6 +105,7 @@ class WeaponUI:
 
 
 class GameUI:
+    """Game UI renderer"""
 
     healthbar: Healthbar
     weapon_ui: WeaponUI
