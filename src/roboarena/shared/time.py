@@ -1,22 +1,24 @@
 from time import perf_counter
+from typing import TYPE_CHECKING
 
 from attrs import define, field
 
-type Time = float
+if TYPE_CHECKING:
+    from roboarena.shared.types import Time
 
 
-def get_time() -> Time:
+def get_time() -> "Time":
     return perf_counter()
 
 
-def add_seconds(time: Time, add: Time) -> Time:
+def add_seconds(time: "Time", add: "Time") -> "Time":
     return time + add
 
 
 @define
 class PreciseClock:
-    min_dt: Time
-    last_t: Time = field(factory=get_time, init=False)
+    min_dt: "Time"
+    last_t: "Time" = field(factory=get_time, init=False)
 
     def tick(self) -> float:
         while get_time() - self.last_t < self.min_dt:

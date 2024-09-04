@@ -23,7 +23,6 @@ from roboarena.shared.entity import (
     Value,
     interpolateMotion,
 )
-from roboarena.shared.time import Time
 from roboarena.shared.types import (
     Acknoledgement,
     ChangedEvent,
@@ -35,6 +34,7 @@ from roboarena.shared.types import (
     OpenEvent,
     Position,
     StartFrameEvent,
+    Time,
     Weapon,
 )
 from roboarena.shared.util import EventTarget

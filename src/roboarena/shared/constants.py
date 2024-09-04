@@ -30,6 +30,45 @@ class Graphics:
     # Text
     FONT = "font/ka1.ttf"
 
+    # Level
+    # Floor
+    FLOOR_1 = load_graphic("floor/floor1.png")
+    FLOOR_2 = load_graphic("floor/floor2.png")
+    FLOOR_START = load_graphic("floor/floor-start.png")
+    # Wall
+    WALL = load_graphic("wall/wall.png")
+    # Door
+    DOOR_OPEN = load_graphic("doors/door-open.png")
+    DOOR_CLOSED = load_graphic("doors/door-closed.png")
+    # Void
+    VOID = load_graphic("void/void.png")
+
+    # Bullets
+    BULLET_FRIENDLY = load_graphic("bullets/bullet-player.png")
+    BULLET_ENEMY = load_graphic("bullets/bullet-enemy.png")
+
+    # Weapons
+    LASER_GUN = load_graphic("weapons/laser-gun.png")
+
+    # Player
+    PLAYER_CENTRE = load_graphic("player/player-centre.png")
+    PLAYER_LEFT = load_graphic("player/player-left.png")
+    PLAYER_LEFT_HALF = load_graphic("player/player-left-half.png")
+    PLAYER_RIGHT = load_graphic("player/player-right.png")
+    PLAYER_RIGHT_HALF = load_graphic("player/player-right-half.png")
+
+    # Enemy
+    ENEMY_FRAME_1 = load_graphic("enemy/enemy-1.png")
+    ENEMY_FRAME_2 = load_graphic("enemy/enemy-2.png")
+    ENEMY_FRAME_3 = load_graphic("enemy/enemy-3.png")
+
+    # GameUI
+    HEART_FULL = load_graphic("game_ui/healthbar/heart-full.png")
+    HEART_EMPTY = load_graphic("game_ui/healthbar/heart-empty.png")
+    HEART_HALF = load_graphic("game_ui/healthbar/heart-half.png")
+    HEALTHBAR_BACKGROUND = load_graphic("game_ui/healthbar/healthbar-background.png")
+    WEAPON_UI_BACKGROUND = load_graphic("game_ui/weapon_ui/weapon_ui-background.png")
+
 
 class MusicPaths:
 
@@ -139,6 +178,13 @@ class TextureSize:
 
     BUTTON_HEIGHT = 1.3
     TEXT_WIDTH = 15
+    BLOCK_WIDTH = 1.0
+    BULLET_TEXTURE = Vector(1.0, 1.0)
+    WEAPON_WIDTH = 0.75
+    WEAPON_HEIGHT = 0.6
+    PLAYER_WIDTH = 1.0
+    ENEMY_WIDTH = 1.5
+    GAME_UI_HEIGHT = 1.5
 
 
 class MusicVolume:
@@ -208,6 +254,23 @@ class CameraPositionConstants:
 
 class ClientConstants:
     START_SCREEN_SIZE = (1920, 1080)
+
+
+class BlockConstants:
+    STANDARD_BLOCK_SIZE_PX = 50
+
+
+class AnimationConstants:
+    PLAYER_LOOPS_PER_FRAME = 7
+    ENEMY_LOOPS_PER_FRAME = 14
+
+
+class GameUIConstants:
+    HEART_OFFSET = 12
+    HEART_SPACING = 50
+    HEART_Y = 13
+    HEALTHBAR_POS = (10, 10)
+    WEAPON_UI_OFFSET = 10
 
 
 CLIENT_TIMESTEP = 1 / 60

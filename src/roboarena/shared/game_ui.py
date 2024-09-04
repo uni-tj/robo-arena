@@ -2,34 +2,21 @@ from typing import TYPE_CHECKING
 
 from pygame import Surface, transform
 
+from roboarena.shared.constants import GameUIConstants, Graphics, TextureSize
+from roboarena.shared.entity import SharedWeapon
 from roboarena.shared.rendering.util import size_from_texture_height
-from roboarena.shared.util import load_graphic
 from roboarena.shared.utils.vector import Vector
-from roboarena.shared.weapon import Weapon
 
 if TYPE_CHECKING:
     from roboarena.shared.rendering.renderer import RenderCtx
 
 
-HEART_FULL_TEXTURE = load_graphic("game_ui/healthbar/heart-full.png")
-
-HEART_EMPTY_TEXTURE = load_graphic("game_ui/healthbar/heart-empty.png")
-
-HEART_HALF_TEXTURE = load_graphic("game_ui/healthbar/heart-half.png")
-
-HEALTHBAR_BACKGROUND_TEXTURE = load_graphic(
-    "game_ui/healthbar/healthbar-background.png"
-)
-
-WEAPON_UI_BACKGROUND_TEXTURE = load_graphic("game_ui/weaponui/weaponui-background.png")
-
-
 class Healthbar:
 
-    heart_full_texture: Surface = HEART_FULL_TEXTURE
-    heart_empty_texture: Surface = HEART_EMPTY_TEXTURE
-    heart_half_texture: Surface = HEART_HALF_TEXTURE
-    background_texture: Surface = HEALTHBAR_BACKGROUND_TEXTURE
+    heart_full_texture: Surface = Graphics.HEART_FULL
+    heart_empty_texture: Surface = Graphics.HEART_EMPTY
+    heart_half_texture: Surface = Graphics.HEART_HALF
+    background_texture: Surface = Graphics.HEALTHBAR_BACKGROUND
 
     max_health: int
     texture: Surface
@@ -42,13 +29,34 @@ class Healthbar:
         healthbar = self.background_texture.copy()
         for heart in range(0, self.max_health):
             if health >= 2:
-                healthbar.blit(self.heart_full_texture, (12 + heart * 50, 13))
+                healthbar.blit(
+                    self.heart_full_texture,
+                    (
+                        GameUIConstants.HEART_OFFSET
+                        + heart * GameUIConstants.HEART_SPACING,
+                        GameUIConstants.HEART_Y,
+                    ),
+                )
                 health -= 2
             elif health == 1:
-                healthbar.blit(self.heart_half_texture, (12 + heart * 50, 13))
+                healthbar.blit(
+                    self.heart_half_texture,
+                    (
+                        GameUIConstants.HEART_OFFSET
+                        + heart * GameUIConstants.HEART_SPACING,
+                        GameUIConstants.HEART_Y,
+                    ),
+                )
                 health -= 1
             else:
-                healthbar.blit(self.heart_empty_texture, (12 + heart * 50, 13))
+                healthbar.blit(
+                    self.heart_empty_texture,
+                    (
+                        GameUIConstants.HEART_OFFSET
+                        + heart * GameUIConstants.HEART_SPACING,
+                        GameUIConstants.HEART_Y,
+                    ),
+                )
         return healthbar
 
     def update_healthbar(self, health: int) -> None:
@@ -57,16 +65,20 @@ class Healthbar:
 
 class WeaponUI:
 
-    background_texture = WEAPON_UI_BACKGROUND_TEXTURE
+    background_texture = Graphics.WEAPON_UI_BACKGROUND
     texture: Surface
 
-    def __init__(self, weapon: Weapon) -> None:
+    def __init__(self, weapon: SharedWeapon) -> None:
         self.texture = self.render_weapon_ui(weapon)
 
-    def render_weapon_ui(self, weapon: Weapon) -> Surface:
+    def render_weapon_ui(self, weapon: SharedWeapon) -> Surface:
         weapon_ui = self.background_texture.copy()
         scaled_weapon_texture = transform.scale(
-            weapon.texture, (weapon_ui.get_height() * 0.6, weapon_ui.get_height() * 0.6)
+            weapon.texture,
+            (
+                weapon_ui.get_height() * TextureSize.WEAPON_HEIGHT,
+                weapon_ui.get_height() * TextureSize.WEAPON_HEIGHT,
+            ),
         )
         weapon_pos = (
             Vector.from_tuple(weapon_ui.get_size()) / 2
@@ -76,7 +88,7 @@ class WeaponUI:
         weapon_ui.blit(scaled_weapon_texture, weapon_pos.to_tuple())
         return weapon_ui
 
-    def update_weapon(self, weapon: Weapon) -> None:
+    def update_weapon(self, weapon: SharedWeapon) -> None:
         self.texture = self.render_weapon_ui(weapon)
 
 
@@ -85,13 +97,13 @@ class GameUI:
     healthbar: Healthbar
     weapon_ui: WeaponUI
 
-    def __init__(self, current_weapon: Weapon, current_health: int) -> None:
+    def __init__(self, current_weapon: SharedWeapon, current_health: int) -> None:
         self.healthbar = Healthbar(current_health)
         self.weapon_ui = WeaponUI(current_weapon)
 
     def texture_size(self, texture: Surface) -> Vector[float]:
         """In game units"""
-        return size_from_texture_height(texture, height=1.5)
+        return size_from_texture_height(texture, height=TextureSize.GAME_UI_HEIGHT)
 
     def render(self, ctx: "RenderCtx") -> None:
         scaled_healthbar = ctx.scale_gu(
@@ -101,13 +113,16 @@ class GameUI:
             self.weapon_ui.texture, self.texture_size(self.weapon_ui.texture)
         )
         weapon_ui_pos_px = Vector(
-            ctx.screen_size_px.x - weapon_ui_scaled.get_width() - 10, 10
+            ctx.screen_size_px.x
+            - weapon_ui_scaled.get_width()
+            - GameUIConstants.WEAPON_UI_OFFSET,
+            GameUIConstants.WEAPON_UI_OFFSET,
         )
-        ctx.screen.blit(scaled_healthbar, (10, 10))
+        ctx.screen.blit(scaled_healthbar, GameUIConstants.HEALTHBAR_POS)
         ctx.screen.blit(weapon_ui_scaled, weapon_ui_pos_px.to_tuple())
 
     def update_health(self, health: int) -> None:
         self.healthbar.update_healthbar(health)
 
-    def update_weapon(self, weapon: Weapon) -> None:
+    def update_weapon(self, weapon: SharedWeapon) -> None:
         self.weapon_ui.update_weapon(weapon)

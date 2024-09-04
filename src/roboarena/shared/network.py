@@ -3,13 +3,8 @@ from queue import Empty, Queue
 from threading import Lock
 from typing import Optional
 
-from roboarena.shared.time import Time, add_seconds, get_time
-
-type IpV4 = int
-"""Time of arrival and message, internal type"""
-type Packet[Message] = tuple[Time, Message]
-"""Time of arrival and message"""
-type Arrived[Message] = tuple[Time, Message]
+from roboarena.shared.time import add_seconds, get_time
+from roboarena.shared.types import Arrived, IpV4, Packet, Time
 
 
 class Network[Message]:

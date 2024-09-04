@@ -6,12 +6,11 @@ from functools import cache, cached_property
 import pygame
 from pygame import Surface
 
+from roboarena.shared.constants import Graphics, TextureSize
 from roboarena.shared.rendering.util import size_from_texture_width
-from roboarena.shared.util import load_graphic
 from roboarena.shared.utils.vector import Vector
 
 logger = logging.getLogger(f"{__name__}")
-STANDARD_BLOCK_SIZE_PX = 50
 
 
 @dataclass(frozen=True)
@@ -24,49 +23,49 @@ class Block(ABC):
     @cached_property
     def texture_size(self) -> Vector[float]:
         """In game units"""
-        return size_from_texture_width(self.texture, width=1.0)
+        return size_from_texture_width(self.texture, width=TextureSize.BLOCK_WIDTH)
 
 
 @cache
 def load_void_debug_texture() -> Surface:
-    voidTexture = Surface((50, 50))
-    voidTexture.fill((0, 0, 0))
-    pygame.draw.circle(voidTexture, "blue", (25, 25), 10)
-    return voidTexture
+    void_texture = Surface((50, 50))
+    void_texture.fill((0, 0, 0))
+    pygame.draw.circle(void_texture, "blue", (25, 25), 10)
+    return void_texture
 
 
 floor = Block(
-    load_graphic("floor/floor1.png"),
+    Graphics.FLOOR_1,
     render_above_entities=False,
     blocks_robot=False,
     blocks_bullet=False,
 )
 floor_room = Block(
-    load_graphic("floor/floor2.png"),
+    Graphics.FLOOR_2,
     render_above_entities=False,
     blocks_robot=False,
     blocks_bullet=False,
 )
 floor_room_spawn = Block(
-    load_graphic("floor/floor-start.png"),
+    Graphics.FLOOR_START,
     render_above_entities=False,
     blocks_robot=False,
     blocks_bullet=False,
 )
 floor_door = Block(
-    load_graphic("doors/door-open.png"),
+    Graphics.DOOR_OPEN,
     render_above_entities=False,
     blocks_robot=False,
     blocks_bullet=False,
 )
 wall = Block(
-    load_graphic("wall/wall.png"),
+    Graphics.WALL,
     render_above_entities=True,
     blocks_robot=True,
     blocks_bullet=True,
 )
 void = Block(
-    load_graphic("void/void.png"),
+    Graphics.VOID,
     render_above_entities=True,
     blocks_robot=True,
     blocks_bullet=True,

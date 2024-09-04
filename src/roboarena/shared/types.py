@@ -1,12 +1,10 @@
 from collections.abc import Collection, Iterable
 from dataclasses import dataclass
 from functools import cached_property
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Generator, NoReturn
 
 import pygame
 
-from roboarena.shared.network import IpV4
-from roboarena.shared.time import Time
 from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
@@ -24,6 +22,16 @@ INITIAL_ACKNOLEDGEMENT: Acknoledgement = -1
 type EntityId = int
 type ClientId = int
 
+type Time = float
+
+type IpV4 = int
+"""Time of arrival and message, internal type"""
+type Packet[Message] = tuple[Time, Message]
+"""Time of arrival and message"""
+type Arrived[Message] = tuple[Time, Message]
+
+type Counter = Generator[int, Any, NoReturn]
+
 type Position = Vector[float]
 type Velocity = Vector[float]
 type Motion = tuple[Position, Velocity]
@@ -36,6 +44,11 @@ type Path = str
 type ClientEntityType = (
     "ClientPlayerRobot | ClientEnemyRobot | ClientBullet | ClientDoorEntity"
 )
+type BulletMoveCtx = tuple[Time]
+
+type PlayerRobotMoveCtx = tuple[Input, Time]
+
+type EnemyRobotMoveCtx = tuple[Time]
 
 
 @dataclass(frozen=True)

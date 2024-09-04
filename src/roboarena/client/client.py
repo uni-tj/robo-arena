@@ -32,7 +32,7 @@ from roboarena.shared.game import GameState as SharedGameState
 from roboarena.shared.game_ui import GameUI
 from roboarena.shared.network import Arrived, IpV4, Network, Receiver
 from roboarena.shared.rendering.renderer import GameRenderer
-from roboarena.shared.time import PreciseClock, Time, get_time
+from roboarena.shared.time import PreciseClock, get_time
 from roboarena.shared.types import (
     INITIAL_ACKNOLEDGEMENT,
     Acknoledgement,
@@ -42,6 +42,7 @@ from roboarena.shared.types import (
     ClientId,
     ClientInputEvent,
     ClientLobbyReadyEvent,
+    Counter,
     EntityId,
     EventType,
     Input,
@@ -58,10 +59,10 @@ from roboarena.shared.types import (
     ServerSpawnDoorEvent,
     ServerSpawnRobotEvent,
     StartFrameEvent,
+    Time,
 )
-from roboarena.shared.util import Counter, EventTarget, Stoppable, Stopped, counter
+from roboarena.shared.util import EventTarget, Stoppable, Stopped, counter
 from roboarena.shared.utils.vector import Vector
-from roboarena.shared.weapon import LaserGun
 
 if TYPE_CHECKING:
     from roboarena.server.level_generation.level_generator import Level
@@ -189,7 +190,7 @@ class GameState(SharedGameState):
             )
             self.entities[spawn.id] = entity
             self._entity = entity
-            self.game_ui = GameUI(LaserGun(), self._entity.health.get())
+            self.game_ui = GameUI(self._entity.weapon, self._entity.health.get())
             self._logger.debug(f"intialized client entity: {self._entity}")
         self._logger.debug(f"initialized all entities: {self.entities}")
 

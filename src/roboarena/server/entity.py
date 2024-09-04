@@ -18,7 +18,6 @@ from roboarena.shared.entity import (
     Value,
 )
 from roboarena.shared.game import OutOfLevelError
-from roboarena.shared.time import Time
 from roboarena.shared.types import (
     ChangedEvent,
     Color,
@@ -32,6 +31,7 @@ from roboarena.shared.types import (
     ServerSpawnBulletEvent,
     ServerSpawnDoorEvent,
     ServerSpawnRobotEvent,
+    Time,
     Weapon,
     basic_weapon,
 )

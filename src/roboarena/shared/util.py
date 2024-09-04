@@ -10,7 +10,7 @@ from enum import Enum
 from functools import cache
 from itertools import count
 from random import getrandbits
-from typing import TYPE_CHECKING, Any, Callable, Generator, Mapping, NoReturn, Optional
+from typing import TYPE_CHECKING, Any, Callable, Mapping, Optional
 
 import numpy as np
 import pygame
@@ -18,8 +18,8 @@ from attrs import define
 from numpy.typing import NDArray
 from pygame import Surface
 
-from roboarena.shared.time import Time, get_time
-from roboarena.shared.types import StartFrameEvent
+from roboarena.shared.time import get_time
+from roboarena.shared.types import StartFrameEvent, Time
 from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
@@ -33,9 +33,6 @@ def gen_id(ids: Iterable[int]) -> int:
         if next_id in ids:
             continue
         return next_id
-
-
-type Counter = Generator[int, Any, NoReturn]
 
 
 def counter():

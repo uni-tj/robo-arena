@@ -31,7 +31,7 @@ from roboarena.shared.constants import (
 from roboarena.shared.custom_threading import Atom
 from roboarena.shared.game import GameState as SharedGameState
 from roboarena.shared.network import IpV4, Network, Receiver
-from roboarena.shared.time import Time, get_time
+from roboarena.shared.time import get_time
 from roboarena.shared.types import (
     INITIAL_ACKNOLEDGEMENT,
     Acknoledgement,
@@ -52,6 +52,7 @@ from roboarena.shared.types import (
     ServerLevelUpdateEvent,
     ServerMarkerEvent,
     StartFrameEvent,
+    Time,
     basic_weapon,
 )
 from roboarena.shared.util import (

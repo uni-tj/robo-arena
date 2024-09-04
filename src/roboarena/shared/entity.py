@@ -10,11 +10,23 @@ import pygame
 from attrs import define, field
 from pygame import Surface
 
-from roboarena.shared.constants import PlayerConstants
+from roboarena.shared.constants import (
+    AnimationConstants,
+    Graphics,
+    PlayerConstants,
+    TextureSize,
+)
 from roboarena.shared.rendering.util import size_from_texture_width
-from roboarena.shared.time import Time
-from roboarena.shared.types import Color, Input, Motion, Position, Weapon
-from roboarena.shared.util import load_graphic, rotate
+from roboarena.shared.types import (
+    Color,
+    EnemyRobotMoveCtx,
+    Motion,
+    PlayerRobotMoveCtx,
+    Position,
+    Time,
+    Weapon,
+)
+from roboarena.shared.util import rotate
 from roboarena.shared.utils.rect import Rect
 from roboarena.shared.utils.vector import Vector
 
@@ -81,15 +93,8 @@ class Entity(ABC):
     def tick(self, dt: Time, t: Time): ...
 
 
-bullet_texture_friendly = load_graphic("bullets/bullet-player.png")
-bullet_texture_unfriendly = load_graphic("bullets/bullet-enemy.png")
-bullet_texture_size = Vector.one()  # * 9 / 50
-
-type BulletMoveCtx = tuple[Time]
-
-
 class Bullet(Entity):
-    texture_size = bullet_texture_size
+    texture_size = TextureSize.BULLET_TEXTURE
     friendly: bool
     blocks_robot = False
     blocks_bullet = False
@@ -101,11 +106,9 @@ class Bullet(Entity):
         super().__init__(game)
         self.collision = CollideAroundCenter(
             lambda: self._position.get(),
-            Rect.from_width_height(bullet_texture_size),
+            Rect.from_width_height(TextureSize.BULLET_TEXTURE),
         )
-        self.texture = (
-            bullet_texture_friendly if friendly else bullet_texture_unfriendly
-        )
+        self.texture = Graphics.BULLET_FRIENDLY if friendly else Graphics.BULLET_ENEMY
         self.friendly = friendly
 
     @property
@@ -118,10 +121,10 @@ class Bullet(Entity):
 
 @define
 class SharedWeapon:
-    texture: Surface = field(default=load_graphic("weapons/laser-gun.png"), init=False)
+    texture: Surface = field(default=Graphics.LASER_GUN, init=False)
     texture_size: Vector[float] = field(
         default=size_from_texture_width(
-            load_graphic("weapons/laser-gun.png"), width=0.75
+            Graphics.LASER_GUN, width=TextureSize.WEAPON_WIDTH
         ),
         init=False,
     )
@@ -150,21 +153,11 @@ class SharedWeapon:
         yield flipped_texture, pos_screen.to_tuple()
 
 
-type PlayerRobotMoveCtx = tuple[Input, Time]
-
-
 def interpolateMotion(old: Motion, new: Motion, blend: float, ctx: None) -> Motion:
     return (
         old[0] + (new[0] - old[0]) * blend,
         old[1] + (new[1] - old[1]) * blend,
     )
-
-
-PLAYER_CENTRE_TEXTURE = load_graphic("player/player-centre.png")
-PLAYER_LEFT_TEXTURE = load_graphic("player/player-left.png")
-PLAYER_LEFT_HALF_TEXTURE = load_graphic("player/player-left-half.png")
-PLAYER_RIGHT_TEXTURE = load_graphic("player/player-right.png")
-PLAYER_RIGHT_HALF_TEXTURE = load_graphic("player/player-right-half.png")
 
 
 class PlayerRobot(Entity):
@@ -174,8 +167,10 @@ class PlayerRobot(Entity):
     motion: Value[Motion]
     color: Value[Color]
     weapon: SharedWeapon
-    texture = PLAYER_CENTRE_TEXTURE
-    texture_size = size_from_texture_width(PLAYER_CENTRE_TEXTURE, width=1.0)
+    texture = Graphics.PLAYER_CENTRE
+    texture_size = size_from_texture_width(
+        Graphics.PLAYER_CENTRE, width=TextureSize.PLAYER_WIDTH
+    )
     _texture_queue: deque[Surface]
     blocks_robot = False
     blocks_bullet = False
@@ -183,7 +178,9 @@ class PlayerRobot(Entity):
     def __init__(self, game: "GameState") -> None:
         super().__init__(game)
         self._texture_queue = deque()
-        self._texture_queue.extend([PLAYER_CENTRE_TEXTURE] * 7)
+        self._texture_queue.extend(
+            [Graphics.PLAYER_CENTRE] * AnimationConstants.PLAYER_LOOPS_PER_FRAME
+        )
         self.collision = CollideAroundCenter(  # type: ignore
             lambda: self.motion.get()[0], Rect.from_size(Vector.from_scalar(0.95))
         )
@@ -230,36 +227,43 @@ class PlayerRobot(Entity):
         _, orientation = self.motion.get()
         if len(self._texture_queue) == 0:
             if orientation.x > 0.5 or orientation.y < -0.5:
-                self._texture_queue.extend([PLAYER_RIGHT_HALF_TEXTURE] * 7)
-                self._texture_queue.extend([PLAYER_RIGHT_TEXTURE] * 7)
-                self._texture_queue.extend([PLAYER_CENTRE_TEXTURE] * 7)
+                self._texture_queue.extend(
+                    [Graphics.PLAYER_RIGHT_HALF]
+                    * AnimationConstants.PLAYER_LOOPS_PER_FRAME
+                )
+                self._texture_queue.extend(
+                    [Graphics.PLAYER_RIGHT] * AnimationConstants.PLAYER_LOOPS_PER_FRAME
+                )
+                self._texture_queue.extend(
+                    [Graphics.PLAYER_CENTRE] * AnimationConstants.PLAYER_LOOPS_PER_FRAME
+                )
             elif orientation.x < -0.5 or orientation.y > 0.5:
-                self._texture_queue.extend([PLAYER_LEFT_HALF_TEXTURE] * 7)
-                self._texture_queue.extend([PLAYER_LEFT_TEXTURE] * 7)
-                self._texture_queue.extend([PLAYER_CENTRE_TEXTURE] * 7)
+                self._texture_queue.extend(
+                    [Graphics.PLAYER_LEFT_HALF]
+                    * AnimationConstants.PLAYER_LOOPS_PER_FRAME
+                )
+                self._texture_queue.extend(
+                    [Graphics.PLAYER_LEFT] * AnimationConstants.PLAYER_LOOPS_PER_FRAME
+                )
+                self._texture_queue.extend(
+                    [Graphics.PLAYER_CENTRE] * AnimationConstants.PLAYER_LOOPS_PER_FRAME
+                )
             else:
-                self._texture_queue.extend([PLAYER_CENTRE_TEXTURE] * 7)
+                self._texture_queue.extend(
+                    [Graphics.PLAYER_CENTRE] * AnimationConstants.PLAYER_LOOPS_PER_FRAME
+                )
 
         return chain(super().prepare_render(ctx), self.weapon.prepare_render(ctx))
-
-
-type EnemyRobotMoveCtx = tuple[Time]
-
-enemy_robot_texture = Surface((50, 50))
-enemy_robot_texture.fill("red")
-
-
-ENEMY_TEXTURE_1 = load_graphic("enemy/enemy-1.png")
-ENEMY_TEXTURE_2 = load_graphic("enemy/enemy-2.png")
-ENEMY_TEXTURE_3 = load_graphic("enemy/enemy-3.png")
 
 
 class EnemyRobot(Entity):
     health: Value[int]
     motion: Value[Motion]
     color: Value[Color]
-    texture = ENEMY_TEXTURE_1
-    texture_size = size_from_texture_width(ENEMY_TEXTURE_1, width=1.5)
+    texture = Graphics.ENEMY_FRAME_1
+    texture_size = size_from_texture_width(
+        Graphics.ENEMY_FRAME_1, width=TextureSize.ENEMY_WIDTH
+    )
     _texture_queue: deque[Surface]
     blocks_robot = False
     blocks_bullet = False
@@ -272,7 +276,9 @@ class EnemyRobot(Entity):
         )
         self.initial_position = motion[0]
         self._texture_queue = deque()
-        self._texture_queue.extend([ENEMY_TEXTURE_1] * 14)
+        self._texture_queue.extend(
+            [Graphics.ENEMY_FRAME_1] * AnimationConstants.ENEMY_LOOPS_PER_FRAME
+        )
 
     @property
     def position(self) -> Position:
@@ -288,18 +294,26 @@ class EnemyRobot(Entity):
     def prepare_render(self, ctx: "RenderCtx") -> Iterable["RenderInfo"]:
         self.texture = self._texture_queue.popleft()
         if len(self._texture_queue) == 0:
-            if self.texture == ENEMY_TEXTURE_1:
-                self._texture_queue.extend([ENEMY_TEXTURE_2] * 14)
-                self._texture_queue.extend([ENEMY_TEXTURE_3] * 14)
-            elif self.texture == ENEMY_TEXTURE_3:
-                self._texture_queue.extend([ENEMY_TEXTURE_2] * 14)
-                self._texture_queue.extend([ENEMY_TEXTURE_1] * 14)
+            if self.texture == Graphics.ENEMY_FRAME_1:
+                self._texture_queue.extend(
+                    [Graphics.ENEMY_FRAME_2] * AnimationConstants.ENEMY_LOOPS_PER_FRAME
+                )
+                self._texture_queue.extend(
+                    [Graphics.ENEMY_FRAME_3] * AnimationConstants.ENEMY_LOOPS_PER_FRAME
+                )
+            elif self.texture == Graphics.ENEMY_FRAME_3:
+                self._texture_queue.extend(
+                    [Graphics.ENEMY_FRAME_2] * AnimationConstants.ENEMY_LOOPS_PER_FRAME
+                )
+                self._texture_queue.extend(
+                    [Graphics.ENEMY_FRAME_1] * AnimationConstants.ENEMY_LOOPS_PER_FRAME
+                )
         return super().prepare_render(ctx)
 
 
 class DoorEntity(Entity):
     OPEN_TEXTURE = Surface((50, 65), pygame.SRCALPHA)
-    CLOSED_TEXTURE = load_graphic("doors/door-closed.png")
+    CLOSED_TEXTURE = Graphics.DOOR_CLOSED
 
     @property
     def texture(self) -> Surface:  # type: ignore
@@ -307,7 +321,9 @@ class DoorEntity(Entity):
             return self.OPEN_TEXTURE
         return self.CLOSED_TEXTURE
 
-    texture_size: Vector[float] = size_from_texture_width(OPEN_TEXTURE, width=1.0)
+    texture_size: Vector[float] = size_from_texture_width(
+        OPEN_TEXTURE, width=TextureSize.BLOCK_WIDTH
+    )
 
     @property
     def blocks_robot(self) -> bool:  # type: ignore
