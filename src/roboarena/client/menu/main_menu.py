@@ -26,7 +26,10 @@ if TYPE_CHECKING:
 class MainMenu(Menu):
 
     def __init__(
-        self, screen: Surface, client: "Client", master_mixer: MasterMixer
+        self,
+        screen: Surface,
+        client: "Client",
+        master_mixer: MasterMixer,
     ) -> None:
         settings_menu = SettingsMenu(screen, self, client, master_mixer)
 
