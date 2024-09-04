@@ -32,6 +32,7 @@ from roboarena.shared.types import (
     Motion,
     OpenEvent,
     Position,
+    ShotEvent,
     StartFrameEvent,
     Time,
     Weapon,
@@ -227,10 +228,6 @@ class ClientEntity(Entity, ABC):
     ): ...
 
 
-class ShotEvent:
-    """Fired after shooting"""
-
-
 @define
 class ClientWeapon(SharedWeapon):
     if TYPE_CHECKING:
@@ -258,8 +255,11 @@ class ClientWeapon(SharedWeapon):
         self._weapon = weapon
         self._last_shot = 0.0
 
+    def on_server_event(self, evt: ShotEvent):
+        self.events.dispatch(evt)
+
     def shoot(self):
-        self.events.dispatch(ShotEvent())
+        pass
 
 
 class ClientBullet(Bullet, ClientEntity):
@@ -387,6 +387,8 @@ class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
                 self.health.on_server(event)
             case "weapon", Weapon():
                 self.weapon.on_server(event)
+            case "weapon_shot", ShotEvent():
+                self.weapon.on_server_event(event)
             case n, e:
                 raise ValueError(f"entity: invalid event {n}={e}")
 
@@ -455,6 +457,8 @@ class ClientEnemyRobot(EnemyRobot, ClientEntity):
                 self.health.on_server(event)
             case "weapon", Weapon():
                 self.weapon.on_server(event)
+            case "weapon_shot", ShotEvent():
+                self.weapon.on_server_event(event)
             case n, e:
                 raise ValueError(f"entity: invalid event {n}={e}")
 

@@ -159,6 +159,11 @@ class OpenEvent:
 
 
 @dataclass(frozen=True)
+class ShotEvent:
+    """Fired after shooting"""
+
+
+@dataclass(frozen=True)
 class Weapon:
     weapon_speed: float
     """In shots per second"""

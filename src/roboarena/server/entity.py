@@ -34,6 +34,7 @@ from roboarena.shared.types import (
     ServerSpawnBulletEvent,
     ServerSpawnDoorEvent,
     ServerSpawnRobotEvent,
+    ShotEvent,
     SimpleDispatch,
     Time,
     Weapon,
@@ -115,10 +116,6 @@ class HealthController(Value[int]):
         return self._health
 
 
-class ShotEvent:
-    """Fired after shooting"""
-
-
 @define
 class ServerWeapon(SharedWeapon):
     if TYPE_CHECKING:
@@ -153,6 +150,7 @@ class ServerWeapon(SharedWeapon):
             self._weapon.bullet_strength,
         )
         self._game.create_entity(bullet)
+        self._game.dispatch(self._entity, "weapon_shot", ShotEvent())
         self.events.dispatch(ShotEvent())
 
     def shoot(self, direction: Vector[float]):
