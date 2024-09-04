@@ -303,14 +303,31 @@ def frame_cache_method[**P, R](f: Callable[P, R]) -> Callable[P, R]:  # noqa: F8
 def debounce(seconds: Time):
 
     def decorator[**P, R](f: Callable[P, R]) -> Callable[P, R | None]:  # noqa F821
-        last_call: Time = 0
+        last_wrapper_call: Time = 0
 
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R | None:  # noqa F821
-            nonlocal last_call
-            if get_time() - last_call < seconds:
-                last_call = get_time()
+            nonlocal last_wrapper_call
+            if get_time() - last_wrapper_call < seconds:
+                last_wrapper_call = get_time()
                 return
-            last_call = get_time()
+            last_wrapper_call = get_time()
+            return f(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def throttle(seconds: Time):
+
+    def decorator[**P, R](f: Callable[P, R]) -> Callable[P, R | None]:  # noqa F821
+        last_f_call: Time = 0
+
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R | None:  # noqa F821
+            nonlocal last_f_call
+            if get_time() - last_f_call < seconds:
+                return
+            last_f_call = get_time()
             return f(*args, **kwargs)
 
         return wrapper
