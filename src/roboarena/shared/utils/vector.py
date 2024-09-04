@@ -220,6 +220,16 @@ class Vector[T: (int, float)]:
             res += x.to_float()
         return res  # type:ignore
 
+    def clamp(self, _max: "Vector[float]", _min: "Vector[float]") -> "Vector[float]":
+        return Vector(
+            min(max(self.x, _min.x), _max.x), min(max(self.y, _min.y), _max.y)
+        )
+
+
+def clamp(value: float, min_value: float, max_value: float) -> float:
+    print(value, min_value, max_value)
+    return min(max(value, min_value), max_value)
+
 
 T = TypeVar("T", int, float)
 

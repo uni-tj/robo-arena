@@ -2,7 +2,6 @@ import heapq
 import logging
 import os
 import string
-import sys
 from abc import ABC, abstractmethod
 from collections import deque
 from collections.abc import Collection, Iterable, Iterator

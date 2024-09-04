@@ -171,7 +171,7 @@ class Weapon:
         return 1 / self.weapon_speed
 
 
-basic_weapon = Weapon(weapon_speed=1.5, bullet_speed=4, bullet_strength=10)
+basic_weapon = Weapon(weapon_speed=1.5, bullet_speed=4, bullet_strength=2)
 
 
 """Communication protocol

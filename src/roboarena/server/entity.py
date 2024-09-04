@@ -1,3 +1,4 @@
+import time
 from abc import ABC, abstractmethod
 from functools import partial
 from logging import getLogger
@@ -129,15 +130,22 @@ class ServerWeapon(SharedWeapon):
 
     _last_shot: float = field(default=0.0, init=False)
 
+    @property
+    def bullet_speed(self):
+        return self._weapon.bullet_speed
+
     def on_input(self, input: Input, t: Time):
         if not input.primary:
             return
         if t - self._last_shot < self._weapon.wepaon_cooldown:
             return
         self._last_shot = t
-        self.shoot(input.mouse - self._entity.position)
+        self._shoot(input.mouse - self._entity.position)
 
-    def shoot(self, direction: Vector[float]):
+    def _shoot(self, direction: Vector[float]):
+        # if time.time() - self._last_shot < self._weapon.wepaon_cooldown:
+        #     return
+        # self._last_shot = time.time()
         bullet = ServerBullet(
             self._game,
             self.friendly,
@@ -147,6 +155,13 @@ class ServerWeapon(SharedWeapon):
         )
         self._game.create_entity(bullet)
         self.events.dispatch(ShotEvent())
+
+    def shoot(self, direction: Vector[float]):
+        t = time.perf_counter()
+        if t - self._last_shot < self._weapon.wepaon_cooldown:
+            return
+        self._last_shot = t
+        self._shoot(direction)
 
     def get(self) -> Weapon:
         return self._weapon
@@ -266,6 +281,7 @@ class ServerEnemyRobot(EnemyRobot):
         color: Color,
         weapon: Weapon,
         room: "Room",
+        difficulty: int,
     ) -> None:
         super().__init__(game, motion)
         self._game = game  # type: ignore
@@ -280,13 +296,14 @@ class ServerEnemyRobot(EnemyRobot):
         self.health.events.add_listener(DeathEvent, self.events.dispatch)
         self.health.events.add_listener(DeathEvent, lambda e: game.delete_entity(self))
 
-        self.ai = EnemyAi(room, game)
+        self.ai = EnemyAi(room, game, difficulty)
 
     def move(self, current: Motion, ctx: EnemyRobotMoveCtx) -> Motion:
         return self.ai.update_enemy_position(current, self, ctx)
 
     def tick(self, dt: Time, t: Time):
         # self.ai.update_enemy_position(self, dt)
+        self.ai.shoot(self.motion.get(), self, (dt,))
         self.motion.tick((dt,))
 
     def to_event(self, entity_id: EntityId) -> ServerSpawnRobotEvent:

@@ -235,7 +235,7 @@ class UserEvents:
 class PlayerConstants:
 
     # Movement
-    ACCELEARTE = 0.6
+    ACCELEARTE = 0.5
     DECELERATE = 0.1
 
     # Health

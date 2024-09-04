@@ -108,6 +108,7 @@ class Room:
                 pygame.Color(0, 0, 0),
                 basic_weapon,
                 self,
+                15,
             )
             for pos in sample(free_floors, k=NUM_ENEMIES)
         ]
