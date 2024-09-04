@@ -4,7 +4,7 @@ from collections import deque
 from collections.abc import Iterable
 from itertools import chain
 from math import copysign, degrees
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, override
 
 import pygame
 from attrs import define, field
@@ -38,12 +38,19 @@ logger = logging.getLogger(f"{__name__}")
 
 
 class Value[T](ABC):
+    """
+    Interface represting a value
+
+    Derivatives can further extend this to include remote functionality.
+    """
 
     @abstractmethod
     def get(self) -> T: ...
 
 
 class Collidable(ABC):
+    """Interface for hitbox calculation"""
+
     @property
     @abstractmethod
     def hitbox(self) -> Rect: ...
@@ -58,13 +65,21 @@ class CollideAroundCenter(Collidable):
 
     @property
     def hitbox(self) -> Rect:
+        """Hitbox at current position"""
         return self._rect.centerAround(self._center())
 
     def hitbox_at(self, center: Vector[float]) -> Rect:
+        """Hitbox if current position was `center`"""
         return self._rect.centerAround(center)
 
 
 class Entity(ABC):
+    """
+    An abstract entity
+
+    Entities are everything that is non-static, e.g. players, doors, bullets, etc.
+    """
+
     _game: "GameState"
     collision: Collidable
     texture: Surface
@@ -94,8 +109,11 @@ class Entity(ABC):
 
 
 class Bullet(Entity):
+    """Abstract bullet."""
+
     texture_size = TextureSize.BULLET_TEXTURE
     friendly: bool
+    """True if shot by player, False if shot by enemy"""
     blocks_robot = False
     blocks_bullet = False
     _position: Value[Vector[float]]
@@ -222,7 +240,9 @@ class PlayerRobot(Entity):
             return (new_position_y, new_velocity_y)
         return (cur_position, Vector(0.0, 0.0))
 
+    @override
     def prepare_render(self, ctx: "RenderCtx") -> Iterable["RenderInfo"]:
+        """Upates player animation and render weapon"""
         self.texture = self._texture_queue.popleft()
         _, orientation = self.motion.get()
         if len(self._texture_queue) == 0:
@@ -293,6 +313,7 @@ class EnemyRobot(Entity):
         return (new_pos, new_ori)
 
     def prepare_render(self, ctx: "RenderCtx") -> Iterable["RenderInfo"]:
+        """Updates enemy animation"""
         self.texture = self._texture_queue.popleft()
         if len(self._texture_queue) == 0:
             if self.texture == Graphics.ENEMY_FRAME_1:
@@ -313,6 +334,7 @@ class EnemyRobot(Entity):
 
 
 class DoorEntity(Entity):
+    "Abstract door."
     OPEN_TEXTURE = Surface((50, 65), pygame.SRCALPHA)
     CLOSED_TEXTURE = Graphics.DOOR_CLOSED
 

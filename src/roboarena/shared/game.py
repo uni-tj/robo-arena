@@ -27,6 +27,12 @@ class OutOfLevelError(Exception):
 
 
 class GameState(ABC):
+    """
+    The abstract game.
+
+    Most components know an instance of this central class.
+    """
+
     env: Literal["server"] | Literal["client"]
     """
     Whether a client or server game instance.
