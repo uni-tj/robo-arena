@@ -338,8 +338,8 @@ class GraphicConstants:
 
 
 class PerlinNoiseConstants:
-    threshold = 0.660
-    gridsize = 5
+    threshold = 0.650
+    gridsize = 4
     num_octaves = 3
 
 
