@@ -1,3 +1,5 @@
+import os
+
 import pygame
 
 from roboarena.shared.types import Acknoledgement, Path
@@ -157,6 +159,7 @@ class SoundPath:
     # Buttons
     BUTTON_HOVER_SOUND = sound_path("menu/button-hover.mp3")
     BUTTON_CLICK_SOUND = sound_path("menu/button-click.mp3")
+    KEY_SET_SOUND = sound_path("menu/button-key-set.mp3")
 
     # AmbienceSound
     AMBIENCE_SOUND: list[Path] = [
@@ -192,40 +195,41 @@ class SoundPath:
 class MusicVolume:
 
     # MainMenu
-    MAIN_MENU = 1.0
+    MAIN_MENU = 0.6
 
     # AmbienceMusic
-    AMBIENCE_MUSIC = 0.15
+    AMBIENCE_MUSIC = 0.2
 
     # MasterMixer
-    START_VOLUME = 1.0
+    START_VOLUME = 0.15
     MUSIC_FADE = 500
 
 
 class SoundVolume:
 
     # Buttons
-    BUTTON_HOVER = 1.0
-    BUTTON_CLICK = 1.0
+    BUTTON_HOVER = 0.8
+    BUTTON_CLICK = 0.7
+    KEY_SET = 0.9
 
     # AmbienceSound
     AMBIENCE_SOUND = 0.1
-    AMBIENCE_SOUND_FADE = 1000
+    AMBIENCE_SOUND_FADE = 1500
 
     # EnemySounds
-    ENEMY_HOVER = 0.2
-    ENEMY_SHOOTING = 1.0
-    ENEMY_HIT = 0.5
-    ENEMY_DYING = 1.0
+    ENEMY_HOVER = 0.15
+    ENEMY_SHOOTING = 0.4
+    ENEMY_HIT = 0.4
+    ENEMY_DYING = 0.6
 
     # DoorSounds
-    DOOR = 1.0
+    DOOR = 0.5
 
     # PlayerSounds
-    PLAYER_WALKING = 1.0
+    PLAYER_WALKING = 0.4
     PLAYER_SHOOTING = 0.2
-    PLAYER_HIT = 1.0
-    PLAYER_DYING = 1.0
+    PLAYER_HIT = 0.4
+    PLAYER_DYING = 0.7
 
 
 class UserEvents:
@@ -294,3 +298,9 @@ class PerlinNoiseConstants:
     threshold = 0.66
     gridsize = 3
     num_octaves = 10
+
+
+class SettingPathConstants:
+    SETTINGS_PATH: str = os.path.join(
+        os.path.dirname(__file__), "../client/settings.yml"
+    )

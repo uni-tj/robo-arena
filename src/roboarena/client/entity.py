@@ -438,7 +438,7 @@ class ClientEnemyRobot(EnemyRobot, ClientEntity):
             ChangedByServerEvent,
             lambda e: dispatch(DeathEvent()) if e.new <= 0 else None,  # type: ignore
         )
-        self.health.events.add_listener(ShotEvent, dispatch)
+        self.weapon.events.add_listener(ShotEvent, dispatch)
         self._enemy_sounds.enemy_hovering()
         self.events.add_listener(
             ShotEvent, lambda _: self._enemy_sounds.enemy_shooting()

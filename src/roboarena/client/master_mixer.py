@@ -112,7 +112,7 @@ class EnemySounds:
     def enemy_dying(self) -> None:
         self._master_mixer.stop_sound(self._hover_sound)
         self._master_mixer.set_sound_volume(self._dying_sound, SoundVolume.ENEMY_DYING)
-        self._master_mixer.play_sound(self._dying_sound)
+        self._master_mixer.play_sound(self._dying_sound, True)
 
 
 class DoorSounds:
@@ -167,11 +167,11 @@ class PlayerSounds:
         self._master_mixer.set_sound_volume(
             self._shooting_sound, SoundVolume.PLAYER_SHOOTING
         )
-        self._master_mixer.play_sound(self._shooting_sound)
+        self._master_mixer.play_sound(self._shooting_sound, True)
 
     def player_hit(self) -> None:
         self._master_mixer.set_sound_volume(self._hit_sound, SoundVolume.PLAYER_HIT)
-        self._master_mixer.play_sound(self._hit_sound)
+        self._master_mixer.play_sound(self._hit_sound, True)
 
     def player_dying(self) -> None:
         self._master_mixer.set_music_volume(SoundVolume.PLAYER_DYING)
