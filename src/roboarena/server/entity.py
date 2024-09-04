@@ -194,6 +194,7 @@ class ServerBullet(Bullet):
             partial(self._game.dispatch, self, "velocity"),
         )
         self._strength = strength
+        self._hit_last_tick = set()
 
     def tick(self, dt: Time, t: Time):
         self._position.tick((dt,))
