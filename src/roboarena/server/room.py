@@ -113,10 +113,7 @@ class Room:
             ),
             bullet_speed=WeaponConstants.BULLET_SPEED / 2
             + 0.2 * math.sqrt(self.difficulty % DIFFICULTY.Weapon_Mod),
-            bullet_strength=int(
-                WeaponConstants.BULLET_Strength
-                + self.difficulty // DIFFICULTY.Weapon_Mod
-            ),
+            bullet_strength=1,
         )
         self._free_floors = free_floors
 
@@ -124,7 +121,6 @@ class Room:
         self.spawn_enemies(free_floors)
 
     def spawn_enemies(self, free_floors: set[BlockPosition]):
-        print("spawn_enemies")
         NUM_ENEMIES = min(len(free_floors), 2)
         self._enemies_alive = NUM_ENEMIES
         enemy_entities = [

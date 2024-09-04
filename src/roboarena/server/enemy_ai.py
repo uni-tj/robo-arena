@@ -130,37 +130,14 @@ class EnemyAi:
 
     def _calculate_wall_repulsion_force(self, pos: EntityPosition) -> Vector[float]:
         min_pos, _ = get_min_max(self.find_all_walls())
+        grid_pos = ((pos - min_pos)).round()
 
-        grid_pos = pos - min_pos
+        try:
 
-        ix, iy = int(grid_pos.x), int(grid_pos.y)
-        fx, fy = grid_pos.x - ix, grid_pos.y - iy
-
-        grid_x = [
-            [
-                self._wpgm[0][
-                    max(0, min(ix + i, self._wpgm[0].shape[0] - 1)),
-                    max(0, min(iy + j, self._wpgm[0].shape[1] - 1)),
-                ]
-                for j in range(-1, 3)
-            ]
-            for i in range(-1, 3)
-        ]
-
-        grid_y = [
-            [
-                self._wpgm[1][
-                    max(0, min(ix + i, self._wpgm[1].shape[0] - 1)),
-                    max(0, min(iy + j, self._wpgm[1].shape[1] - 1)),
-                ]
-                for j in range(-1, 3)
-            ]
-            for i in range(-1, 3)
-        ]
-
-        gradient_x = bicubic_interpolation(grid_x, fx, fy)
-        gradient_y = bicubic_interpolation(grid_y, fx, fy)
-
+            gradient_x = self._wpgm[0][grid_pos.x, grid_pos.y]
+            gradient_y = self._wpgm[1][grid_pos.x, grid_pos.y]
+        except IndexError:
+            return Vector.zero()
         return Vector(gradient_x, gradient_y)
 
     def _calculate_entity_repulsion_force(
@@ -202,6 +179,7 @@ class EnemyAi:
     def update_enemy_position(
         self, current: Motion, enemy: "ServerEnemyRobot", ctx: "EnemyRobotMoveCtx"
     ) -> Motion:
+
         (dt,) = ctx
         enemy_pos, cur_velocity = current
         np = self._get_nearest_player(enemy_pos)
@@ -239,36 +217,6 @@ class EnemyAi:
         if combined_force.length() > max_force:
             combined_force = combined_force.normalize() * max_force
 
-        # Mark Debug positions + Forces acting on enemies
-        self._i += 1
-        if self._i % 10 == 0:
-            # self._game.mark(
-            #     [
-            #         Marker(enemy_pos, PygameColor.green()),
-            #     ]
-            #     + [Marker(pos.to_float(), PygameColor.grey()) for pos in path]
-            # )
-            # self._game.markvect(
-            #     [
-            #         MarkerVect(
-            #             enemy_pos, enemy_pos + wall_force, PygameColor(255, 129, 0)
-            #         ),
-            #         MarkerVect(
-            #             enemy_pos, enemy_pos + entity_force, PygameColor(0, 255, 0)
-            #         ),
-            #         MarkerVect(
-            #             enemy_pos, enemy_pos + player_force, PygameColor(0, 0, 255)
-            #         ),
-            #         MarkerVect(
-            #             enemy_pos, enemy_pos
-            # + a_start_force, PygameColor(200, 200, 200)
-            #         ),
-            #         MarkerVect(
-            #             enemy_pos, enemy_pos + combined_force, PygameColor(0, 0, 255)
-            #         ),
-            #     ]
-            # )
-            pass
         # Update Velocity + prevent moving into walls->sliding along walls
         new_velocity = (
             cur_velocity * (1 - PlayerConstants.DECELERATE * 3) + combined_force
