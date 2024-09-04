@@ -11,6 +11,7 @@ pyyaml = "~=6.0.1"
 keyboard = "~=0.13.5"
 bidict = "~=0.23.1"
 more-itertools = "~=10.4.0"
+matplotlib = "~=3.9.2"
 roboarena = {file = ".", editable = true}
 
 [dev-packages]
