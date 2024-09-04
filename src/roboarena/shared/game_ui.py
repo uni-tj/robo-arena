@@ -21,7 +21,7 @@ HEALTHBAR_BACKGROUND_TEXTURE = load_graphic(
     "game_ui/healthbar/healthbar-background.png"
 )
 
-WEAPON_UI_BACKGROUND_TEXTURE = load_graphic("game_ui/weaponUI/weaponUI-background.png")
+WEAPON_UI_BACKGROUND_TEXTURE = load_graphic("game_ui/weaponui/weaponui-background.png")
 
 
 class Healthbar:
