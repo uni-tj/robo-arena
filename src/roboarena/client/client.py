@@ -20,11 +20,9 @@ from roboarena.client.keys import load_keys
 from roboarena.client.master_mixer import MasterMixer
 from roboarena.client.menu.main_menu import MainMenu
 from roboarena.shared.constants import (
-    CLIENT_TIMESTEP,
-    SERVER_IP,
-    VSYNC,
     CameraPositionConstants,
     ClientConstants,
+    NetworkConstants,
     UserEvents,
 )
 from roboarena.shared.custom_threading import Atom
@@ -34,7 +32,6 @@ from roboarena.shared.network import Arrived, IpV4, Network, Receiver
 from roboarena.shared.rendering.renderer import GameRenderer
 from roboarena.shared.time import PreciseClock, get_time
 from roboarena.shared.types import (
-    INITIAL_ACKNOLEDGEMENT,
     Acknoledgement,
     ClientConnectionRequestEvent,
     ClientGameEvent,
@@ -99,7 +96,7 @@ class GameOverState:
 
     def loop(self) -> Stopped | None:
         self._logger.debug("Entered loop")
-        clock = PreciseClock(CLIENT_TIMESTEP)
+        clock = PreciseClock(NetworkConstants.CLIENT_TIMESTEP)
         while True:
             if self._client.stopped.get():
                 return Stopped()
@@ -179,7 +176,10 @@ class GameState(SharedGameState):
 
         for spawn in start.entities:
             if spawn.id != start.client_entity:
-                self.handle(t_start, ServerGameEvent(INITIAL_ACKNOLEDGEMENT, spawn))
+                self.handle(
+                    t_start,
+                    ServerGameEvent(NetworkConstants.INITIAL_ACKNOLEDGEMENT, spawn),
+                )
                 continue
             # initialize client entity
             if not isinstance(spawn, ServerSpawnRobotEvent):
@@ -256,7 +256,7 @@ class GameState(SharedGameState):
 
     def loop(self) -> Stopped:
         self._logger.debug("Enterered loop")
-        clock = PreciseClock(CLIENT_TIMESTEP)
+        clock = PreciseClock(NetworkConstants.CLIENT_TIMESTEP)
         _ambience_sound = AmbienceSound(self.master_mixer)
 
         while True:
@@ -317,14 +317,14 @@ class Client(Stoppable):
         self.master_mixer = MasterMixer()
 
     def dispatch(self, event: EventType) -> None:
-        self.network.send(SERVER_IP, event)
+        self.network.send(NetworkConstants.SERVER_IP, event)
 
     def loop(self) -> Stopped:
         pygame.init()
         screen = pygame.display.set_mode(
             ClientConstants.START_SCREEN_SIZE,
             flags=RESIZABLE,
-            vsync=int(VSYNC),
+            vsync=int(NetworkConstants.VSYNC),
         )
 
         menu = MainMenu(screen, self, self.master_mixer)

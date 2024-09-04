@@ -1,6 +1,6 @@
 import pygame
 
-from roboarena.shared.types import Path
+from roboarena.shared.types import Acknoledgement, Path
 from roboarena.shared.util import load_graphic, sound_path
 from roboarena.shared.utils.vector import Vector
 
@@ -70,55 +70,6 @@ class Graphics:
     WEAPON_UI_BACKGROUND = load_graphic("game_ui/weapon_ui/weapon_ui-background.png")
 
 
-class MusicPaths:
-
-    # Menue
-    MENU_MUSIC = sound_path("menu/menu-music.mp3")
-
-    # AmbienceMusic
-    AMBIENCE_MUSIC: list[Path] = [
-        sound_path("game_ambience/game-music_1.mp3"),
-        sound_path("game_ambience/game-music_2.mp3"),
-    ]
-
-
-class SoundPath:
-
-    # Buttons
-    BUTTON_HOVER_SOUND = sound_path("menu/button-hover.mp3")
-    BUTTON_CLICK_SOUND = sound_path("menu/button-click.mp3")
-
-    # AmbienceSound
-    AMBIENCE_SOUND: list[Path] = [
-        sound_path("game_ambience/background-ambience_1.mp3"),
-        sound_path("game_ambience/background-ambience_2.mp3"),
-        sound_path("game_ambience/background-ambience_3.mp3"),
-        sound_path("game_ambience/background-ambience_4.mp3"),
-        sound_path("game_ambience/background-ambience_5.mp3"),
-        sound_path("game_ambience/background-ambience_6.mp3"),
-        sound_path("game_ambience/background-ambience_7.mp3"),
-        sound_path("game_ambience/background-ambience_8.mp3"),
-        sound_path("game_ambience/background-ambience_9.mp3"),
-        sound_path("game_ambience/background-ambience_10.mp3"),
-        sound_path("game_ambience/background-ambience_1.mp3"),
-    ]
-
-    # EnemySounds
-    ENEMY_HOVER_SOUND = sound_path("enemy/enemy-hover.mp3")
-    ENEMY_SHOOTING_SOUND = sound_path("enemy/enemy-shot.mp3")
-    ENEMY_HIT_SOUND = sound_path("enemy/enemy-hit.mp3")
-    ENEMY_DYING_SOUND = sound_path("enemy/enemy-dying.mp3")
-
-    # DoorSounds
-    DOOR_SOUND = sound_path("door/door.mp3")
-
-    # PlayerSounds
-    PLAYER_WALKING_SOUND = sound_path("player/player-moving.mp3")
-    PLAYER_SHOOTING_SOUND = sound_path("player/laser-gun.mp3")
-    PLAYER_HIT_SOUND = sound_path("player/player-hit.mp3")
-    PLAYER_DYING_SOUND = sound_path("player/player-dying.mp3")
-
-
 class ButtonPos:
 
     # MainMenu
@@ -185,6 +136,55 @@ class TextureSize:
     PLAYER_WIDTH = 1.0
     ENEMY_WIDTH = 1.5
     GAME_UI_HEIGHT = 1.5
+
+
+class MusicPaths:
+
+    # Menue
+    MENU_MUSIC = sound_path("menu/menu-music.mp3")
+
+    # AmbienceMusic
+    AMBIENCE_MUSIC: list[Path] = [
+        sound_path("game_ambience/game-music_1.mp3"),
+        sound_path("game_ambience/game-music_2.mp3"),
+    ]
+
+
+class SoundPath:
+
+    # Buttons
+    BUTTON_HOVER_SOUND = sound_path("menu/button-hover.mp3")
+    BUTTON_CLICK_SOUND = sound_path("menu/button-click.mp3")
+
+    # AmbienceSound
+    AMBIENCE_SOUND: list[Path] = [
+        sound_path("game_ambience/background-ambience_1.mp3"),
+        sound_path("game_ambience/background-ambience_2.mp3"),
+        sound_path("game_ambience/background-ambience_3.mp3"),
+        sound_path("game_ambience/background-ambience_4.mp3"),
+        sound_path("game_ambience/background-ambience_5.mp3"),
+        sound_path("game_ambience/background-ambience_6.mp3"),
+        sound_path("game_ambience/background-ambience_7.mp3"),
+        sound_path("game_ambience/background-ambience_8.mp3"),
+        sound_path("game_ambience/background-ambience_9.mp3"),
+        sound_path("game_ambience/background-ambience_10.mp3"),
+        sound_path("game_ambience/background-ambience_1.mp3"),
+    ]
+
+    # EnemySounds
+    ENEMY_HOVER_SOUND = sound_path("enemy/enemy-hover.mp3")
+    ENEMY_SHOOTING_SOUND = sound_path("enemy/enemy-shot.mp3")
+    ENEMY_HIT_SOUND = sound_path("enemy/enemy-hit.mp3")
+    ENEMY_DYING_SOUND = sound_path("enemy/enemy-dying.mp3")
+
+    # DoorSounds
+    DOOR_SOUND = sound_path("door/door.mp3")
+
+    # PlayerSounds
+    PLAYER_WALKING_SOUND = sound_path("player/player-moving.mp3")
+    PLAYER_SHOOTING_SOUND = sound_path("player/laser-gun.mp3")
+    PLAYER_HIT_SOUND = sound_path("player/player-hit.mp3")
+    PLAYER_DYING_SOUND = sound_path("player/player-dying.mp3")
 
 
 class MusicVolume:
@@ -279,8 +279,10 @@ class GameUIConstants:
     WEAPON_UI_OFFSET = 10
 
 
-CLIENT_TIMESTEP = 1 / 60
-SERVER_TIMESTEP = 1 / 20
-SERVER_FRAMES_PER_TIMESTEP = 3
-SERVER_IP = 0x00000000
-VSYNC = True
+class NetworkConstants:
+    CLIENT_TIMESTEP = 1 / 60
+    SERVER_TIMESTEP = 1 / 20
+    SERVER_FRAMES_PER_TIMESTEP = 3
+    SERVER_IP = 0x00000000
+    VSYNC = True
+    INITIAL_ACKNOLEDGEMENT: Acknoledgement = -1

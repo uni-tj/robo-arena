@@ -34,17 +34,16 @@ if TYPE_CHECKING:
 
 
 type Acknoledgement = int
-INITIAL_ACKNOLEDGEMENT: Acknoledgement = -1
 type EntityId = int
 type ClientId = int
-
-type Time = float
 
 type IpV4 = int
 """Time of arrival and message, internal type"""
 type Packet[Message] = tuple[Time, Message]
 """Time of arrival and message"""
 type Arrived[Message] = tuple[Time, Message]
+
+type Time = float
 
 type Counter = Generator[int, Any, NoReturn]
 
@@ -63,16 +62,12 @@ type BlockPosition = Vector[int]
 type Level = dict[BlockPosition, "Block"]
 type LevelUpdate = Iterable[tuple[BlockPosition, "Block"]]
 
-type EventName = str
-type Dispatch[Evt] = Callable[[EventName, Evt], None]
-type SimpleDispatch[Evt] = Callable[[Evt], None]
-
-type PlayerPosition = Vector[float]
-
 type Position = Vector[float]
 type Velocity = Vector[float]
 type Motion = tuple[Position, Velocity]
 type Color = pygame.Color
+
+type PlayerPosition = Vector[float]
 
 type Entities = dict[EntityId, "Entity"]
 
@@ -81,16 +76,17 @@ type Path = str
 type ClientEntityType = (
     "ClientPlayerRobot | ClientEnemyRobot | ClientBullet | ClientDoorEntity"
 )
-
 type ServerEntityType = (
     "ServerPlayerRobot | ServerEnemyRobot | ServerBullet | ServerDoorEntity"
 )
 
 type BulletMoveCtx = tuple[Time]
-
 type PlayerRobotMoveCtx = tuple[Input, Time]
-
 type EnemyRobotMoveCtx = tuple[Time]
+
+type EventName = str
+type Dispatch[Evt] = Callable[[EventName, Evt], None]
+type SimpleDispatch[Evt] = Callable[[Evt], None]
 
 
 @dataclass(frozen=True)

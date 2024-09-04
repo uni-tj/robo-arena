@@ -11,7 +11,7 @@ from pygame import Color
 
 from roboarena.client.master_mixer import DoorSounds, EnemySounds, PlayerSounds
 from roboarena.server.events import EventName
-from roboarena.shared.constants import SERVER_TIMESTEP
+from roboarena.shared.constants import NetworkConstants
 from roboarena.shared.entity import (
     Bullet,
     DoorEntity,
@@ -123,11 +123,14 @@ class InterpolatedValue[T, Ctx](Value[T]):
         self.interpolate = f
         # display current value until a future value has buffered
         self.snapshots = deque(
-            [(last_ack, t - SERVER_TIMESTEP, value), (last_ack, t, value)]
+            [
+                (last_ack, t - NetworkConstants.SERVER_TIMESTEP, value),
+                (last_ack, t, value),
+            ]
         )
 
     def tick(self, t: Time, ctx: Ctx) -> None:
-        interpolated_t = t - SERVER_TIMESTEP
+        interpolated_t = t - NetworkConstants.SERVER_TIMESTEP
 
         # delete old snapshots
         # snapshots of the current frame trated as old snapshots bc easier interpolation

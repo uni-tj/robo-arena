@@ -4,7 +4,7 @@ from threading import Thread
 
 from roboarena.client.client import Client, QuitEvent
 from roboarena.server.server import Server
-from roboarena.shared.constants import SERVER_IP
+from roboarena.shared.constants import NetworkConstants
 from roboarena.shared.network import Network
 from roboarena.shared.types import EventType
 from roboarena.shared.util import stopAll
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 network = Network[EventType](0)
 logger.info("initialized network")
 
-server = Server(network, SERVER_IP)
+server = Server(network, NetworkConstants.SERVER_IP)
 server_thread = Thread(target=lambda: server.loop())
 server_thread.start()
 logger.info("started server")

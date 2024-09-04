@@ -22,18 +22,12 @@ from roboarena.server.level_generation.level_generator import (
 from roboarena.server.level_generation.tileset import tileset
 from roboarena.server.room import Room
 from roboarena.shared.block import floor_door, floor_room_spawn, room_blocks
-from roboarena.shared.constants import (
-    SERVER_FRAMES_PER_TIMESTEP,
-    SERVER_TIMESTEP,
-    EnemyConstants,
-    PlayerConstants,
-)
+from roboarena.shared.constants import EnemyConstants, NetworkConstants, PlayerConstants
 from roboarena.shared.custom_threading import Atom
 from roboarena.shared.game import GameState as SharedGameState
 from roboarena.shared.network import IpV4, Network, Receiver
 from roboarena.shared.time import get_time
 from roboarena.shared.types import (
-    INITIAL_ACKNOLEDGEMENT,
     Acknoledgement,
     ClientConnectionRequestEvent,
     ClientGameEvent,
@@ -160,7 +154,7 @@ class GameState(SharedGameState):
         for client_id, ip in clients.items():
             entity_id, entity = self.gen_client_entity()
             self._clients[client_id] = GameState.ClientInfo(
-                ip, INITIAL_ACKNOLEDGEMENT, entity_id, entity
+                ip, NetworkConstants.INITIAL_ACKNOLEDGEMENT, entity_id, entity
             )
             self.entities[entity_id] = entity
 
@@ -272,12 +266,12 @@ class GameState(SharedGameState):
             # init update
             t_update = get_time()
             dt_update = t_update - last_t
-            dt_frame = dt_update / SERVER_FRAMES_PER_TIMESTEP
+            dt_frame = dt_update / NetworkConstants.SERVER_FRAMES_PER_TIMESTEP
 
             self.events.dispatch(StartFrameEvent())
 
             # Each update is split into 3 frames to get more precise results
-            for i in range(SERVER_FRAMES_PER_TIMESTEP):
+            for i in range(NetworkConstants.SERVER_FRAMES_PER_TIMESTEP):
                 t_frame = last_t + i * dt_frame
 
                 # TODO: create/delete_entitiy into loop function using a TickCtx
@@ -317,7 +311,7 @@ class GameState(SharedGameState):
 
             # cleanup udpate
             last_t = t_update
-            clock.tick(1 / SERVER_TIMESTEP)
+            clock.tick(1 / NetworkConstants.SERVER_TIMESTEP)
 
 
 class Server(Stoppable):
