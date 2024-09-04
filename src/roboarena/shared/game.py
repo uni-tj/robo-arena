@@ -28,6 +28,11 @@ class OutOfLevelError(Exception):
 
 class GameState(ABC):
     env: Literal["server"] | Literal["client"]
+    """
+    Whether a client or server game instance.
+
+    ONLY intended for conditional debug logging.
+    """
     entities: dict[EntityId, Entity]
     level: "Level"
     events: EventTarget[QuitEvent | StartFrameEvent]
@@ -41,6 +46,15 @@ class GameState(ABC):
     def blocking(
         self, collider: Rect | Entity, mode: Literal["robot"] | Literal["bullet"]
     ) -> bool:
+        """Whether an entity/a rect is blocked, i.e. not allowed to be there.
+
+        Parameters
+        ----------
+        collider:
+            the entity or its hitbox or similar to check
+        mode:
+            whether collider is an robot or bullet
+        """
         return any(
             (mode == "robot" and e.blocks_robot)
             or (mode == "bullet" and e.blocks_bullet)
@@ -58,6 +72,7 @@ class GameState(ABC):
     def collidingEntities(self, collider: Rect) -> Iterable[Entity]: ...
 
     def collidingEntities(self, collider: Rect | Entity) -> Iterable[Entity]:
+        """Entites another entity/a rect collides with."""
         rect = collider.collision.hitbox if isinstance(collider, Entity) else collider
         entities = self.entities.values()
         return (
@@ -70,6 +85,7 @@ class GameState(ABC):
     def colliding_blocks(
         self, collider: Rect | Entity
     ) -> dict["BlockPosition", "Block"]:
+        """Blocks and their positions an entity/a rect collides with."""
         rect = collider.collision.hitbox if isinstance(collider, Entity) else collider
         with change_exception(KeyError, OutOfLevelError):
             return {
