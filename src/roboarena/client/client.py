@@ -346,7 +346,7 @@ class Client(Stoppable):
             vsync=int(NetworkConstants.VSYNC),
         )
 
-        last_score: int | None = None
+        # last_score: int | None = None
         while True:
             menu = MainMenu(screen, self, self.master_mixer)
             menu.events.add_listener(QuitEvent, self.events.dispatch)
@@ -398,12 +398,12 @@ class Client(Stoppable):
                 self, screen, client_id, start[0], start[1], self.master_mixer
             )
             game.events.add_listener(QuitEvent, self.events.dispatch)
-            gmae_result = game.loop()
-            if isinstance(gmae_result, Stopped):
+            game_result = game.loop()
+            if isinstance(game_result, Stopped):
                 self._logger.info("Stopped game")
-                return gmae_result
-            self._logger.info(f"Ended game with score {gmae_result.score}")
-            last_score = gmae_result.score
+                return game_result
+            self._logger.info(f"Ended game with score {game_result.score}")
+            # last_score = game_result.score
 
     def stop(self) -> None:
         return self.stopped.set(True)

@@ -99,6 +99,10 @@ class TextPos:
     INFO_MUTE = Vector(50, 15)
     INFO_KEYS = Vector(50, 35)
 
+    # Endscreen
+    HEADER_ENDSCREEN = Vector(50, 10)
+    SCORE = Vector(50, 50)
+
 
 class TextSize:
 
@@ -118,6 +122,9 @@ class TextContent:
     HEADER_SETTINGS = "          Settings          "
     INFO_MUTE = "              Toggle sound              "
     INFO_KEYS = "Click button and hit key to change key binding"
+
+    # Endscreen
+    HEADER_ENDSCREEN = "G A M E O V E R"
 
 
 class Colors:
