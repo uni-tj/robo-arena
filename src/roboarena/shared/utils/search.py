@@ -11,6 +11,8 @@ from roboarena.shared.utils.vector import Vector
 @total_ordering
 @dataclass
 class HeapItem:
+    """used to define ordering so that items with small keys are selected."""
+
     key: int
     pos: Vector[int]
 
@@ -27,10 +29,12 @@ type ScoreMapping = Mapping[Vector[int], int]
 
 
 def manhattan_heuristic(node: Vector[int], goal: Vector[int]) -> int:
+    """Heuristic commenly used for astar implementations."""
     return abs(node.x - goal.x) + abs(node.x - goal.x)
 
 
 def astar(start: Vector[int], goal: Vector[int], grid: Grid) -> list[Vector[int]]:
+    """Standart astar implementation"""
     if start not in grid or not grid[start]:
         return []
     open_list: list[HeapItem] = []
@@ -62,6 +66,7 @@ def astar(start: Vector[int], goal: Vector[int], grid: Grid) -> list[Vector[int]
 def reconstruct_path(
     came_from: dict[Vector[int], Vector[int]], current: Vector[int]
 ) -> list[Vector[int]]:
+    """Backtrack the path throug the a star path map"""
     path: list[Vector[int]] = [current]
     while current in came_from:
         current = came_from[current]
@@ -70,6 +75,7 @@ def reconstruct_path(
 
 
 def get_neighbors(pos: Vector[int], grid: Grid) -> Iterable[Vector[int]]:
+    """Get all neighbors for a position in the grid"""
     for dir in Direction:
         dv = dir.value
         neighbor = dv + pos

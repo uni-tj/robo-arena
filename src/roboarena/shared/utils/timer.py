@@ -8,6 +8,8 @@ from roboarena.shared.utils.statistics import StatsCollection
 
 
 class Timer:
+    """Timer to measure the time taken to execute parts of code"""
+
     timings: dict[str, list[float]]
     last_started: deque[str]
     current: dict[str, float]
@@ -65,6 +67,7 @@ class Timer:
         self.timings[label].append(elapsed_time)
 
     def end_run(self) -> None:
+        """Ends a run (used for periodic printing)."""
         self._c += 1
         while len(self.current) > 0:
             self.tick_end()

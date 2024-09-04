@@ -19,6 +19,8 @@ def sign(x: int | float) -> int:
 
 @dataclass(frozen=True)
 class Vector[T: (int, float)]:
+    """Provides a Vector 2d implementation"""
+
     x: T
     y: T
 
@@ -235,6 +237,8 @@ T = TypeVar("T", int, float)
 
 
 class Matrix2d[K: (int, float)]:
+    """A 2x2 Matrix implementation with most matrix operations"""
+
     a11: K
     a12: K
     a21: K

@@ -8,6 +8,11 @@ from roboarena.shared.utils.statistics import StatsCollection
 
 
 class PerformanceTester[A]:
+    """Compares the performace of multiple functions
+    All registered functions must be linked to a special function that
+    transforms the general data to inputs the function can use.
+    The Statistics are stored in a Statcollection and pretty printed."""
+
     def __init__(self, num_tests: int, gen_data: Callable[[], A]):
         self.num_tests = num_tests
         self.functions: list[tuple[str, Callable[[A], Any], Callable[[Any], Any]]] = []
@@ -18,6 +23,7 @@ class PerformanceTester[A]:
     def add_function[
         T
     ](self, name: str, func: Callable[[T], Any], data_func: Callable[[A], T]):
+        """Add one function to test with its name and data preperation function"""
         if not name:
             name = func.__name__
         self.functions.append((name, data_func, func))
@@ -46,6 +52,7 @@ class PerformanceTester[A]:
         return []
 
     def compare_performance(self):
+        """Runs the tests and prints the results"""
         self.run_tests()
 
         # Create Stats objects for each function and store them in the stats_collection

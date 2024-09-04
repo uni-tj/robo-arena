@@ -15,6 +15,7 @@ TupleVectorInt = Tuple[int, int]
 
 
 def random_gradient(ix: int, iy: int) -> TupleVector:
+    """Function to generate a random gradient, the function is pure"""
     # No precomputed gradients mean this works for any number of grid coordinates
     w: int = 32
     s: int = w // 2
@@ -37,10 +38,12 @@ def dot_grid_gradient(ix: int, iy: int, x: float, y: float) -> float:
 
 
 def interpolate(a0: float, a1: float, w: float) -> float:
+    # qubic interpolation of two values
     return (a1 - a0) * (3.0 - w * 2.0) * w * w + a0
 
 
 def perlin(x: float, y: float) -> float:
+    """Generates perlin noise for one positions"""
     x0: int = int(x)
     y0: int = int(y)
     x1: int = x0 + 1
@@ -63,7 +66,7 @@ def perlin(x: float, y: float) -> float:
 def perline_noise_spot_patial(
     part_coordx: float, part_coordy: float, num_octaves: int
 ) -> float:
-
+    """Calulate the stacked perlin noise for one spot based on partial coordinate"""
     val: float = 0
     freq: float = 1
     amp: float = 1
@@ -79,6 +82,7 @@ def perline_noise_spot_patial(
 
 
 def perlin_noise_spot(pos: Vector[int], gridsize: int, num_octaves: int):
+    """Generate perlin noise value for a spot based on coordinates"""
     return (
         perline_noise_spot_patial(pos.x / gridsize, pos.y / gridsize, num_octaves) + 1
     ) * 0.5
@@ -143,6 +147,7 @@ def perlin_noise_mp(
 
 
 def display_noise(pixels: list[NDArray[np.double]]) -> None:
+    """Displays the perlin noise maps(pixels) in a matplotlib plot"""
     n = len(pixels)
     sn = math.ceil(math.sqrt(n))
     fig, axs = plt.subplots(sn, sn, figsize=(10, 8), sharex=True)  # type: ignore

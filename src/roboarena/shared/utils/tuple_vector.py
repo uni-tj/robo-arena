@@ -3,6 +3,7 @@ from typing import Callable, Tuple, Union, overload
 
 # Define the type for float-based tuples
 type TupleVector = tuple[float, float]
+"""Provides function most arithmetic operation for float-based tuple Vectors."""
 
 
 @overload

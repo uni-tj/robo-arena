@@ -35,6 +35,9 @@ def stddev(data: list[float], ddof: int = 1):
 
 
 class Stats:
+    """Container for a sequence of data that computes statistics on the provided
+    data, this includes automtic scaling and processing of units"""
+
     def __init__(
         self,
         data: list[float],
@@ -57,27 +60,28 @@ class Stats:
             if label in self._unitless:
                 self._scales[label] = ""
 
-    def _adjust_scale(self, value: float) -> str:
+    def _adjust_scale(self, value: float, unit: str = "s") -> str:
+        """determines the appropriate scale for the given value"""
         scales = [
-            (1e-9, "ns"),
-            (1e-6, "µs"),
-            (1e-3, "ms"),
-            (1, "s"),
+            (1e-9, "n" + unit),
+            (1e-6, "µ" + unit),
+            (1e-3, "m" + unit),
+            (1, unit),
         ]
         for factor, label in scales:
             if abs(value) < factor * 1e2:
                 return label
         return "s"
 
-    def _scaled_metric(self, name: str) -> float:
+    def _scaled_metric(self, name: str, unit: str = "s") -> float:
         if name in self._unitless:
             return self._metrics[name]
         scale_label = self._scales[name]
         scale_factor = {
-            "ns": 1e9,
-            "µs": 1e6,
-            "ms": 1e3,
-            "s": 1,
+            "n" + unit: 1e9,
+            "µ" + unit: 1e6,
+            "m" + unit: 1e3,
+            "s" + unit: 1,
         }[scale_label]
         return self._metrics[name] * scale_factor
 
@@ -89,6 +93,7 @@ class Stats:
         return f"{metric_str}"
 
     def table_repr(self) -> list[str]:
+        """generates the table row list for all metrics"""
         return [
             f"{self._scaled_metric(name):6.3f} {self._scales[name]}"
             for name in self._metrics
@@ -96,6 +101,10 @@ class Stats:
 
 
 class StatsCollection:
+    """Container for a collection of statistics. The data in each stat is
+    evaluated using the registered metrics.
+    Prints the result of the metric calculations using the    Table printer"""
+
     def __init__(self, default_metrics: bool = True):
         self._stats_constructors: dict[str, Callable[[list[float]], float]] = {}
         self._columns: list[str] = []
@@ -119,6 +128,7 @@ class StatsCollection:
         functions: list[Callable[[list[float]], float]],
         unitless: Optional[set[str]],
     ) -> None:
+        """registers a new metic for all newly added stats"""
         if unitless is not None:
             self._unitless = unitless
         else:
@@ -130,6 +140,7 @@ class StatsCollection:
     def add_stats(
         self, label: str, res: list[float], group: Optional[str] = None
     ) -> None:
+        """adds a new stat to the collection"""
         stats = Stats(
             data=res, functions=self._stats_constructors, unitless=self._unitless
         )
@@ -140,6 +151,7 @@ class StatsCollection:
             self.groups["_"].add(label)
 
     def print_all_stats(self) -> None:
+        """pretty prints the statistics table containing all metrics"""
         header = ["Label"] + self._columns
         config = [header, ["__sep"]]
 

@@ -11,6 +11,8 @@ class ProgressBarConfig:
 
 
 class ProgressBar:
+    """A Simple and easy to use ProgressBar to display Progress and ETA"""
+
     def __init__(
         self, total: int, bar_length: int = 50, pgc: Optional[ProgressBarConfig] = None
     ):
