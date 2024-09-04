@@ -19,6 +19,7 @@ from roboarena.client.entity import (
 )
 from roboarena.client.keys import load_keys
 from roboarena.client.master_mixer import MasterMixer
+from roboarena.client.menu.endscreen import Endscreen
 from roboarena.client.menu.main_menu import MainMenu
 from roboarena.shared.constants import (
     CameraPositionConstants,
@@ -278,6 +279,7 @@ class GameState(SharedGameState):
 
         while True:
             if self._client.stopped.get():
+                self.master_mixer.stop_all()
                 return Stopped()
 
             # init frame
@@ -289,6 +291,7 @@ class GameState(SharedGameState):
             for t_msg, msg in self._client.receiver.receive():
                 handle_result = self.handle(t_msg, msg)
                 if isinstance(handle_result, Ended):
+                    self.master_mixer.stop_all()
                     return handle_result
 
             input = self.get_input(dt)
@@ -403,6 +406,9 @@ class Client(Stoppable):
                 self._logger.info("Stopped game")
                 return game_result
             self._logger.info(f"Ended game with score {game_result.score}")
+            endscreen = Endscreen(screen, self, self.master_mixer, game_result.score)
+            endscreen.events.add_listener(QuitEvent, self.events.dispatch)
+            endscreen.loop()
             # last_score = game_result.score
 
     def stop(self) -> None:
