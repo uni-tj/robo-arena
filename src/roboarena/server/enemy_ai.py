@@ -339,7 +339,7 @@ class EnemyAi:
 
             direction = aim_position - enemy_pos
 
-            if random.random() < min((1 / 60) * np.log(self._difficulty), 1):
+            if random.random() < ((1 / 60) * self._difficulty):
                 enemy.weapon.shoot(direction)
                 pass
 

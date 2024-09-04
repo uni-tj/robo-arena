@@ -105,16 +105,14 @@ class Room:
                 new_ori = Vector.zero().to_float()
                 player.motion.set((player_in_room.position, new_ori))
             free_floors -= set(self._game.colliding_blocks(player))
-        self._waves_remaining = (
-            int(math.sqrt((self.difficulty / DIFFICULTY.Weapon_Mod) ** 1.2)) - 1
-        )
+        self._waves_remaining = int(math.sqrt((self.difficulty) ** 1.4)) - 1
         self._alien_weapon = Weapon(
-            weapon_speed=max(
-                WeaponConstants.WEAPON_SPEED - self.difficulty % DIFFICULTY.Weapon_Mod,
-                0.5,
+            weapon_speed=min(
+                WeaponConstants.WEAPON_SPEED / 2 + math.sqrt(self.difficulty) % 2,
+                5,
             ),
-            bullet_speed=WeaponConstants.BULLET_SPEED
-            + self.difficulty % DIFFICULTY.Weapon_Mod,
+            bullet_speed=WeaponConstants.BULLET_SPEED / 2
+            + 0.2 * math.sqrt(self.difficulty % DIFFICULTY.Weapon_Mod),
             bullet_strength=int(
                 WeaponConstants.BULLET_Strength
                 + self.difficulty // DIFFICULTY.Weapon_Mod

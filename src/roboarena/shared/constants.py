@@ -338,9 +338,9 @@ class GraphicConstants:
 
 
 class PerlinNoiseConstants:
-    threshold = 0.66
-    gridsize = 3
-    num_octaves = 10
+    threshold = 0.660
+    gridsize = 5
+    num_octaves = 3
 
 
 class SettingPathConstants:

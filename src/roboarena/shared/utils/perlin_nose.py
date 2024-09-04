@@ -105,8 +105,8 @@ def perlin_noise(
             pixels[y, x] = color
 
             pixels[y, x] = color
-    del pixels
-    # return pixels
+    # del pixels
+    return pixels
 
 
 def perline_noise_spot_mp(
