@@ -58,7 +58,7 @@ class Room:
     @property
     def difficulty(self) -> float:
         doors = list(self._doors)
-        return Vector.sum_vectors(doors).length() / 25  # type:ignore
+        return Vector.sum_vectors(doors).length() / (len(doors) * 25)  # type:ignore
 
     @property
     @frame_cache_method
@@ -105,8 +105,8 @@ class Room:
                 new_ori = Vector.zero().to_float()
                 player.motion.set((player_in_room.position, new_ori))
             free_floors -= set(self._game.colliding_blocks(player))
-        self._waves_remaining = int(
-            math.sqrt((self.difficulty / DIFFICULTY.Weapon_Mod) ** 1.2)
+        self._waves_remaining = (
+            int(math.sqrt((self.difficulty / DIFFICULTY.Weapon_Mod) ** 1.2)) - 1
         )
         self._alien_weapon = Weapon(
             weapon_speed=max(
@@ -149,8 +149,10 @@ class Room:
         self._enemies_alive -= 1
 
         if self._enemies_alive == 0:
-            if self._waves_remaining >= 0:
+            if self._waves_remaining > 0:
+                self._waves_remaining -= 1
                 self.spawn_enemies(self._free_floors)
+                return
             self.on_end()
 
     def on_end(self) -> None:
