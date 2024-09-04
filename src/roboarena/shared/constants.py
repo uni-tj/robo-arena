@@ -163,7 +163,7 @@ class TextureSize:
     BUTTON_HEIGHT = 1.3
     TEXT_WIDTH = 10
     BLOCK_WIDTH = 1.0
-    BULLET_TEXTURE = Vector(1.0, 1.0)
+    BULLET_TEXTURE = Vector(0.3, 0.3)
     WEAPON_WIDTH = 0.75
     WEAPON_HEIGHT = 0.6
     PLAYER_WIDTH = 1.0
@@ -276,8 +276,8 @@ class PlayerConstants:
 
 
 class WeaponConstants:
-    WEAPON_SPEED = 1.5
-    BULLET_SPEED = 4
+    WEAPON_SPEED = 2
+    BULLET_SPEED = 6
     BULLET_Strength = 2
 
 
