@@ -289,7 +289,8 @@ class NetworkConstants:
     VSYNC = True
     INITIAL_ACKNOLEDGEMENT: Acknoledgement = -1
 
+
 class PerlinNoiseConstants:
-    threshold = 0.60
+    threshold = 0.66
     gridsize = 3
     num_octaves = 10
