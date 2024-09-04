@@ -1,11 +1,7 @@
 # from abc import ABC, abstractmethod
 from collections.abc import Iterable
-from typing import Callable
 
-type EventName = str
-type Dispatch[Evt] = Callable[[EventName, Evt], None]
-type SimpleDispatch[Evt] = Callable[[Evt], None]
-
+from roboarena.shared.types import EventName
 
 # class EventTarget[T](ABC):
 #     @abstractmethod

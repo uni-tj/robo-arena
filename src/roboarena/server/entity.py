@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from attrs import define, field
 
-from roboarena.server.events import Dispatch, SimpleDispatch
 from roboarena.shared.entity import (
     Bullet,
     DoorEntity,
@@ -22,15 +21,18 @@ from roboarena.shared.types import (
     ChangedEvent,
     Color,
     DeathEvent,
+    Dispatch,
     EntityId,
     Input,
     Marker,
     Motion,
     Position,
     PygameColor,
+    ServerEntityType,
     ServerSpawnBulletEvent,
     ServerSpawnDoorEvent,
     ServerSpawnRobotEvent,
+    SimpleDispatch,
     Time,
     Weapon,
     basic_weapon,
@@ -108,11 +110,6 @@ class HealthController(Value[int]):
 
     def get(self) -> int:
         return self._health
-
-
-type ServerEntityType = (
-    ServerPlayerRobot | ServerEnemyRobot | ServerBullet | ServerDoorEntity
-)
 
 
 class ShotEvent:

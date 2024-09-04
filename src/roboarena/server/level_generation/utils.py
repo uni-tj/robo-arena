@@ -3,9 +3,8 @@ from typing import Iterable
 
 import numpy as np
 
+from roboarena.shared.types import TupleVector
 from roboarena.shared.utils.vector import Vector
-
-type TupleVector = tuple[int, int]
 
 
 @cache

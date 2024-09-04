@@ -11,11 +11,10 @@ from pygame.time import Clock
 
 from roboarena.server.entity import (
     ServerEnemyRobot,
-    ServerEntityType,
     ServerInputHandler,
     ServerPlayerRobot,
 )
-from roboarena.server.events import Dispatch, EventBuffer, EventName
+from roboarena.server.events import EventBuffer, EventName
 from roboarena.server.level_generation.level_generator import (
     LevelGenerator,
     LevelUpdate,
@@ -26,6 +25,7 @@ from roboarena.shared.block import floor_door, floor_room_spawn, room_blocks
 from roboarena.shared.constants import (
     SERVER_FRAMES_PER_TIMESTEP,
     SERVER_TIMESTEP,
+    EnemyConstants,
     PlayerConstants,
 )
 from roboarena.shared.custom_threading import Atom
@@ -40,12 +40,14 @@ from roboarena.shared.types import (
     ClientId,
     ClientInputEvent,
     ClientLobbyReadyEvent,
+    Dispatch,
     EntityId,
     EventType,
     Marker,
     ServerConnectionConfirmEvent,
     ServerDeleteEntityEvent,
     ServerEntityEvent,
+    ServerEntityType,
     ServerGameEvent,
     ServerGameEventType,
     ServerGameStartEvent,
@@ -146,7 +148,7 @@ class GameState(SharedGameState):
         enemy_id = 0
         enemy = ServerEnemyRobot(
             self,
-            100,
+            EnemyConstants.START_HEALTH,
             (Vector(10.0, 1.0), Vector(1.0, 0.0)),
             Color(255, 0, 0),
             basic_weapon,
@@ -247,7 +249,7 @@ class GameState(SharedGameState):
         entity_id = gen_id(self.entities.keys())
         entity = ServerPlayerRobot(
             self,
-            PlayerConstants.MAX_HEALTH,
+            PlayerConstants.START_HEALTH,
             (Vector(12.5, 12.5), Vector(1.0, 0.0)),
             Color(0, 255, 0),
             self.dispatch_factory(None, entity_id),

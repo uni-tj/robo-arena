@@ -11,6 +11,7 @@ from roboarena.server.entity import (
     ServerPlayerRobot,
 )
 from roboarena.server.level_generation.level_generator import BlockPosition
+from roboarena.shared.constants import EnemyConstants
 from roboarena.shared.types import CloseEvent, DeathEvent, OpenEvent, basic_weapon
 from roboarena.shared.util import EventTarget, frame_cache_method
 from roboarena.shared.utils.vector import Vector
@@ -20,8 +21,6 @@ if TYPE_CHECKING:
     from roboarena.shared.entity import Entity
 
 logger = logging.getLogger(__name__)
-
-type PlayerPosition = Vector[float]
 
 
 def sample[T](iter: set[T], k: int) -> set[T]:
@@ -81,7 +80,7 @@ class Room:
         enemy_entities = list(
             ServerEnemyRobot(
                 self._game,
-                100,
+                EnemyConstants.START_HEALTH,
                 (pos.to_float(), Vector.zero().to_float()),
                 pygame.Color(0, 0, 0),
                 basic_weapon,

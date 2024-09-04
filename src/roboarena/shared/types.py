@@ -1,7 +1,15 @@
 from collections.abc import Collection, Iterable
 from dataclasses import dataclass
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, Generator, NoReturn
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generator,
+    NoReturn,
+    Sequence,
+    SupportsIndex,
+)
 
 import pygame
 
@@ -14,8 +22,16 @@ if TYPE_CHECKING:
         ClientEnemyRobot,
         ClientPlayerRobot,
     )
-    from roboarena.server.level_generation.level_generator import Level, LevelUpdate
+    from roboarena.server.entity import (
+        ServerBullet,
+        ServerDoorEntity,
+        ServerEnemyRobot,
+        ServerPlayerRobot,
+    )
+    from roboarena.server.level_generation.level_generator import Tileset
+    from roboarena.shared.block import Block
     from roboarena.shared.entity import Entity
+
 
 type Acknoledgement = int
 INITIAL_ACKNOLEDGEMENT: Acknoledgement = -1
@@ -32,6 +48,27 @@ type Arrived[Message] = tuple[Time, Message]
 
 type Counter = Generator[int, Any, NoReturn]
 
+type TupleVector = tuple[int, int]
+
+type ShapeLike = SupportsIndex | Sequence[SupportsIndex]
+
+type Tile = int
+type TilePosition = Vector[int]
+type PossibleTiles = int
+type WFCMap = dict[TilePosition, PossibleTiles]
+type WFCUpdate = Iterable[tuple[TilePosition, int]]
+type Ts = "Tileset"
+
+type BlockPosition = Vector[int]
+type Level = dict[BlockPosition, "Block"]
+type LevelUpdate = Iterable[tuple[BlockPosition, "Block"]]
+
+type EventName = str
+type Dispatch[Evt] = Callable[[EventName, Evt], None]
+type SimpleDispatch[Evt] = Callable[[Evt], None]
+
+type PlayerPosition = Vector[float]
+
 type Position = Vector[float]
 type Velocity = Vector[float]
 type Motion = tuple[Position, Velocity]
@@ -44,6 +81,11 @@ type Path = str
 type ClientEntityType = (
     "ClientPlayerRobot | ClientEnemyRobot | ClientBullet | ClientDoorEntity"
 )
+
+type ServerEntityType = (
+    "ServerPlayerRobot | ServerEnemyRobot | ServerBullet | ServerDoorEntity"
+)
+
 type BulletMoveCtx = tuple[Time]
 
 type PlayerRobotMoveCtx = tuple[Input, Time]

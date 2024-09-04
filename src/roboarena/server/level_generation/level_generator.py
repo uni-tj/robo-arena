@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Callable, TypeGuard
 from more_itertools import iterate, take
 
 import roboarena.server.level_generation.wfc as wfc
+from roboarena.shared.types import BlockPosition, Level, LevelUpdate
 from roboarena.shared.util import enumerate2d_vec, neighbours_horiz, neighbours_vert
 from roboarena.shared.utils.vector import Vector
 
@@ -13,10 +14,6 @@ if TYPE_CHECKING:
     from roboarena.shared.block import Block
 
 logger = logging.getLogger(f"{__name__}")
-
-type BlockPosition = Vector[int]
-type Level = dict[BlockPosition, "Block"]
-type LevelUpdate = Iterable[tuple[BlockPosition, "Block"]]
 
 
 @dataclass(frozen=True)

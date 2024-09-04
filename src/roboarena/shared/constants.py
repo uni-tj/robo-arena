@@ -237,7 +237,13 @@ class PlayerConstants:
     DECELERATE = 0.1
 
     # Health
-    MAX_HEALTH = 10
+    START_HEALTH = 10
+
+
+class EnemyConstants:
+
+    # Health
+    START_HEALTH = 10
 
 
 class AmbienceSoundConstants:

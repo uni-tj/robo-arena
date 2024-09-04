@@ -7,12 +7,20 @@ from dataclasses import dataclass
 from enum import Enum
 from functools import cache
 from math import ceil, sqrt
-from typing import Iterable, Sequence, SupportsIndex
+from typing import Iterable, Sequence
 
 import numpy as np
 from attr import define, field
 
 from roboarena.server.level_generation.utils import gen_square_space_wfc_fast
+from roboarena.shared.types import (
+    PossibleTiles,
+    Tile,
+    TilePosition,
+    Ts,
+    WFCMap,
+    WFCUpdate,
+)
 from roboarena.shared.util import (
     Color,
     EventTarget,
@@ -40,18 +48,7 @@ seed = 24
 np.random.seed(seed)
 random.seed(seed)
 
-# General purpose helpers
-
-type ShapeLike = SupportsIndex | Sequence[SupportsIndex]
-
-
 # Wave Function Collapse implementation
-
-type Tile = int
-type TilePosition = Vector[int]
-type PossibleTiles = int
-type WFCMap = dict[TilePosition, PossibleTiles]
-type WFCUpdate = Iterable[tuple[TilePosition, int]]
 
 
 class Direction(Enum):
@@ -86,9 +83,6 @@ class Tileset:
 
     def __eq__(self, other: object) -> bool:
         return self is other
-
-
-type Ts = Tileset
 
 
 entropy = nonzero_count
