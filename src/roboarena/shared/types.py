@@ -44,14 +44,17 @@ type Packet[Message] = tuple[Time, Message]
 type Arrived[Message] = tuple[Time, Message]
 
 type Time = float
+"""In seconds"""
 
 type Counter = Generator[int, Any, NoReturn]
 
 type TupleVector = tuple[int, int]
 
 type ShapeLike = SupportsIndex | Sequence[SupportsIndex]
+"""Pygame"""
 
 type Tile = int
+"""Square of 25x25 blocks generated as one unit by the wafe function collapse"""
 type TilePosition = Vector[int]
 type PossibleTiles = int
 type WFCMap = dict[TilePosition, PossibleTiles]
