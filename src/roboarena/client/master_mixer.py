@@ -56,6 +56,10 @@ class MasterMixer:
         mixer.music.fadeout(MusicVolume.MUSIC_FADE)
         mixer.music.unload()
 
+    def stop_all(self):
+        self.stop_music()
+        mixer.stop()
+
     def set_music_volume(self, volume: float):
         self._last_set_music_volume = volume
         if not self.muted:
