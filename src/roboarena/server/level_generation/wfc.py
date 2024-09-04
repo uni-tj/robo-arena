@@ -9,7 +9,6 @@ from functools import cache
 from math import ceil, sqrt
 from typing import Iterable, Sequence
 
-import numpy as np
 from attr import define, field
 
 from roboarena.server.level_generation.utils import gen_square_space_wfc_fast
@@ -44,9 +43,9 @@ logger = logging.getLogger(__file__)
 # stdout_handler.setLevel(logging.DEBUG)
 # logger.addHandler(stdout_handler)
 
-seed = 24
-np.random.seed(seed)
-random.seed(seed)
+# seed = 24
+# np.random.seed(seed)
+# random.seed(seed)
 
 # Wave Function Collapse implementation
 

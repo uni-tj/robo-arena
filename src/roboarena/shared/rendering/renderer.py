@@ -16,10 +16,8 @@ from pygame import Surface, display
 
 from roboarena.shared.block import void
 from roboarena.shared.constants import GraphicConstants
-from roboarena.shared.game import OutOfLevelError
 from roboarena.shared.rendering.util import draw_arrow
 from roboarena.shared.types import EntityId
-from roboarena.shared.util import throws
 from roboarena.shared.utils.rect import Rect
 from roboarena.shared.utils.tuple_vector import (
     TupleVector,
@@ -219,10 +217,10 @@ class GameRenderer(Renderer):
         self._debug_surface = Surface(self._screen.get_size(), pygame.SRCALPHA)
 
     def render(self, camera_position: Vector[float]) -> None:
-        self._fps_counter.tick()
-        if self._debug_surface.get_size() != self._screen.get_size():
-            self._debug_surface = Surface(self._screen.get_size(), pygame.SRCALPHA)
-        self._debug_surface.fill((0, 0, 0, 0))
+        # self._fps_counter.tick()
+        # if self._debug_surface.get_size() != self._screen.get_size():
+        #     self._debug_surface = Surface(self._screen.get_size(), pygame.SRCALPHA)
+        # self._debug_surface.fill((0, 0, 0, 0))
         self._screen.fill((0, 0, 0))
 
         ctx = self._genCtx(camera_position)
@@ -240,32 +238,32 @@ class GameRenderer(Renderer):
             render_infos += self._prepare_render_background(ctx, y, True)
         self._screen.blits(render_infos)
 
-        # TODO: Remove rendering colliding blocks
-        cb_texture = pygame.Surface(ctx.gu2px_tup((1, 1)), pygame.SRCALPHA)
-        cb_texture.fill((0, 0, 0, 128))
-        cb_ent = [
-            (cb_texture, ctx.gu2screen(block_pos.to_float()).to_tuple())
-            for entity in self._game.entities.values()
-            if ctx.fov.contains(entity.position)
-            if not throws(
-                OutOfLevelError,
-                lambda: self._game.colliding_blocks(entity),  # noqa B023
-            )
-            for block_pos in self._game.colliding_blocks(entity).keys()
-            if ctx.fov.contains(block_pos)  # type: ignore
-        ]
-        ctx.screen.blits(cb_ent)
+        # # TODO: Remove rendering colliding blocks
+        # cb_texture = pygame.Surface(ctx.gu2px_tup((1, 1)), pygame.SRCALPHA)
+        # cb_texture.fill((0, 0, 0, 128))
+        # cb_ent = [
+        #     (cb_texture, ctx.gu2screen(block_pos.to_float()).to_tuple())
+        #     for entity in self._game.entities.values()
+        #     if ctx.fov.contains(entity.position)
+        #     if not throws(
+        #         OutOfLevelError,
+        #         lambda: self._game.colliding_blocks(entity),  # noqa B023
+        #     )
+        #     for block_pos in self._game.colliding_blocks(entity).keys()
+        #     if ctx.fov.contains(block_pos)  # type: ignore
+        # ]
+        # ctx.screen.blits(cb_ent)
 
         # self._render_markers(ctx)
         # self._render_vect_markers(ctx)
-        self._fps_counter.render(self._screen)
+        # self._fps_counter.render(self._screen)
         self._render_ui(ctx)
 
         # ! Debugging only
-        self._last_camera_pos.append(camera_position)
+        # self._last_camera_pos.append(camera_position)
         # self._render_debug_traces(ctx)
-        self._render_markers(ctx)
-        self._screen.blit(self._debug_surface, (0, 0))
+        # self._render_markers(ctx)
+        # self._screen.blit(self._debug_surface, (0, 0))
         display.flip()
 
     def _prepare_render_background(

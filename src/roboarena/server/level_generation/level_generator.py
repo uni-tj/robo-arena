@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING, Any, Callable, TypeGuard
 from more_itertools import iterate, take
 
 import roboarena.server.level_generation.wfc as wfc
-from roboarena.shared.types import BlockPosition, Level, LevelUpdate
 from roboarena.shared.block import crate, floor_room
 from roboarena.shared.constants import PerlinNoiseConstants
+from roboarena.shared.types import BlockPosition, Level, LevelUpdate
 from roboarena.shared.util import enumerate2d_vec, neighbours_horiz, neighbours_vert
 from roboarena.shared.utils.perlin_nose import perlin_noise_spot
 from roboarena.shared.utils.vector import Vector
