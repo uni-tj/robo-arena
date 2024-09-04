@@ -108,7 +108,7 @@ class Room:
         self._waves_remaining = int(math.sqrt((self.difficulty) ** 1.4)) - 1
         self._alien_weapon = Weapon(
             weapon_speed=min(
-                WeaponConstants.WEAPON_SPEED / 2 + math.sqrt(self.difficulty) % 2,
+                WeaponConstants.WEAPON_SPEED / 3 + math.sqrt(self.difficulty) % 2,
                 5,
             ),
             bullet_speed=WeaponConstants.BULLET_SPEED / 2
