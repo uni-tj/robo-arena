@@ -97,12 +97,14 @@ class ServerInputHandler(Entity, ABC):
 
 class HealthController(Value[int]):
 
+    _max_health: int
     _health: int
     _dispatch: SimpleDispatch[int]
     events: EventTarget[DeathEvent]
 
-    def __init__(self, health: int, dispatch: SimpleDispatch[int]) -> None:
-        self._health = health
+    def __init__(self, max_health: int, dispatch: SimpleDispatch[int]) -> None:
+        self._max_health = max_health
+        self._health = max_health
         self._dispatch = dispatch
         self.events = EventTarget()
 
@@ -110,6 +112,10 @@ class HealthController(Value[int]):
         self._health -= strength
         if self._health <= 0:
             self.events.dispatch(DeathEvent())
+        self._dispatch(self._health)
+
+    def heal(self):
+        self._health = self._max_health
         self._dispatch(self._health)
 
     def get(self) -> int:

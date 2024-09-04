@@ -359,8 +359,8 @@ class ClientPlayerRobot(PlayerRobot, ClientEntity, ClientInputHandler):
         self.events.add_listener(
             DeathEvent, lambda _: self._player_sounds.player_dying()
         )
-        self.events.add_listener(
-            HitEvent, lambda _: game.game_ui.update_health(self.health.get())
+        self.health.events.add_listener(
+            ChangedEvent, lambda _: game.game_ui.update_health(self.health.get())
         )
 
     def on_input(self, input: Input, dt: Time, ack: Acknoledgement, t: Time):

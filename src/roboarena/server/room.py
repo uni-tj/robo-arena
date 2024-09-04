@@ -159,6 +159,8 @@ class Room:
         self.events.dispatch(OpenEvent())
         for door in self._door_entities:
             door.open.set(True)
+        for player in filter(is_player, self._game.entities.values()):
+            player.health.heal()
 
     @frame_cache_method
     def _is_in_room(self, entity: "Entity") -> bool:
