@@ -159,7 +159,7 @@ class LevelGenerator:
                 if (
                     block == floor_room
                     and perlin_noise_spot(
-                        pos,
+                        pos + PerlinNoiseConstants.offset,
                         PerlinNoiseConstants.gridsize,
                         PerlinNoiseConstants.num_octaves,
                     )
