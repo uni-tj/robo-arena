@@ -2,9 +2,31 @@ import os
 
 import pygame
 
-from roboarena.shared.types import Acknoledgement, Path
-from roboarena.shared.util import load_graphic, sound_path
 from roboarena.shared.utils.vector import Vector
+
+type Acknoledgement = int
+type Path = str
+
+
+def resource_path(relative_path: str) -> str:
+    """Get the absolute path to the resource"""
+    base_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "resources")
+    )
+
+    return os.path.join(base_path, relative_path.replace("/", os.sep))
+
+
+def graphic_path(path: str) -> str:
+    return resource_path(os.path.join("graphics", path))
+
+
+def sound_path(path: str) -> str:
+    return resource_path(os.path.join("sounds", path))
+
+
+def load_graphic(path: str) -> pygame.Surface:
+    return pygame.image.load(graphic_path(path))
 
 
 class Graphics:
@@ -251,6 +273,16 @@ class PlayerConstants:
 
     # Health
     START_HEALTH = 10
+
+
+class WeaponConstants:
+    WEAPON_SPEED = 1.5
+    BULLET_SPEED = 4
+    BULLET_Strength = 2
+
+
+class DIFFICULTY:
+    Weapon_Mod = 3
 
 
 class EnemyConstants:

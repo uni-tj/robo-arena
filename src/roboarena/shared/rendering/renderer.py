@@ -256,14 +256,14 @@ class GameRenderer(Renderer):
         ]
         ctx.screen.blits(cb_ent)
 
-        self._render_markers(ctx)
-        self._render_vect_markers(ctx)
+        # self._render_markers(ctx)
+        # self._render_vect_markers(ctx)
         self._fps_counter.render(self._screen)
         self._render_ui(ctx)
 
         # ! Debugging only
         self._last_camera_pos.append(camera_position)
-        self._render_debug_traces(ctx)
+        # self._render_debug_traces(ctx)
         self._render_markers(ctx)
         self._screen.blit(self._debug_surface, (0, 0))
         display.flip()

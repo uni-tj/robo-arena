@@ -13,6 +13,7 @@ from typing import (
 
 import pygame
 
+from roboarena.shared.constants import WeaponConstants
 from roboarena.shared.utils.vector import Vector
 
 if TYPE_CHECKING:
@@ -179,7 +180,11 @@ class Weapon:
         return 1 / self.weapon_speed
 
 
-basic_weapon = Weapon(weapon_speed=1.5, bullet_speed=4, bullet_strength=2)
+basic_weapon = Weapon(
+    weapon_speed=WeaponConstants.WEAPON_SPEED,
+    bullet_speed=WeaponConstants.BULLET_SPEED,
+    bullet_strength=WeaponConstants.BULLET_Strength,
+)
 
 
 """Communication protocol

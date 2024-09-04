@@ -279,7 +279,7 @@ class ServerEnemyRobot(EnemyRobot):
         color: Color,
         weapon: Weapon,
         room: "Room",
-        difficulty: int,
+        difficulty: float,
     ) -> None:
         super().__init__(game, motion)
         self._game = game  # type: ignore

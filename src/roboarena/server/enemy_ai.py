@@ -2,7 +2,7 @@ import math
 import random
 from collections import defaultdict, deque
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Callable, Mapping
+from typing import TYPE_CHECKING, Callable, Mapping, Optional
 
 import numpy as np
 from numpy.typing import NDArray
@@ -11,7 +11,7 @@ from roboarena.server.level_generation.level_generator import BlockPosition
 from roboarena.server.level_generation.wfc import Direction
 from roboarena.shared.constants import PlayerConstants
 from roboarena.shared.entity import Bullet
-from roboarena.shared.types import EntityId, MarkerVect, Motion, PygameColor
+from roboarena.shared.types import EntityId, Motion
 from roboarena.shared.util import get_min_max
 from roboarena.shared.utils.search import astar
 from roboarena.shared.utils.vector import Matrix2d, Vector
@@ -66,11 +66,13 @@ class EnemyAi:
 
     def _get_nearest_player(
         self, enemy_pos: EntityPosition
-    ) -> tuple[EntityId, "ServerPlayerRobot"]:
+    ) -> Optional[tuple[EntityId, "ServerPlayerRobot"]]:
         players = [
             (player_id, player, (player.motion.get()[0] - enemy_pos).length())
             for player_id, player in self._get_players_in_room()
         ]
+        if len(players) == 0:
+            return None
         np = min(players, key=lambda x: x[2])
         return np[0], np[1]
 
@@ -178,6 +180,7 @@ class EnemyAi:
                 factor = 1 * self._difficulty
                 if not entity.friendly:
                     continue
+                repulsion_force += distance_vector
                 distance_vector = (
                     Matrix2d.rot_matrix(random.uniform(0, math.pi)) * distance_vector
                 )
@@ -186,7 +189,7 @@ class EnemyAi:
             if 0 < distance < 4.5:  # CONST: Repulsion radius
                 # force_magnitude = 1 / (distance / 4.5) ** (1 / factor)
                 distance = max(0.01, distance)
-                force_magnitude = min(1 / (distance / 6 + 0.001) ** factor, 6)
+                force_magnitude = min(1 / (distance / 6 + 0.001) ** factor, 4.5)
                 repulsion_force += distance_vector.normalize() * force_magnitude
 
         return repulsion_force
@@ -201,7 +204,11 @@ class EnemyAi:
     ) -> Motion:
         (dt,) = ctx
         enemy_pos, cur_velocity = current
-        _, nearest_player = self._get_nearest_player(enemy_pos)
+        np = self._get_nearest_player(enemy_pos)
+        if np is None:
+            return current
+
+        _, nearest_player = np
 
         player_pos = nearest_player.motion.get()[0]
 
@@ -241,25 +248,26 @@ class EnemyAi:
             #     ]
             #     + [Marker(pos.to_float(), PygameColor.grey()) for pos in path]
             # )
-            self._game.markvect(
-                [
-                    MarkerVect(
-                        enemy_pos, enemy_pos + wall_force, PygameColor(255, 129, 0)
-                    ),
-                    MarkerVect(
-                        enemy_pos, enemy_pos + entity_force, PygameColor(0, 255, 0)
-                    ),
-                    MarkerVect(
-                        enemy_pos, enemy_pos + player_force, PygameColor(0, 0, 255)
-                    ),
-                    MarkerVect(
-                        enemy_pos, enemy_pos + a_start_force, PygameColor(200, 200, 200)
-                    ),
-                    MarkerVect(
-                        enemy_pos, enemy_pos + combined_force, PygameColor(0, 0, 255)
-                    ),
-                ]
-            )
+            # self._game.markvect(
+            #     [
+            #         MarkerVect(
+            #             enemy_pos, enemy_pos + wall_force, PygameColor(255, 129, 0)
+            #         ),
+            #         MarkerVect(
+            #             enemy_pos, enemy_pos + entity_force, PygameColor(0, 255, 0)
+            #         ),
+            #         MarkerVect(
+            #             enemy_pos, enemy_pos + player_force, PygameColor(0, 0, 255)
+            #         ),
+            #         MarkerVect(
+            #             enemy_pos, enemy_pos
+            # + a_start_force, PygameColor(200, 200, 200)
+            #         ),
+            #         MarkerVect(
+            #             enemy_pos, enemy_pos + combined_force, PygameColor(0, 0, 255)
+            #         ),
+            #     ]
+            # )
             pass
         # Update Velocity + prevent moving into walls->sliding along walls
         new_velocity = (
@@ -293,7 +301,10 @@ class EnemyAi:
         accuracy_factor = 1.0
 
         enemy_pos, _ = current
-        pid, _ = self._get_nearest_player(enemy_pos)
+        _np = self._get_nearest_player(enemy_pos)
+        if _np is None:
+            return
+        pid, _ = _np
         positions = self._player_poss_map[pid]
         (dt,) = ctx
 
@@ -328,7 +339,7 @@ class EnemyAi:
 
             direction = aim_position - enemy_pos
 
-            if random.random() < min(0.020 * np.log(self._difficulty), 1):
+            if random.random() < min((1 / 60) * np.log(self._difficulty), 1):
                 enemy.weapon.shoot(direction)
                 pass
 
