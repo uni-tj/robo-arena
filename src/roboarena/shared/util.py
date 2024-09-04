@@ -43,6 +43,7 @@ def counter():
 
 
 def safe_next[T](iterator: Iterator[T]) -> T | None:
+    """Get the next value of an iterator, or None if empty"""
     try:
         return next(iterator)
     except StopIteration:
@@ -70,6 +71,7 @@ def rect_space(bottom_right: Vector[int]) -> Iterable[Vector[int]]:
 def rect_space_at(
     top_left: Vector[int], bottom_right: Vector[int]
 ) -> Iterable[Vector[int]]:
+    """Translates a rect space"""
     return (top_left + pos for pos in rect_space(bottom_right - top_left))
 
 
