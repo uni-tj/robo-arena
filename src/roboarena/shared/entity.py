@@ -191,7 +191,7 @@ class PlayerRobot(Entity):
     )
     _texture_queue: deque[Surface]
     blocks_robot = False
-    blocks_bullet = True
+    blocks_bullet = False
 
     def __init__(self, game: "GameState") -> None:
         super().__init__(game)
@@ -287,7 +287,7 @@ class EnemyRobot(Entity):
     )
     _texture_queue: deque[Surface]
     blocks_robot = False
-    blocks_bullet = True
+    blocks_bullet = False
     initial_position: Position
 
     def __init__(self, game: "GameState", motion: Motion) -> None:
