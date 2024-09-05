@@ -1,7 +1,7 @@
 roboarena = "src"         # Point to the src directory
 [project]
 name = "roboarena"
-version = "0.0.1"
+version = "1.0.0"
 authors = [
     {name = "Jan Keller"},
     {name = "Timon Martins"},
@@ -16,21 +16,38 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
+dependencies = [
+    "pygame~=2.5.2",
+    "numpy~=1.26.4",
+    "funcy~=2.0",
+    "pyyaml~=6.0.1",
+    "keyboard~=0.13.5",
+    "bidict~=0.23.1",
+    "more-itertools~=10.4.0",
+    "matplotlib~=3.9.2",
+    "attrs~=24.2.0"
+
+]
+[project.optional-dependencies]
+dev = [
+    "flake8==7.0.0",
+    "flake8-bugbear~=24.4.26",
+    "black~=24.4.0",
+    "pytest~=8.1.1",
+    "cx-freeze",
+    "toml",
+]
 [tool.setuptools]
-packages = ["roboarena"]
+packages = {find = {where = ["src"]}}
 package-dir = {"" = "src"}
+
 
 [tool.setuptools.package-data]
 "*" = ["*"]  
 
-[tool.setuptools.dynamic]
-version = {attr = "roboarena.__version__"}
 
 [build-system]
-requires = ["setuptools>=61.0",  "wheel"]
+requires = ["setuptools>=61.0", "wheel", "pipenv"]
 build-backend = "setuptools.build_meta"
 
-[tool.cx_freeze]
-include_files = [
-    "src/roboarena/resources"
-]
+

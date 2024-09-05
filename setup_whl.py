@@ -2,6 +2,7 @@ import os
 
 import toml
 from cx_Freeze import Executable, setup
+from setuptools import find_packages
 
 # Load and parse the pyproject.toml file
 with open("pyproject.toml", "r") as toml_file:
@@ -14,7 +15,8 @@ cx_freeze_options = pyproject_data.get("tool", {}).get("cx_freeze", {})
 name = project["name"]
 version = project["version"]
 description = project.get("description", "")
-packages = pyproject_data.get("tool", {}).get("setuptools", {}).get("packages", [])
+
+packages = find_packages(where="src")
 package_dir = (
     pyproject_data.get("tool", {}).get("setuptools", {}).get("package-dir", {})
 )
