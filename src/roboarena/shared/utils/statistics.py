@@ -81,7 +81,7 @@ class Stats:
             "n" + unit: 1e9,
             "µ" + unit: 1e6,
             "m" + unit: 1e3,
-            "s" + unit: 1,
+            "s": 1,
         }[scale_label]
         return self._metrics[name] * scale_factor
 
