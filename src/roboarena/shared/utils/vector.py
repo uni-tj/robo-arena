@@ -24,6 +24,10 @@ class Vector[T: (int, float)]:
     x: T
     y: T
 
+    @staticmethod
+    def from_angle(angle: float) -> "Vector[float]":
+        return Vector(math.cos(angle), math.sin(angle))
+
     @overload
     def __add__(self, o: T) -> "Vector[T]": ...  # type: ignore
 
@@ -84,6 +88,26 @@ class Vector[T: (int, float)]:
             case _:
                 return Vector(self.x * o, self.y * o)
 
+    @overload
+    def __mod__(self, o: T) -> "Vector[T]": ...  # type: ignore
+
+    @overload
+    def __mod__(self, o: "Vector[T]") -> "Vector[T]": ...
+
+    @overload
+    def __mod__(
+        self, o: "int | float | Vector[int] | Vector[float]"
+    ) -> "Vector[float]": ...
+
+    def __mod__(  # type: ignore
+        self, o: "int | float | Vector[int] | Vector[float]"
+    ) -> "Vector[float] | Vector[int]":
+        match o:
+            case Vector(x, y):
+                return Vector(self.x % x, self.y % y)
+            case _:
+                return Vector(self.x % o, self.y % o)
+
     def __truediv__[
         S: (int, float, "Vector[int]", "Vector[float]")
     ](self, o: S) -> "Vector[float]":
@@ -138,6 +162,9 @@ class Vector[T: (int, float)]:
         return self.x * size, self.y * size, size, size
 
     def dot_product(self, o: "Vector[T]") -> T:
+        return self.x * o.x + self.y * o.y
+
+    def cross_product(self, o: "Vector[T]") -> T:
         return self.x * o.x + self.y * o.y
 
     def ceil(self) -> "Vector[int]":
@@ -226,6 +253,9 @@ class Vector[T: (int, float)]:
         return Vector(
             min(max(self.x, _min.x), _max.x), min(max(self.y, _min.y), _max.y)
         )
+
+    def is_close(self, o: "Vector[T]", tol: float = 1e-6) -> bool:
+        return (self - o).length() < tol
 
 
 def clamp(value: float, min_value: float, max_value: float) -> float:

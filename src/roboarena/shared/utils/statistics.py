@@ -158,7 +158,7 @@ class StatsCollection:
         sorted_groups = sorted(self.groups.items(), key=lambda x: x[0])
 
         for group_name, labels in sorted_groups:
-            for label in labels:
+            for label in sorted(labels):
                 stats = self._stats[label]
                 row = [label] + stats.table_repr()
                 config.append(row)

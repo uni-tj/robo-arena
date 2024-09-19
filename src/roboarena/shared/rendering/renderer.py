@@ -16,9 +16,11 @@ from pygame import Surface, display
 
 from roboarena.shared.block import void
 from roboarena.shared.constants import GraphicConstants
+from roboarena.shared.raytracing.raytracing import LightLevel, calculate_light
 from roboarena.shared.rendering.util import draw_arrow
 from roboarena.shared.types import EntityId
 from roboarena.shared.utils.rect import Rect
+from roboarena.shared.utils.timer import Timer
 from roboarena.shared.utils.tuple_vector import (
     TupleVector,
     add_tuples,
@@ -175,6 +177,7 @@ class Renderer(ABC):
     _fps_counter: FPSCounter
     _last_screen_size: Vector[int] | None
     _scale_cache: dict[tuple[Surface, Vector[float]], Surface]
+    _light: LightLevel
 
     def __init__(self, screen: Surface) -> None:
         self._screen = screen
@@ -215,15 +218,42 @@ class GameRenderer(Renderer):
         self._last_camera_pos = deque(maxlen=20)
         self._last_entity_pos = defaultdict(lambda: deque(maxlen=20))
         self._debug_surface = Surface(self._screen.get_size(), pygame.SRCALPHA)
+        self._timer = Timer(10, reset=False)
 
     def render(self, camera_position: Vector[float]) -> None:
-        # self._fps_counter.tick()
+        self._fps_counter.tick()
         # if self._debug_surface.get_size() != self._screen.get_size():
         #     self._debug_surface = Surface(self._screen.get_size(), pygame.SRCALPHA)
         # self._debug_surface.fill((0, 0, 0, 0))
         self._screen.fill((0, 0, 0))
 
         ctx = self._genCtx(camera_position)
+        rdr_sc = Surface(self._screen.get_size(), pygame.SRCALPHA)
+
+        def rdr(ori: tuple[float, float], inter: tuple[float, float], c=(128, 200, 0)):
+            pygame.draw.line(
+                rdr_sc,
+                pygame.Color(*c),
+                ctx.gu2screen_tup((ori)),
+                ctx.gu2screen_tup((inter)),
+                3,
+            )
+
+        def rdi(ori: Vector[float], c=(200, 200, 0)):
+            # return
+            try:
+                pygame.draw.circle(
+                    rdr_sc,
+                    pygame.Color(*c),
+                    ctx.gu2screen_tup(ori),
+                    4,
+                )
+            except Exception as _:
+                pass
+
+        self._light = calculate_light(
+            self._game.level, camera_position, ctx.fov, rdr, rdi, self._timer
+        )
 
         entities_to_render: dict[int, list["Entity"]] = defaultdict(list)
         for eid, entity in self._game.entities.items():
@@ -237,6 +267,7 @@ class GameRenderer(Renderer):
             render_infos += self._prepare_render_entities(ctx, entities_to_render[y])
             render_infos += self._prepare_render_background(ctx, y, True)
         self._screen.blits(render_infos)
+        self._screen.blit(rdr_sc, (0, 0))
 
         # # TODO: Remove rendering colliding blocks
         # cb_texture = pygame.Surface(ctx.gu2px_tup((1, 1)), pygame.SRCALPHA)
@@ -256,7 +287,7 @@ class GameRenderer(Renderer):
 
         # self._render_markers(ctx)
         # self._render_vect_markers(ctx)
-        # self._fps_counter.render(self._screen)
+        self._fps_counter.render(self._screen)
         self._render_ui(ctx)
 
         # ! Debugging only
@@ -271,11 +302,31 @@ class GameRenderer(Renderer):
     ) -> Iterable[RenderInfo]:
         for x in range(floor(ctx.fov.top_left.x), ceil(ctx.fov.bottom_right.x)):
             pos_gu = Vector(x, row)
+            ll = self._light.get(pos_gu.to_tuple(), 0.0)
             block = self._game.level.get(pos_gu) or void
             if block.render_above_entities != above_entities:
                 continue
             texture, texture_size = block.texture, block.texture_size
-            scaled_texture = ctx.scale_gu(texture, texture_size)
+            tx = Vector.from_tuple(texture.get_size())
+            ll_texture = pygame.Surface((tx.x, tx.y), pygame.SRCALPHA)
+            ll_texture.blit(texture, (0, 0))
+            rect_surf = pygame.Surface((tx.x, tx.y), pygame.SRCALPHA)
+            rect_surf.fill(pygame.Color(0, 0, 0, int(ll * 255)))
+            # pygame.draw.circle(
+            #     rect_surf,
+            #     pygame.Color(0, 0, 0, int(ll * 255)),
+            #     # (0, 0, tx.x, tx.y),
+            #     ll * 5,
+            # )
+
+            pygame.draw.circle(
+                rect_surf,
+                pygame.Color(0, 0, 0, int(ll * 255)),
+                (tx / 2).to_tuple(),
+                ll * 5,
+            )
+            ll_texture.blit(rect_surf, (0, 0))
+            scaled_texture = ctx.scale_gu(ll_texture, texture_size)
             pos_screen = ctx.gu2screen_tup((x, row - texture_size.y + 1))
             yield scaled_texture, pos_screen  # type: ignore
 
