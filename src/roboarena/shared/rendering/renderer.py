@@ -14,7 +14,7 @@ import pygame
 import pygame.freetype
 from pygame import Surface, display
 
-from roboarena.shared.block import void, wall
+from roboarena.shared.block import Block, void, wall
 from roboarena.shared.constants import GraphicConstants
 from roboarena.shared.raytracing.raytracing import LightLevel, calculate_light
 from roboarena.shared.rendering.util import draw_arrow
@@ -211,8 +211,8 @@ class GameRenderer(Renderer):
     _last_camera_pos: deque[Vector[float]]
     _debug_surface: Surface
     _font = get_default_font()
-    _light_surfaces: dict[tuple[int, int], Surface]
-    _darkness_surfaces: dict[tuple[int, int], Surface]
+    _light_surfaces: dict[tuple[Block, int], Surface]
+    _darkness_surfaces: dict[int, Surface]
 
     def __init__(self, screen: Surface, game: "GameState") -> None:
         super().__init__(screen)
@@ -220,10 +220,33 @@ class GameRenderer(Renderer):
 
         self._last_camera_pos = deque(maxlen=20)
         self._last_entity_pos = defaultdict(lambda: deque(maxlen=20))
-        self._debug_surface = Surface(self._screen.get_size(), pygame.SRCALPHA)
+        self._debug_surface = Surface(self._screen.get_size(), self.default_flags)
         self._timer = Timer(10, reset=False)
         self._light_surfaces = dict()
         self._darkness_surfaces = dict()
+        self.precompute_darnkness()
+
+    @property
+    def default_flags(self) -> int:
+        return pygame.SRCALPHA | pygame.HWSURFACE | pygame.HWACCEL
+
+    def precompute_darnkness(self):
+        for dl in range(256):
+            ds = pygame.Surface((50, 65), self.default_flags)
+            ds.fill((0, 0, 0, dl))
+            self._darkness_surfaces[dl] = ds
+
+    def dark_surface(self, dl: int) -> Surface:
+        return self._darkness_surfaces[dl]
+
+    def compute_light_texture(self, block: Block, ll: float) -> Surface:
+        dl = int((1 - ll) * 255)
+        if (block, dl) not in self._light_surfaces:
+            # tx = pygame.Surface(block.texture.get_size(), self.default_flags)
+            tx = block.texture.convert_alpha()
+            tx.blit(self.dark_surface(dl), (0, 0))
+            self._light_surfaces[(block, dl)] = tx
+        return self._light_surfaces[(block, dl)]
 
     def render(self, camera_position: Vector[float]) -> None:
         self._fps_counter.tick()
@@ -307,23 +330,16 @@ class GameRenderer(Renderer):
             block = self._game.level.get(pos_gu) or void
             if block.render_above_entities != above_entities:
                 continue
-            texture, texture_size = block.texture, block.texture_size
-            tx = Vector.from_tuple(texture.get_size())
-            ll_texture = pygame.Surface((tx.x, tx.y), pygame.SRCALPHA)
-            ll_texture.blit(texture, (0, 0))
-            rect_surf = pygame.Surface((tx.x, tx.y), pygame.SRCALPHA)
-            if not block.blocks_light:
-                try:
-                    # pass
-                    rect_surf.fill(pygame.Color(0, 0, 0, int((1 - ll) * 255)))
-                except Exception as _:
-                    print(int((1 - ll) * 254 + 1), "ll", ll)
-                ll_texture.blit(rect_surf, (0, 0))
+            ll_texture = self.compute_light_texture(
+                # block, ll if not block.blocks_light else 1.0
+                block,
+                ll,
+            )
 
-            scaled_texture = ctx.scale_gu(ll_texture, texture_size)
-            img = self._font.render(str(int(ll * 255)), (255, 255, 255))[0]
-            scaled_texture.blit(img, (0, 0))
-            pos_screen = ctx.gu2screen_tup((x, row - texture_size.y + 1))
+            scaled_texture = ctx.scale_gu(ll_texture, block.texture_size)
+            # img = self._font.render(str(int(ll * 255)), (255, 255, 255))[0]
+            # scaled_texture.blit(img, (0, 0))
+            pos_screen = ctx.gu2screen_tup((x, row - block.texture_size.y + 1))
             yield scaled_texture, pos_screen  # type: ignore
 
     def _prepare_render_entities(

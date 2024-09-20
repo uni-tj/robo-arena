@@ -55,6 +55,7 @@ def reflect(d: FloatVector, n: FloatVector) -> FloatVector:
 def find_nearest_intersection(
     ray: Line, ctx: RayContext
 ) -> tuple[Optional[FloatVector], Optional[IntVector], Optional[Block]]:
+    ctx.timer.tick("find_nearest_intersection")
     nearest_intersection = None
     nearest_distance = float("inf")
     nearest_block_pos = None
@@ -64,7 +65,7 @@ def find_nearest_intersection(
         block = ctx.level_grid.get(pos, None)
         if block is None:
             continue
-        if nearest_block is None and block.blocks_light and ctx.tfov.contains(pos):
+        if nearest_block is None and block.blocks_light:
             for edge in block.edges_at(Vector(*pos)):
                 intersection = edge.intersection(ray)
                 if intersection:
@@ -74,7 +75,7 @@ def find_nearest_intersection(
                         nearest_intersection = intersection
                         nearest_block_pos = pos
                         nearest_block = block
-
+    ctx.timer.tick_end()
     return nearest_intersection, nearest_block_pos, nearest_block
 
 
@@ -86,13 +87,16 @@ def update_light_levels(
     energy: float,
     ctx: RayContext,
 ) -> None:
+    ctx.timer.tick("update_light_levels")
     for block_pos in ray.blocks_along_line():
-        if block_pos in ctx.level_grid and not ctx.level_grid[block_pos].blocks_light:
-            dist = distance(block_pos, origin)
+        if block_pos in ctx.level_grid:
+            dist = distance(block_pos, origin) + 1
             # ctx.rdi(block_pos, (128, 200, 200), dist)
-            if dist >= distance(origin, end):
+            if dist - 1 >= distance(origin, end):
+                ctx.timer.tick_end()
                 return
             # light_level = 1 / (((dst + dist) / 3) ** 2)
+            # ctx.rdi(block_pos, (128, 0, 128), 4)
             ctx.light_levels[block_pos] = min(
                 1,
                 max(
@@ -102,6 +106,7 @@ def update_light_levels(
             )
             ctx.num_rays[block_pos] += 1
             # print(dst, dist, dst + dist, light_level, ctx.light_levels[block_pos])
+    ctx.timer.tick_end()
 
 
 def cast_ray(
@@ -112,7 +117,11 @@ def cast_ray(
     dst: float,
     ctx: RayContext,
 ) -> int:
-    if bounces > ctx.max_bounces or energy < 0.05:
+    if energy == 1:
+        ctx.timer.tick("cast_ray")
+    if bounces > ctx.max_bounces or energy < 0.05 or not ctx.tfov.contains(origin):
+        if energy == 1:
+            ctx.timer.tick_end()
         return 0
     ray = Line(origin, direction, restrict=(0, ctx.max_distance))
     # blocks_to_check = ctx.level_grid.get_blocks_in_range(origin, end_point)
@@ -133,7 +142,7 @@ def cast_ray(
                 nearest_intersection[0] + reflected_direction[0] * 0.01,
                 nearest_intersection[1] + reflected_direction[1] * 0.01,
             )
-            return 1 + cast_ray(
+            res = 1 + cast_ray(
                 reflected_origin,
                 reflected_direction,
                 reflected_energy,
@@ -141,7 +150,12 @@ def cast_ray(
                 dst + distance(origin, reflected_origin),
                 ctx,
             )
+            if energy == 1:
+                ctx.timer.tick_end()
+            return res
 
+    if energy == 1:
+        ctx.timer.tick_end()
     return 1
 
 
@@ -161,8 +175,8 @@ def calculate_light(
     if not light_source:
         return light_levels
 
-    num_rays = 200  # Number of rays to cast
-    max_bounces = 3  # Maximum number of reflections
+    num_rays = 400  # Number of rays to cast
+    max_bounces = 1  # Maximum number of reflections
     tfov = Rect.from_vect_rect(fov)
     max_distance = tfov.half_diag
 
@@ -192,6 +206,7 @@ def calculate_light(
     light_map: LightLevel = defaultdict(lambda: 0)
     max_light = max(light_levels.values(), default=1)
     max_rays = max(ctx.num_rays.values(), default=0)
+
     for pos in light_levels:
         light_levels[pos] /= max_light
         light_map[pos] = (light_levels[pos]) ** (1 - (ctx.num_rays[pos] / max_rays))
