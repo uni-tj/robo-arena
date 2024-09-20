@@ -91,3 +91,9 @@ class Line:
             self.origin - self.direction * self._restrict[0],
             self.origin + self.direction * self._restrict[1],
         )
+
+    def blocks_along_ray(self) -> Iterable[Vector[int]]:
+        t = 0
+        while self.check_restrict(t):
+            yield self.origin + self.direction * t
+            t += 1

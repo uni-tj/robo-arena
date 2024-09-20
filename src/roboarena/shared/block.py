@@ -105,7 +105,7 @@ wall = Block(
     blocks_light=True,
     blocks_robot=True,
     blocks_bullet=True,
-    reflectivity=0.2,
+    reflectivity=0.5,
 )
 void = Block(
     Graphics.VOID,

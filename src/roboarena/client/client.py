@@ -345,7 +345,7 @@ class Client(Stoppable):
         pygame.init()
         screen = pygame.display.set_mode(
             ClientConstants.START_SCREEN_SIZE,
-            flags=RESIZABLE,
+            flags=RESIZABLE | pygame.SRCALPHA | pygame.HWSURFACE,
             vsync=int(NetworkConstants.VSYNC),
         )
 
